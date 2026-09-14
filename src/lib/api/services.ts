@@ -94,6 +94,7 @@ import type {
   DefinirAnoLetivoAcademiaRequest,
   DefinirAnoLetivoGlobalRequest,
   AnoLetivoAcademiaResponse,
+  ConfiguracaoStatusResponse,
   ListarAnosLetivosAcademiaResponse,
   DefinirAnoLetivoResponse,
   DefinirAnoLetivoGlobalResponse,
@@ -247,6 +248,7 @@ async function getAllPaginated<T extends object>(
 }
 
 const ACADEMIA_ANO_LETIVO_ENDPOINT = '/academia/ano-letivo';
+const ACADEMIA_CONFIGURACAO_STATUS_ENDPOINT = '/academia/configuracao-status';
 const ACADEMIA_DEFINIR_ANO_LETIVO_ENDPOINT = '/academia/definir-ano-letivo';
 const ADMIN_SISTEMA_ANO_LETIVO_ENDPOINT = '/admin/definir-ano-letivo-geral';
 const GLOBAL_ANO_LETIVO_ENDPOINT = '/ano-letivo';
@@ -1421,6 +1423,22 @@ export const academiaService = {
     const codigo   = isLegacy ? undefined : params?.codigo_academia;
     const qs       = codigo ? `?codigo_academia=${encodeURIComponent(codigo)}` : '';
     return api.get<AnoLetivoAcademiaResponse>(`${ACADEMIA_ANO_LETIVO_ENDPOINT}${qs}`, {
+      token: tok || tokenStorage.get() || undefined,
+    });
+  },
+
+  // GET /academia/configuracao-status
+  // Consolida em uma única chamada o status de cada passo do Guia de
+  // Configuração (o que já foi configurado e o que falta), evitando que o
+  // front end precise buscar ano letivo, anos acadêmicos, cursos, matérias,
+  // turmas, estudantes, categorias de nota e regras de avaliação final
+  // separadamente para depois calcular isso no navegador.
+  getConfiguracaoStatus: (params?: { codigo_academia?: string; token?: string } | string) => {
+    const isLegacy = typeof params === 'string' || params === undefined;
+    const tok      = isLegacy ? (params as string | undefined) : params?.token;
+    const codigo   = isLegacy ? undefined : params?.codigo_academia;
+    const qs       = codigo ? `?codigo_academia=${encodeURIComponent(codigo)}` : '';
+    return api.get<ConfiguracaoStatusResponse>(`${ACADEMIA_CONFIGURACAO_STATUS_ENDPOINT}${qs}`, {
       token: tok || tokenStorage.get() || undefined,
     });
   },
