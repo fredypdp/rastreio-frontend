@@ -2,31 +2,13 @@
 import { UserType } from "./api";
 
 /**
- * Request para gerar token de verificação (frontend envia email)
- */
-export interface GerarTokenVerificacaoRequest {
-  identificador: string; // codigo_estudante, codigo_academia ou email (admin)
-  tipo: UserType; // 'estudante' | 'academia' | 'admin'
-}
-
-/**
- * Request para gerar token de recuperação (frontend envia email)
+ * Request para recuperação de senha (identificador obrigatório, tipo
+ * opcional — quando omitido, o backend tenta estudante/academia/admin
+ * nessa ordem).
  */
 export interface GerarTokenRecuperacaoRequest {
   identificador: string; // codigo_estudante, codigo_academia ou email (admin)
   tipo: UserType; // 'estudante' | 'academia' | 'admin'
-}
-
-/**
- * Response do backend quando gera token (frontend deve enviar email)
- */
-export interface TokenResponse {
-  success: boolean;
-  token: string;
-  email: string;
-  nome: string;
-  tipo: string;
-  expira_em: string;
 }
 
 /**
@@ -38,14 +20,15 @@ export interface VerificarEmailResponse {
 }
 
 /**
- * Response quando senha é resetada
- * Inclui a senha padrão gerada pelo backend
+ * Response dos endpoints /email/verificar-email/solicitar e
+ * /email/recuperar-senha/solicitar — o backend controla o envio completo
+ * (token + email), por isso a resposta não traz token nem senha, só a
+ * confirmação de que o email foi enviado.
  */
-export interface ResetarSenhaResponse {
+export interface SolicitarEmailResponse {
+  success: boolean;
   message: string;
-  senha_padrao: string;  // Senha gerada pelo backend
-  email: string;
-  proximos_passos: string;
+  email?: string;
 }
 
 /**
@@ -111,26 +94,6 @@ export function getSenhaPadrao(userType: UserType, codigo?: string, role?: strin
     default:
       return SenhasPadrao.default;
   }
-}
-
-/**
- * Response do endpoint /api/verificar-email (Next.js API route)
- */
-export interface FrontendEmailVerificacaoResponse {
-  success: boolean;
-  message: string;
-  messageId?: string;
-  error?: string;
-}
-
-/**
- * Response do endpoint /api/recuperar-senha (Next.js API route)
- */
-export interface FrontendEmailRecuperacaoResponse {
-  success: boolean;
-  message: string;
-  messageId?: string;
-  error?: string;
 }
 
 /**
