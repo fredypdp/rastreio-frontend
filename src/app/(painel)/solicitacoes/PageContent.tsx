@@ -128,6 +128,14 @@ export default function SolicitacoesPageContent() {
 
   const pendentes = useMemo(() => items.filter((item) => item.status === "pendente").length, [items]);
   const edicoesPendentes = useMemo(() => editItems.filter((item) => item.status === "pendente").length, [editItems]);
+  const pendentesPorAba = useMemo<Partial<Record<AbaSolicitacao, number>>>(() => {
+    const contagem: Partial<Record<AbaSolicitacao, number>> = {};
+    for (const item of items) {
+      if (item.status === "pendente") contagem[item.tipo] = (contagem[item.tipo] ?? 0) + 1;
+    }
+    if (edicoesPendentes > 0) contagem.edicao = edicoesPendentes;
+    return contagem;
+  }, [items, edicoesPendentes]);
   const itemsDaAba = useMemo(() => items.filter((item) => item.tipo === aba), [aba, items]);
   const editSelecionada = useMemo(() => editItems.find((item) => item.codigo_solicitacao === editSelecionadaCodigo) ?? null, [editItems, editSelecionadaCodigo]);
 
@@ -274,16 +282,6 @@ export default function SolicitacoesPageContent() {
     <div>
       <PageBreadcrumb pageTitle="Solicitações" />
       <div className="space-y-6">
-        <section className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Status acadêmico</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{isEstudante ? "Crie e acompanhe suas solicitações." : isAcademia ? "Analise solicitações pendentes da sua academia." : "Consulte solicitações por instituição."}</p>
-            </div>
-            <button onClick={load} disabled={refreshing || (isAdmin && !academiaSelecionada)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-gray-700 dark:text-gray-200">{refreshing ? "Atualizando..." : `Atualizar (${pendentes + edicoesPendentes} pendentes)`}</button>
-          </div>
-        </section>
-
         {isAdmin && (
           <section className="grid gap-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:grid-cols-[1fr_auto] md:items-end">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -310,7 +308,16 @@ export default function SolicitacoesPageContent() {
         {message && <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-300">{message}</div>}
         {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300">{error}</div>}
 
-        {isAcademia && !editSelecionada && <AbasTabelaSolicitacoes aba={aba} onChange={setAba} />}
+        {isAcademia && !editSelecionada && (
+          <AbasTabelaSolicitacoes
+            aba={aba}
+            onChange={setAba}
+            pendentesPorAba={pendentesPorAba}
+            totalPendentes={pendentes + edicoesPendentes}
+            onAtualizar={load}
+            atualizando={refreshing}
+          />
+        )}
 
         {isEstudante && (
           <form onSubmit={submitStudentRequest} className="grid gap-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:grid-cols-2">
@@ -329,7 +336,16 @@ export default function SolicitacoesPageContent() {
           </form>
         )}
 
-        {isEstudante && !editSelecionada && <AbasTabelaSolicitacoes aba={aba} onChange={setAba} />}
+        {isEstudante && !editSelecionada && (
+          <AbasTabelaSolicitacoes
+            aba={aba}
+            onChange={setAba}
+            pendentesPorAba={pendentesPorAba}
+            totalPendentes={pendentes + edicoesPendentes}
+            onAtualizar={load}
+            atualizando={refreshing}
+          />
+        )}
 
         {(isEstudante || isAcademia) && aba === "edicao" && !editSelecionada && (
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -396,18 +412,49 @@ export default function SolicitacoesPageContent() {
 }
 
 
-function AbasTabelaSolicitacoes({ aba, onChange }: { aba: AbaSolicitacao; onChange: (value: AbaSolicitacao) => void }) {
+function AbasTabelaSolicitacoes({
+  aba,
+  onChange,
+  pendentesPorAba,
+  totalPendentes,
+  onAtualizar,
+  atualizando,
+}: {
+  aba: AbaSolicitacao;
+  onChange: (value: AbaSolicitacao) => void;
+  pendentesPorAba: Partial<Record<AbaSolicitacao, number>>;
+  totalPendentes: number;
+  onAtualizar: () => void;
+  atualizando: boolean;
+}) {
+  const rotuloAtualizar = atualizando ? "Atualizando..." : `Atualizar (${totalPendentes} pendentes)`;
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-white/[0.03]">
-      <div className="hidden flex-wrap gap-2 sm:flex">
-        {abasSolicitacoes.map((item) => (
-          <button key={item.value} type="button" onClick={() => onChange(item.value)} className={`rounded-lg px-4 py-2 text-sm font-medium transition ${aba === item.value ? "bg-brand-500 text-white" : "border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"}`}>
-            {item.label}
-          </button>
-        ))}
+      <div className="hidden flex-wrap items-center gap-2 sm:flex">
+        {abasSolicitacoes.map((item) => {
+          const qtdPendente = pendentesPorAba[item.value] ?? 0;
+          return (
+            <button key={item.value} type="button" onClick={() => onChange(item.value)} className={`relative rounded-lg px-4 py-2 text-sm font-medium transition ${aba === item.value ? "bg-brand-500 text-white" : "border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"}`}>
+              {item.label}
+              {qtdPendente > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white">
+                  {qtdPendente}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        <button type="button" onClick={onAtualizar} disabled={atualizando} className="ml-auto rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-gray-700 dark:text-gray-200">
+          {rotuloAtualizar}
+        </button>
       </div>
-      <div className="sm:hidden">
-        <SearchableSelect value={aba} options={abasSolicitacoes} onChange={(value) => onChange(value as AbaSolicitacao)} isSearchable={false} />
+      <div className="flex items-center gap-2 sm:hidden">
+        <div className="flex-1">
+          <SearchableSelect value={aba} options={abasSolicitacoes} onChange={(value) => onChange(value as AbaSolicitacao)} isSearchable={false} />
+        </div>
+        <button type="button" onClick={onAtualizar} disabled={atualizando} className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium disabled:opacity-60 dark:border-gray-700 dark:text-gray-200">
+          {atualizando ? "..." : "Atualizar"}
+        </button>
       </div>
     </section>
   );
