@@ -2075,6 +2075,20 @@ export interface AnoLetivoResponse {
   ano_letivo: string;
 }
 
+/** GET /academia/configuracao-status */
+export interface ConfiguracaoStatusResponse {
+  steps: {
+    'ano-letivo': { completed: boolean };
+    cursos?: { completed: boolean; total_ativos: number };
+    materias: { completed: boolean };
+    'categorias-superiores'?: { completed: boolean };
+    'regras-superiores'?: { completed: boolean; total_ativas: number };
+    turmas: { completed: boolean };
+    estudantes: { completed: boolean; total: number };
+    'estudantes-turmas': { completed: boolean };
+  };
+}
+
 export interface DefinirAnoLetivoResponse {
   message: string;
   ano_letivo: string;
