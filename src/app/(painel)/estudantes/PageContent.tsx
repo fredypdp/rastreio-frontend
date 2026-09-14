@@ -1049,6 +1049,28 @@ export default function Estudantes() {
           </>
         )}
 
+        {modoTela === 'lista' && vistaEscala && isAcademia && !carregado && (
+          <div className="space-y-3" aria-busy="true" aria-label="Carregando estudantes">
+            {[0, 1, 2].map((grupo) => (
+              <div key={grupo} className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+                <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-white/[0.05]">
+                  <div className="h-4 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                  <div className="h-4 w-10 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                </div>
+                <div className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                  {[0, 1, 2].map((linha) => (
+                    <div key={linha} className="flex items-center gap-3 px-4 py-3">
+                      <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
+                      <div className="h-3.5 flex-1 max-w-[220px] animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                      <div className="h-3.5 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/*
           Vista em Escala do Admin: navegação Província -> Academia -> árvore.
           Vive num componente à parte porque o admin não tem um "próprio"
