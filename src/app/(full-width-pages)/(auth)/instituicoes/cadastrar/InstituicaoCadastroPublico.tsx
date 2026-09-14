@@ -12,21 +12,12 @@ import type { CadastroAcademiaPublicaRequest } from "@/types/api";
 interface ResultadoCadastroPublico { codigo_academia: string; nome: string; }
 
 /**
- * Aciona (melhor esforço, sem bloquear a UI) o aviso por email aos
- * administradores com permissão de ativação sobre esta nova instituição
- * pendente de análise. Nunca aguardado (sem await no chamador) e qualquer
- * falha aqui é só logada — o cadastro em si já foi concluído com sucesso
- * antes desta chamada.
+ * NOTA: o aviso por email aos administradores sobre uma nova instituição
+ * pendente de análise já é enviado automaticamente pelo backend, dentro do
+ * próprio registo (RegisterAcademiaPublica -> SendAcademiaCadastradaEmailBrevo),
+ * a todos os admins com permissão de ativação. Uma chamada extra a partir
+ * daqui enviaria um segundo aviso duplicado — por isso foi removida.
  */
-function notificarAdminsCadastroAcademia(codigoAcademia: string) {
-  fetch("/api/academia-cadastro-notificacao", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ codigoAcademia }),
-  }).catch((error) => {
-    console.error("[cadastro-publico] falha ao acionar aviso aos administradores:", error);
-  });
-}
 
 function SuccessState({ resultado, onCadastrarOutra }: { resultado: ResultadoCadastroPublico; onCadastrarOutra: () => void; }) {
   return (
@@ -56,7 +47,6 @@ export default function InstituicaoCadastroPublico() {
     const result = await executarCadastro({ ...payload, senha } as CadastroAcademiaPublicaRequest);
     if (result) {
       setResultado({ codigo_academia: result.codigo_academia, nome: payload.nome });
-      notificarAdminsCadastroAcademia(result.codigo_academia);
     }
   };
   return (
