@@ -252,33 +252,33 @@ export default function PageContent() {
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Configurações de matrícula</h1>
-            <p className="mt-1 text-sm text-gray-500">Configure os documentos extra solicitados por ano acadêmico.</p>
+            <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Configurações de matrícula</h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure os documentos extra solicitados por ano acadêmico.</p>
           </div>
           <Button onClick={() => abrir()}>Adicionar documento</Button>
         </div>
         {erro && <Alert variant="error" title="Configurações de matrícula" message={erro} />}
         {loading ? (
-          <p className="py-8 text-center text-gray-500">Carregando documentos...</p>
+          <p className="py-8 text-center text-gray-500 dark:text-gray-400">Carregando documentos...</p>
         ) : docs.length === 0 ? (
-          <p className="py-8 text-center text-gray-500">Nenhum documento extra configurado.</p>
+          <p className="py-8 text-center text-gray-500 dark:text-gray-400">Nenhum documento extra configurado.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[680px] text-sm">
+            <table className="w-full min-w-[680px] text-sm text-gray-700 dark:text-gray-300">
               <thead>
-                <tr className="border-b text-left text-gray-500">
-                  <th className="p-3">Rótulo</th>
-                  <th className="p-3">Tipo</th>
-                  <th className="p-3">Anos acadêmicos</th>
-                  <th className="p-3">Obrigatório</th>
-                  <th className="p-3">Estado</th>
-                  <th className="p-3 text-right">Ações</th>
+                <tr className="border-b border-gray-200 text-left text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                  <th className="p-3 font-medium text-gray-600 dark:text-gray-300">Rótulo</th>
+                  <th className="p-3 font-medium text-gray-600 dark:text-gray-300">Tipo</th>
+                  <th className="p-3 font-medium text-gray-600 dark:text-gray-300">Anos acadêmicos</th>
+                  <th className="p-3 font-medium text-gray-600 dark:text-gray-300">Obrigatório</th>
+                  <th className="p-3 font-medium text-gray-600 dark:text-gray-300">Estado</th>
+                  <th className="p-3 text-right font-medium text-gray-600 dark:text-gray-300">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {docs.map((d) => (
-                  <tr key={d.id} className="border-b">
-                    <td className="p-3 font-medium">{d.rotulo}</td>
+                  <tr key={d.id} className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 font-medium text-gray-800 dark:text-white/90">{d.rotulo}</td>
                     <td className="p-3 uppercase">{d.tipo}</td>
                     <td className="p-3">
                       <div className="flex flex-wrap gap-1">
@@ -292,8 +292,8 @@ export default function PageContent() {
                     <td className="p-3">{d.obrigatorio ? "Sim" : "Não"}</td>
                     <td className="p-3">{d.ativo ? "Ativo" : "Inativo"}</td>
                     <td className="p-3 text-right">
-                      <button onClick={() => abrir(d)} className="mr-3 text-brand-600">Editar</button>
-                      <button onClick={() => toggleAtivo(d)} className={d.ativo ? "text-red-600" : "text-green-600"}>
+                      <button onClick={() => abrir(d)} className="mr-3 text-brand-600 dark:text-brand-400">Editar</button>
+                      <button onClick={() => toggleAtivo(d)} className={d.ativo ? "text-error-600 dark:text-error-400" : "text-success-600 dark:text-success-400"}>
                         {d.ativo ? "Desativar" : "Reativar"}
                       </button>
                     </td>
