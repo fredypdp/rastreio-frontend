@@ -144,15 +144,15 @@ interface AlertBannerProps {
 function AlertBanner({ icon, message, variant, action }: AlertBannerProps) {
   const styles = {
     warning:
-      "bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/15 dark:border-yellow-800/40 dark:text-yellow-300",
-    info: "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/15 dark:border-blue-800/40 dark:text-blue-300",
+      "bg-warning-50 border-warning-200 text-warning-800 dark:bg-warning-900/15 dark:border-warning-800/40 dark:text-warning-300",
+    info: "bg-brand-50 border-brand-200 text-brand-800 dark:bg-brand-900/15 dark:border-brand-800/40 dark:text-brand-300",
     success:
-      "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/15 dark:border-green-800/40 dark:text-green-300",
+      "bg-success-50 border-success-200 text-success-800 dark:bg-success-900/15 dark:border-success-800/40 dark:text-success-300",
   };
   const iconStyles = {
-    warning: "text-yellow-500 dark:text-yellow-400",
-    info: "text-blue-500 dark:text-blue-400",
-    success: "text-green-500 dark:text-green-400",
+    warning: "text-warning-500 dark:text-warning-400",
+    info: "text-brand-500 dark:text-brand-400",
+    success: "text-success-500 dark:text-success-400",
   };
 
   return (
@@ -219,10 +219,10 @@ function QuickLink({ href, icon, label, sub }: QuickLinkProps) {
 function MediaBadge({ media }: { media: number }) {
   const cor =
     media >= 14
-      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+      ? "bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400"
       : media >= 10
-      ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-      : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+      ? "bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400"
+      : "bg-error-100 text-error-700 dark:bg-error-900/30 dark:text-error-400";
 
   return (
     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cor}`}>
@@ -294,8 +294,8 @@ function DashboardAdmin({ user }: { user: MeuPerfilResponse }) {
             label="Academias"
             value={totalAcademias}
             sub={inativas > 0 ? `${inativas} inativas` : "Todas ativas"}
-            color="bg-blue-50 dark:bg-blue-500/10"
-            iconColor="text-blue-500"
+            color="bg-brand-50 dark:bg-brand-500/10"
+            iconColor="text-brand-500 dark:text-brand-400"
             loading={loadingAcademias}
             href="/academias"
           />
@@ -303,8 +303,8 @@ function DashboardAdmin({ user }: { user: MeuPerfilResponse }) {
             icon="mdi:account-school"
             label="Estudantes"
             value={totalEstudantes}
-            color="bg-violet-50 dark:bg-violet-500/10"
-            iconColor="text-violet-500"
+            color="bg-brand-50 dark:bg-brand-500/10"
+            iconColor="text-brand-500 dark:text-brand-400"
             loading={loadingEstudantes}
             href="/estudantes"
           />
@@ -312,16 +312,16 @@ function DashboardAdmin({ user }: { user: MeuPerfilResponse }) {
             icon="mdi:file-document-edit-outline"
             label="Notas registadas"
             value={totalNotas}
-            color="bg-emerald-50 dark:bg-emerald-500/10"
-            iconColor="text-emerald-500"
+            color="bg-brand-50 dark:bg-brand-500/10"
+            iconColor="text-brand-500 dark:text-brand-400"
             loading={loadingNotas}
           />
           <StatCard
             icon="mdi:calendar-remove-outline"
             label="Faltas registadas"
             value={totalFaltas}
-            color="bg-orange-50 dark:bg-orange-500/10"
-            iconColor="text-orange-500"
+            color="bg-brand-50 dark:bg-brand-500/10"
+            iconColor="text-brand-500 dark:text-brand-400"
             loading={loadingFaltas}
           />
         </div>
@@ -378,8 +378,8 @@ function DashboardAdmin({ user }: { user: MeuPerfilResponse }) {
               <span
                 className={`text-xs font-semibold px-2 py-1 rounded-full ${
                   admin.status === "ativo"
-                    ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
-                    : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
+                    ? "bg-success-50 text-success-700 dark:bg-success-900/20 dark:text-success-400"
+                    : "bg-error-50 text-error-700 dark:bg-error-900/20 dark:text-error-400"
                 }`}
               >
                 {admin.status}
@@ -482,8 +482,8 @@ function DashboardAcademia({ user }: { user: MeuPerfilResponse }) {
               <span
                 className={`flex items-center gap-1 font-medium ${
                   academia.status === "ativo"
-                    ? "text-green-500 dark:text-green-400"
-                    : "text-red-500 dark:text-red-400"
+                    ? "text-success-500 dark:text-success-400"
+                    : "text-error-500 dark:text-error-400"
                 }`}
               >
                 <Icon
@@ -508,8 +508,8 @@ function DashboardAcademia({ user }: { user: MeuPerfilResponse }) {
             icon="mdi:account-group-outline"
             label="Estudantes"
             value={totalEst}
-            color="bg-violet-50 dark:bg-violet-500/10"
-            iconColor="text-violet-500"
+            color="bg-brand-50 dark:bg-brand-500/10"
+            iconColor="text-brand-500 dark:text-brand-400"
             loading={loadingEst}
             href="/estudantes"
           />
@@ -518,16 +518,16 @@ function DashboardAcademia({ user }: { user: MeuPerfilResponse }) {
             label="Turmas activas"
             value={turmasAtivas}
             sub={`${turmas.length} no total`}
-            color="bg-blue-50 dark:bg-blue-500/10"
-            iconColor="text-blue-500"
+            color="bg-brand-50 dark:bg-brand-500/10"
+            iconColor="text-brand-500 dark:text-brand-400"
             loading={loadingTurmas}
           />
           <StatCard
             icon="mdi:book-open-outline"
             label={isSuperior ? "Cursos activos" : "Notas registadas"}
             value={isSuperior ? cursosAtivos : totalNotasAcad}
-            color="bg-emerald-50 dark:bg-emerald-500/10"
-            iconColor="text-emerald-500"
+            color="bg-brand-50 dark:bg-brand-500/10"
+            iconColor="text-brand-500 dark:text-brand-400"
             loading={loading}
           />
         </div>
@@ -540,8 +540,8 @@ function DashboardAcademia({ user }: { user: MeuPerfilResponse }) {
             icon="mdi:file-document-edit-outline"
             label="Notas lançadas"
             value={totalNotasAcad}
-            color="bg-emerald-50 dark:bg-emerald-500/10"
-            iconColor="text-emerald-500"
+            color="bg-brand-50 dark:bg-brand-500/10"
+            iconColor="text-brand-500 dark:text-brand-400"
             loading={loadingEst}
             href="/notas"
           />
@@ -549,8 +549,8 @@ function DashboardAcademia({ user }: { user: MeuPerfilResponse }) {
             icon="mdi:calendar-remove-outline"
             label="Faltas lançadas"
             value={totalFaltasAcad}
-            color="bg-red-50 dark:bg-red-500/10"
-            iconColor="text-red-500"
+            color="bg-error-50 dark:bg-error-500/10"
+            iconColor="text-error-500 dark:text-error-400"
             loading={loadingEst}
             href="/faltas"
           />
@@ -705,7 +705,7 @@ function DashboardEstudante({ user }: { user: MeuPerfilResponse }) {
               <span
                 className={`flex items-center gap-1 font-medium ${
                   emAndamento
-                    ? "text-green-500 dark:text-green-400"
+                    ? "text-success-500 dark:text-success-400"
                     : "text-gray-400"
                 }`}
               >
@@ -732,8 +732,8 @@ function DashboardEstudante({ user }: { user: MeuPerfilResponse }) {
             label="Notas este ano"
             value={notasAno.length}
             sub={mediaGeral != null ? `Média: ${mediaGeral.toFixed(1)}` : undefined}
-            color="bg-emerald-50 dark:bg-emerald-500/10"
-            iconColor="text-emerald-500"
+            color="bg-brand-50 dark:bg-brand-500/10"
+            iconColor="text-brand-500 dark:text-brand-400"
             loading={loadingNotas}
             href="/notas"
           />
@@ -742,8 +742,8 @@ function DashboardEstudante({ user }: { user: MeuPerfilResponse }) {
             label="Faltas este ano"
             value={totalFaltasAno}
             sub={`${faltasAno.length} registro${faltasAno.length !== 1 ? "s" : ""}`}
-            color="bg-orange-50 dark:bg-orange-500/10"
-            iconColor="text-orange-500"
+            color="bg-brand-50 dark:bg-brand-500/10"
+            iconColor="text-brand-500 dark:text-brand-400"
             loading={loadingFaltas}
             href="/faltas"
           />
@@ -751,8 +751,8 @@ function DashboardEstudante({ user }: { user: MeuPerfilResponse }) {
             icon="mdi:check-circle-outline"
             label="Aprovações"
             value={aprovacoes}
-            color="bg-green-50 dark:bg-green-500/10"
-            iconColor="text-green-500"
+            color="bg-success-50 dark:bg-success-500/10"
+            iconColor="text-success-500 dark:text-success-400"
             loading={loadingAval}
             href="/avaliacoes/avaliacoes-finais"
           />
@@ -760,8 +760,8 @@ function DashboardEstudante({ user }: { user: MeuPerfilResponse }) {
             icon="mdi:close-circle-outline"
             label="Reprovações"
             value={reprovacoes}
-            color="bg-red-50 dark:bg-red-500/10"
-            iconColor="text-red-500"
+            color="bg-error-50 dark:bg-error-500/10"
+            iconColor="text-error-500 dark:text-error-400"
             loading={loadingAval}
             href="/avaliacoes/avaliacoes-finais"
           />
