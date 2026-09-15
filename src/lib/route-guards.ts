@@ -111,7 +111,7 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
     redirectIfUnauthorized: '/',
   },
   {
-    path: '/configuracoes/documentos-extra',
+    path: '/configuracoes/matricula',
     allowedTypes: ['academia'],
     redirectIfUnauthorized: '/',
   },
