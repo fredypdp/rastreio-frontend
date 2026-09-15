@@ -11,6 +11,7 @@ import { PageHeading, PageDescription, Section, SectionTitle, SectionDescription
 import { academiaService } from "@/lib/api";
 import { useUserCookie } from "@/hooks/useUserCookie";
 import type { AnoAcademico, DocumentoExtra, DocumentoExtraPayload } from "@/types/api";
+import { Icon } from "@iconify/react";
 
 // Mesma lista/rótulos de src/components/paineis/MateriaPainel.tsx e
 // src/components/paineis/ServicosExtrasPainel.tsx — mantenha os três em
@@ -163,6 +164,9 @@ export default function PageContent() {
       <div>
         <PageBreadcrumb pageTitle="Configurações de matrícula" />
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+          <Button className="mb-5" variant="outline" size="sm" onClick={voltarParaLista} disabled={saving} startIcon={<Icon icon="mdi:arrow-left" width={16} />}>
+            Voltar
+          </Button>
           <PageHeading>{editing ? "Editar documento" : "Novo documento"}</PageHeading>
           <PageDescription>Configure o documento adicional exigido — ou apenas oferecido — no cadastro e na matrícula.</PageDescription>
           {erro && <Alert variant="error" title="Configurações de matrícula" message={erro} />}
