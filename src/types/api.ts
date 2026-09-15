@@ -161,8 +161,8 @@ export interface DocumentoExtra {
   rotulo: string;
   tipo: 'pdf' | 'jpg';
   obrigatorio: boolean;
-  nivel: 'fundamental' | 'medio' | 'superior';
-  ano_academico: AnoAcademico;
+  /** Um documento pode se aplicar a mais de um ano acadêmico ao mesmo tempo. */
+  anos_academicos: AnoAcademico[];
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -172,7 +172,7 @@ export interface DocumentoExtraPayload {
   rotulo: string;
   tipo: 'pdf' | 'jpg';
   obrigatorio: boolean;
-  ano_academico: AnoAcademico;
+  anos_academicos: AnoAcademico[];
 }
 
 export interface CriarEstudanteRequest {

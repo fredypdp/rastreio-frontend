@@ -69,8 +69,8 @@ function nomeProvincia(codigo?: string): string {
 function labelNivelAcademia(acad: AcadInfo): string {
   if (acad.nivel === 'superior') return 'Ensino Superior';
   if (acad.nivel_escolar === 'medio') return 'Ensino Médio';
-  if (acad.nivel_escolar === 'misto') return 'Ensino Fundamental + Médio';
-  return 'Ensino Fundamental';
+  if (acad.nivel_escolar === 'misto') return 'Ensino Primário e Iº Ciclo + Médio';
+  return 'Ensino Primário e Iº Ciclo';
 }
 
 export default function EstudantesVistaEscalaAdmin({ onVerDetalhes }: {

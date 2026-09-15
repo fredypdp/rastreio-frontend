@@ -24,7 +24,7 @@ function labelPeriodo(v: string) {
 }
 
 function labelTipo(v: TipoEnsino) {
-  return v === "fundamental" ? "Ensino fundamental" : v === "medio" ? "Ensino médio" : "Ensino superior";
+  return v === "fundamental" ? "Ensino Primário e Iº Ciclo" : v === "medio" ? "Ensino Médio" : "Ensino Superior";
 }
 
 function labelFormula(formula: string): string {
@@ -386,6 +386,6 @@ function InformacaoAvaliacaoFinal({ perfil, nivel, modelosMedio }: { perfil: Inf
         </div>
       </InfoCard>
     )}
-    {perfil === "admin" && <InfoCard title="O que o administrador precisa saber"><p>Nas escolas, as regras são fixas para manter o mesmo padrão entre academias: Ensino fundamental, Ensino Médio Técnico ou Liceu, exame e recurso seguem o catálogo oficial. No ensino superior, cada academia tem liberdade para criar suas próprias regras e categorias.</p></InfoCard>}
+    {perfil === "admin" && <InfoCard title="O que o administrador precisa saber"><p>Nas escolas, as regras são fixas para manter o mesmo padrão entre academias: Ensino Primário e Iº Ciclo, Ensino Médio Técnico ou Liceu, exame e recurso seguem o catálogo oficial. No ensino superior, cada academia tem liberdade para criar suas próprias regras e categorias.</p></InfoCard>}
   </div>;
 }

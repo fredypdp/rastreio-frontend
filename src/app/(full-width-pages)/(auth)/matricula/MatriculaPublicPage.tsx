@@ -11,16 +11,15 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { Qr, money } from "@/components/paineis/financeiroShared";
 import { academiaService, consultasService, solicitacaoMatriculaService } from "@/lib/api/services";
-import type { AcademiaDetalhada, CriarSolicitacaoMatriculaRequest, Curso, FinanceiroMetodoPagamento, Genero, SolicitacaoMatriculaResumo, SolicitacaoMatriculaStatusResponse, DocumentoExtra } from "@/types/api";
+import type { AcademiaDetalhada, AnoAcademico, CriarSolicitacaoMatriculaRequest, Curso, FinanceiroMetodoPagamento, Genero, SolicitacaoMatriculaResumo, SolicitacaoMatriculaStatusResponse, DocumentoExtra } from "@/types/api";
 
-type StepId = 0 | 1 | 2 | 3 | 4;
+type StepId = 0 | 1 | 2 | 3 | 4 | 5;
 type FileKey = "bi_estudante" | "bi_encarregado" | "cedula_estudante" | "declaracao" | "certificado_6_ano_fundamental" | "certificado_9_ano_fundamental" | "certificado_ensino_medio";
 type MatriculaForm = Partial<CriarSolicitacaoMatriculaRequest> & { genero: Genero };
 
 interface AnoOpcao { label: string; value: string }
 interface DocumentoOpcao { key: FileKey; label: string; obrigatorio: boolean }
 
-const steps = ["1º Passo", "2º Passo", "3º Passo", "4º Passo", "5º Passo"];
 const emptyForm: MatriculaForm = { genero: "masculino" };
 
 function normalizarAcademia(response: unknown): AcademiaDetalhada {
@@ -32,8 +31,8 @@ function getAnoLabel(value?: string) {
   if (!value) return "-";
   const match = value.match(/^(\d+)_ano_(fundamental|medio|superior)$/);
   if (!match) return value.replace(/_/g, " ");
-  const nivel = match[2] === "medio" ? "Médio" : match[2] === "superior" ? "Superior" : "Fundamental";
-  return `${match[1]}º Ano ${nivel}`;
+  if (match[2] === "fundamental") return `${match[1]}ª Classe`;
+  return `${match[1]}º Ano ${match[2] === "medio" ? "Médio" : "Superior"}`;
 }
 
 function getAnoAcademicoAnterior(value?: string | null) {
@@ -130,7 +129,7 @@ export default function MatriculaPublicPage() {
   const academiaSuperior = academia?.nivel === "superior";
   useEffect(() => {
     if (!academia?.codigo_academia) { setDocumentosExtra([]); return; }
-    academiaService.listarDocumentosExtra({ ativos: true, codigo_academia: academia.codigo_academia }).then((res) => setDocumentosExtra(res.documentos_extra ?? [])).catch(() => setDocumentosExtra([]));
+    academiaService.listarDocumentosExtraDisponiveis(academia.codigo_academia).then((res) => setDocumentosExtra(res.documentos_extra ?? [])).catch(() => setDocumentosExtra([]));
   }, [academia?.codigo_academia]);
 
   const cursosAtivos = useMemo(() => cursos.filter((item) => item.status === "ativo"), [cursos]);
@@ -215,7 +214,15 @@ export default function MatriculaPublicPage() {
   );
 
   const declaracaoAnoAcademico = getAnoAcademicoAnterior(anoSelecionado);
-  const documentosExtraDoAno = documentosExtra.filter((doc) => doc.ano_academico === anoSelecionado);
+  const documentosExtraDoAno = documentosExtra.filter((doc) => !!anoSelecionado && doc.anos_academicos.includes(anoSelecionado as AnoAcademico));
+  const temDocumentosExtra = documentosExtraDoAno.length > 0;
+  const stepDocumentosExtraNumero = 5;
+  const stepFinalNumero = temDocumentosExtra ? 6 : 5;
+  const stepFinalId: StepId = temDocumentosExtra ? 5 : 4;
+  const steps = useMemo(
+    () => (temDocumentosExtra ? ["1º Passo", "2º Passo", "3º Passo", "4º Passo", "5º Passo", "6º Passo"] : ["1º Passo", "2º Passo", "3º Passo", "4º Passo", "5º Passo"]),
+    [temDocumentosExtra]
+  );
   const estudanteSuperiorSelecionado = isSuperior(anoSelecionado ?? undefined);
   const estudantePrimeiroFundamental = anoSelecionado === "1_ano_fundamental";
   const estudanteEscolarSelecionado = !!anoSelecionado && !estudanteSuperiorSelecionado;
@@ -359,6 +366,10 @@ export default function MatriculaPublicPage() {
       if (form.telefone && form.telefone_encarregado && onlyDigits(form.telefone) === onlyDigits(form.telefone_encarregado)) return "Os telefones do estudante e do encarregado de educação não podem ser iguais.";
       if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "Informe um email válido.";
     }
+    if (current === 4 && temDocumentosExtra) {
+      const faltandoExtra = documentosExtraDoAno.find((doc) => doc.obrigatorio && !filesExtra[doc.id]);
+      if (faltandoExtra) return `Anexe o documento: ${faltandoExtra.rotulo}.`;
+    }
     return "";
   }
 
@@ -369,7 +380,7 @@ export default function MatriculaPublicPage() {
       return;
     }
     setErro("");
-    setStep((prev) => Math.min(prev + 1, 4) as StepId);
+    setStep((prev) => Math.min(prev + 1, stepFinalId) as StepId);
   }
 
   function voltar() {
@@ -384,6 +395,14 @@ export default function MatriculaPublicPage() {
       const msg = validarStep(i as StepId);
       if (msg) {
         setStep(i as StepId);
+        setErro(msg);
+        return;
+      }
+    }
+    if (temDocumentosExtra) {
+      const msg = validarStep(4);
+      if (msg) {
+        setStep(4);
         setErro(msg);
         return;
       }
@@ -638,7 +657,7 @@ export default function MatriculaPublicPage() {
                 <div className="space-y-3 border-t border-gray-100 pt-4 dark:border-gray-800">
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Documentos para {getAnoLabel(anoSelecionado)}</p>
                   {estudantePrimeiroFundamental && (
-                    <InfoCard title="Não é necessário nenhum comprovativo anterior" lines={["Para o 1.º Ano Fundamental, não pedimos documentos de anos anteriores."]} />
+                    <InfoCard title="Não é necessário nenhum comprovativo anterior" lines={["Para a 1ª Classe, não pedimos documentos de anos anteriores."]} />
                   )}
                   {(documentosAcademicosSemAlternativas.length > 0 || mostrarAlternativaAcademica) && (
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -669,7 +688,6 @@ export default function MatriculaPublicPage() {
                       )}
                     </div>
                   )}
-                  {documentosExtraDoAno.length > 0 && <div className="mt-4 grid gap-3 border-t border-gray-100 pt-4 sm:grid-cols-2 dark:border-gray-800"><p className="sm:col-span-2 text-sm font-medium text-gray-700 dark:text-gray-300">Documentos extra</p>{documentosExtraDoAno.map((doc) => <DocumentUpload key={doc.id} id={`matricula-documento-extra-${doc.id}`} label={doc.rotulo} required={doc.obrigatorio} tipo={doc.tipo} file={filesExtra[doc.id]} onChange={(file, error) => { if (error) setErro(error); else setErro(""); setFilesExtra((prev) => ({ ...prev, [doc.id]: file })); }} />)}</div>}
                 </div>
               )}
             </section>
@@ -698,7 +716,7 @@ export default function MatriculaPublicPage() {
                       />
                     </div>
                   ) : (
-                    <InfoCard title="Documento do estudante" lines={["Para o 1.º Ano Fundamental, pedimos apenas a cédula do estudante."]} />
+                    <InfoCard title="Documento do estudante" lines={["Para a 1ª Classe, pedimos apenas a cédula do estudante."]} />
                   )}
                   <div>
                     <Label>Bilhete de Identidade do encarregado de educação</Label>
@@ -751,11 +769,39 @@ export default function MatriculaPublicPage() {
             </section>
           )}
 
-          {step === 4 && (
+          {step === 4 && temDocumentosExtra && (
             <section className="space-y-4">
-              <StepTitle title="5. Solicitar matrícula" description="Revise o resumo geral e envie a solicitação." />
+              <StepTitle
+                title={`${stepDocumentosExtraNumero}. Documentos extra`}
+                description={`Esta instituição exige documentos adicionais para ${getAnoLabel(anoSelecionado ?? undefined)}. Anexe-os para continuar.`}
+              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {documentosExtraDoAno.map((doc) => (
+                  <DocumentUpload
+                    key={doc.id}
+                    id={`matricula-documento-extra-${doc.id}`}
+                    label={doc.rotulo}
+                    required={doc.obrigatorio}
+                    tipo={doc.tipo}
+                    file={filesExtra[doc.id]}
+                    onChange={(file, error) => { if (error) setErro(error); else setErro(""); setFilesExtra((prev) => ({ ...prev, [doc.id]: file })); }}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {step === stepFinalId && (
+            <section className="space-y-4">
+              <StepTitle title={`${stepFinalNumero}. Solicitar matrícula`} description="Revise o resumo geral e envie a solicitação." />
               <div className="grid gap-2 sm:grid-cols-2">{resumo.map(([label, value]) => <div key={label} className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800"><span className="block text-xs text-gray-500">{label}</span><b className="text-gray-800 dark:text-white/90">{value}</b></div>)}</div>
-              <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-800"><h3 className="mb-2 text-sm font-semibold text-gray-800 dark:text-white/90">Documentos anexados</h3><div className="grid gap-1 text-sm sm:grid-cols-2">{documentos.map((doc) => <p key={doc.key} className="text-gray-600 dark:text-gray-300"><b>{doc.label}:</b> {files[doc.key] ? "✓ anexado" : doc.obrigatorio ? "Ainda falta" : "Não anexado"}</p>)}</div></div>
+              <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-800">
+                <h3 className="mb-2 text-sm font-semibold text-gray-800 dark:text-white/90">Documentos anexados</h3>
+                <div className="grid gap-1 text-sm sm:grid-cols-2">
+                  {documentos.map((doc) => <p key={doc.key} className="text-gray-600 dark:text-gray-300"><b>{doc.label}:</b> {files[doc.key] ? "✓ anexado" : doc.obrigatorio ? "Ainda falta" : "Não anexado"}</p>)}
+                  {documentosExtraDoAno.map((doc) => <p key={doc.id} className="text-gray-600 dark:text-gray-300"><b>{doc.rotulo}:</b> {filesExtra[doc.id] ? "✓ anexado" : doc.obrigatorio ? "Ainda falta" : "Não anexado"}</p>)}
+                </div>
+              </div>
               {sucesso && (
                 <button
                   type="button"
@@ -773,7 +819,7 @@ export default function MatriculaPublicPage() {
         {erro && <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-300">{erro}</p>}
         <div className="mt-5 flex items-center justify-between gap-3">
           <button type="button" onClick={voltar} disabled={step === 0 || loading} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 disabled:opacity-50 dark:border-gray-800 dark:text-gray-300">Voltar</button>
-          {step < 4 ? <Button onClick={avancar}>Continuar</Button> : <Button disabled={loading || !!sucesso} onClick={submit}>{loading ? "Enviando..." : sucesso ? "Solicitação enviada" : "Solicitar matrícula"}</Button>}
+          {step < stepFinalId ? <Button onClick={avancar}>Continuar</Button> : <Button disabled={loading || !!sucesso} onClick={submit}>{loading ? "Enviando..." : sucesso ? "Solicitação enviada" : "Solicitar matrícula"}</Button>}
         </div>
         </>
         )}
