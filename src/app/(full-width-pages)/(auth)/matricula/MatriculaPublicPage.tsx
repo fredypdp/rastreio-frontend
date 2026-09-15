@@ -65,7 +65,18 @@ function isFundamental(ano?: string) { return !!ano && ano.includes("fundamental
 function isMedio(ano?: string) { return !!ano && ano.includes("medio"); }
 function isSuperior(ano?: string) { return !!ano && ano.includes("superior"); }
 
+// 2.1.1: terminologia dos níveis escolares na matrícula pública — antes o
+// nível vinha cru do backend (ex.: "Escola fundamental", "Escola misto").
+function labelNivelAcademiaMatricula(academia: AcademiaDetalhada | null): string {
+  if (!academia) return "";
+  if (academia.nivel === "superior") return "Ensino Superior";
+  if (academia.nivel_escolar === "medio") return "Ensino Médio";
+  if (academia.nivel_escolar === "misto") return "Ensino Primário, Iº Ciclo, e Médio";
+  return "Ensino Primário e Iº Ciclo";
+}
+
 export default function MatriculaPublicPage() {
+  const [modo, setModo] = useState<"menu" | "form" | "consulta">("menu");
   const [step, setStep] = useState<StepId>(0);
   const [academias, setAcademias] = useState<AcademiaDetalhada[]>([]);
   const [academia, setAcademia] = useState<AcademiaDetalhada | null>(null);
@@ -73,6 +84,7 @@ export default function MatriculaPublicPage() {
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [curso, setCurso] = useState<Curso | null>(null);
   const [anoSelecionado, setAnoSelecionado] = useState<string | null>(null);
+  const [nivelMistoSelecionado, setNivelMistoSelecionado] = useState<"fundamental" | "medio" | null>(null);
   const [form, setForm] = useState<MatriculaForm>(emptyForm);
   const [files, setFiles] = useState<Partial<Record<FileKey, File>>>({});
   const [documentosExtra, setDocumentosExtra] = useState<DocumentoExtra[]>([]);
@@ -126,7 +138,7 @@ export default function MatriculaPublicPage() {
   const cursosSuperior = useMemo(() => cursosAtivos.filter((item) => item.type === "superior"), [cursosAtivos]);
   const anosFundamental = useMemo(() => academia?.anos_academicos?.filter(isFundamental) ?? [], [academia]);
 
-  const cursoObrigatorio = academiaSuperior || academiaMedia || (academiaMista && isMedio(anoSelecionado ?? undefined));
+  const cursoObrigatorio = academiaSuperior || academiaMedia || (academiaMista && nivelMistoSelecionado === "medio");
   const cursosDisponiveis = academiaSuperior ? cursosSuperior : cursosMedio;
 
   const anosDisponiveis = useMemo(() => {
@@ -134,11 +146,12 @@ export default function MatriculaPublicPage() {
     if (academiaSuperior) return toAnoOptions(curso?.anos_academicos?.filter(isSuperior));
     if (academiaMedia) return toAnoOptions(curso?.anos_academicos?.filter(isMedio));
     if (academiaMista) {
-      const anosMedio = curso?.anos_academicos?.filter(isMedio) ?? cursosMedio.flatMap((item) => item.anos_academicos.filter(isMedio));
-      return toAnoOptions([...anosFundamental, ...Array.from(new Set(anosMedio))]);
+      if (nivelMistoSelecionado === "fundamental") return toAnoOptions(anosFundamental);
+      if (nivelMistoSelecionado === "medio") return toAnoOptions(curso?.anos_academicos?.filter(isMedio));
+      return [];
     }
     return [];
-  }, [academiaFundamental, academiaMedia, academiaMista, academiaSuperior, anosFundamental, curso, cursosMedio]);
+  }, [academiaFundamental, academiaMedia, academiaMista, academiaSuperior, anosFundamental, curso, nivelMistoSelecionado]);
 
   // Documentos de identificação (BI do estudante, BI do encarregado, cédula) — exibidos no passo "Dados pessoais"
   const documentosIdentificacao = useMemo<DocumentoOpcao[]>(() => {
@@ -245,6 +258,7 @@ export default function MatriculaPublicPage() {
   function resetAcademico() {
     setCurso(null);
     setAnoSelecionado(null);
+    setNivelMistoSelecionado(null);
     setFiles({});
     setFilesExtra({});
     setForm(emptyForm);
@@ -296,9 +310,19 @@ export default function MatriculaPublicPage() {
     setForm((prev) => ({ ...prev, ano_escolar_medio: undefined, ano_superior: undefined, curso_medio_id: undefined, curso_superior_id: undefined }));
   }
 
+  function handleNivelMistoChange(value: "fundamental" | "medio") {
+    setNivelMistoSelecionado(value);
+    setCurso(null);
+    setAnoSelecionado(null);
+    setFiles({});
+    setFilesExtra({});
+    setForm((prev) => ({ ...prev, ano_escolar_fundamental: undefined, ano_escolar_medio: undefined, curso_medio_id: undefined }));
+  }
+
   function validarStep(current = step) {
     if (current === 0 && !academia) return "Selecione uma instituição pelo código ou pela lista.";
     if (current === 1) {
+      if (academiaMista && !nivelMistoSelecionado) return "Selecione se a matrícula é para o Ensino Primário/Iº Ciclo ou para o Ensino Médio.";
       if (cursoObrigatorio && !curso) return "Selecione o curso para continuar.";
       if (!anoSelecionado) return "Selecione o ano acadêmico.";
       if (cursoObrigatorio && curso && !curso.anos_academicos.includes(anoSelecionado)) return "O curso selecionado não possui o ano acadêmico escolhido.";
@@ -473,20 +497,50 @@ export default function MatriculaPublicPage() {
       <div className="w-full max-w-4xl rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Fazer matrícula</h1>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {modo === "consulta" ? "Consultar matrícula feita" : "Fazer matrícula"}
+            </h1>
           </div>
-          <Link href="/login" className="text-sm font-medium text-brand-500 hover:text-brand-600">Voltar</Link>
+          {modo === "menu" ? (
+            <Link href="/login" className="text-sm font-medium text-brand-500 hover:text-brand-600">Voltar</Link>
+          ) : (
+            <button type="button" onClick={() => setModo("menu")} className="text-sm font-medium text-brand-500 hover:text-brand-600">Voltar</button>
+          )}
         </div>
 
-        <section className="mb-6 rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-900 dark:bg-brand-900/20">
-          <h2 className="font-semibold text-brand-700 dark:text-brand-200">Acompanhar solicitação e pagar matrícula</h2>
-          <p className="mt-1 text-sm text-brand-700/90 dark:text-brand-300">Se já enviou a matrícula, informe o código recebido ou busque por telefone, email ou BI para consultar o estado e pagar a taxa quando ela existir.</p>
-          <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]"><Input placeholder="Código da solicitação" defaultValue={busca.codigo} onChange={(e)=>setBusca((prev)=>({...prev,codigo:e.target.value}))}/><Button onClick={()=>consultarSolicitacao()} disabled={loadingStatus}>Consultar status</Button></div>
-          <div className="mt-3 grid gap-3 md:grid-cols-4"><Input placeholder="Telefone" defaultValue={busca.telefone} onChange={(e)=>setBusca((prev)=>({...prev,telefone:e.target.value}))}/><Input placeholder="Email" defaultValue={busca.email} onChange={(e)=>setBusca((prev)=>({...prev,email:e.target.value}))}/><Input placeholder="BI" defaultValue={busca.bi} onChange={(e)=>setBusca((prev)=>({...prev,bi:e.target.value}))}/><Button variant="outline" onClick={buscarSolicitacoes} disabled={loadingStatus}>Buscar solicitações</Button></div>
-          {solicitacoes.length > 0 && <div className="mt-3 space-y-2">{solicitacoes.map((item)=><button key={item.codigo_solicitacao} type="button" onClick={()=>{setSolicitacao(item); void consultarSolicitacao(item.codigo_solicitacao);}} className="block w-full rounded-lg border bg-white p-3 text-left text-sm hover:border-brand-300 dark:border-gray-700 dark:bg-gray-900"><b>{item.codigo_solicitacao}</b> · {item.nome_estudante} · {item.status}</button>)}</div>}
-          {statusSolicitacao && solicitacao && <div className="mt-4 rounded-lg bg-white p-4 text-sm dark:bg-gray-900"><p><b>Solicitação:</b> {solicitacao.codigo_solicitacao}</p><p><b>Estado:</b> {statusSolicitacao.status}</p><p><b>Instituição:</b> {statusSolicitacao.codigo_academia}</p>{statusSolicitacao.valor_matricula != null && <p><b>Taxa de matrícula:</b> {money(statusSolicitacao.valor_matricula)}</p>}{statusSolicitacao.valor_matricula != null && statusSolicitacao.metodos_pagamento?.length ? <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_auto]"><Select key={metodoPagamento} defaultValue={metodoPagamento} options={statusSolicitacao.metodos_pagamento.map((m)=>({value:m,label:m}))} onChange={(v)=>setMetodoPagamento(v as FinanceiroMetodoPagamento)}/>{metodoPagamento === "GPO" && <Input placeholder="Telefone para GPO" defaultValue={telefonePagamento} onChange={(e)=>setTelefonePagamento(e.target.value)}/>}<Button onClick={iniciarPagamentoMatricula} disabled={loadingStatus}>Pagar taxa</Button></div> : <p className="mt-2 text-gray-500">Nenhum pagamento de matrícula está pendente para esta solicitação.</p>}{resultadoPagamento?.cobranca && <div className="mt-3 space-y-2"><p><b>Status da cobrança:</b> {resultadoPagamento.cobranca.status}</p>{metodoPagamento === "GPO" && <p>Confirme a notificação no telefone informado.</p>}{metodoPagamento === "REF" && <pre className="overflow-auto rounded bg-gray-50 p-3 text-xs dark:bg-gray-800">{JSON.stringify(resultadoPagamento.cobranca.response ?? {}, null, 2)}</pre>}{metodoPagamento === "GPO_QR" && <Qr value={resultadoPagamento.cobranca.qrCodeArr}/>}<Button size="sm" variant="outline" onClick={()=>consultarSolicitacao(solicitacao.codigo_solicitacao)}>Verificar status</Button></div>}</div>}
-        </section>
+        {modo === "menu" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setModo("form")}
+              className="flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-white p-6 text-left shadow-sm transition hover:border-brand-300 hover:bg-brand-50/50 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-800 dark:hover:bg-brand-900/10"
+            >
+              <span className="text-base font-semibold text-gray-900 dark:text-white">Fazer matrícula</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Preencha o formulário para solicitar uma nova matrícula.</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setModo("consulta")}
+              className="flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-white p-6 text-left shadow-sm transition hover:border-brand-300 hover:bg-brand-50/50 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-800 dark:hover:bg-brand-900/10"
+            >
+              <span className="text-base font-semibold text-gray-900 dark:text-white">Consultar matrícula feita</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Acompanhe o estado da sua solicitação e pague a taxa quando ela existir.</span>
+            </button>
+          </div>
+        )}
 
+        {modo === "consulta" && (
+          <section>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Informe o código recebido ou busque por telefone, email ou BI para consultar o estado da sua matrícula e pagar a taxa quando ela existir.</p>
+            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]"><Input placeholder="Código da solicitação" defaultValue={busca.codigo} onChange={(e)=>setBusca((prev)=>({...prev,codigo:e.target.value}))}/><Button onClick={()=>consultarSolicitacao()} disabled={loadingStatus}>Consultar status</Button></div>
+            <div className="mt-3 grid gap-3 md:grid-cols-4"><Input placeholder="Telefone" value={maskTelefoneAngola(busca.telefone)} onChange={(e)=>setBusca((prev)=>({...prev,telefone:onlyDigits(e.target.value).slice(0,9)}))}/><Input placeholder="Email" defaultValue={busca.email} onChange={(e)=>setBusca((prev)=>({...prev,email:e.target.value}))}/><Input placeholder="BI" defaultValue={busca.bi} onChange={(e)=>setBusca((prev)=>({...prev,bi:e.target.value}))}/><Button variant="outline" onClick={buscarSolicitacoes} disabled={loadingStatus}>Buscar solicitações</Button></div>
+            {solicitacoes.length > 0 && <div className="mt-3 space-y-2">{solicitacoes.map((item)=><button key={item.codigo_solicitacao} type="button" onClick={()=>{setSolicitacao(item); void consultarSolicitacao(item.codigo_solicitacao);}} className="block w-full rounded-lg border bg-white p-3 text-left text-sm hover:border-brand-300 dark:border-gray-700 dark:bg-gray-900"><b>{item.codigo_solicitacao}</b> · {item.nome_estudante} · {item.status}</button>)}</div>}
+            {statusSolicitacao && solicitacao && <div className="mt-4 rounded-lg bg-white p-4 text-sm dark:bg-gray-900"><p><b>Solicitação:</b> {solicitacao.codigo_solicitacao}</p><p><b>Estado:</b> {statusSolicitacao.status}</p><p><b>Instituição:</b> {statusSolicitacao.codigo_academia}</p>{statusSolicitacao.valor_matricula != null && <p><b>Taxa de matrícula:</b> {money(statusSolicitacao.valor_matricula)}</p>}{statusSolicitacao.valor_matricula != null && statusSolicitacao.metodos_pagamento?.length ? <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_auto]"><Select key={metodoPagamento} defaultValue={metodoPagamento} options={statusSolicitacao.metodos_pagamento.map((m)=>({value:m,label:m}))} onChange={(v)=>setMetodoPagamento(v as FinanceiroMetodoPagamento)}/>{metodoPagamento === "GPO" && <Input placeholder="Telefone para GPO" value={maskTelefoneAngola(telefonePagamento)} onChange={(e)=>setTelefonePagamento(onlyDigits(e.target.value).slice(0,9))}/>}<Button onClick={iniciarPagamentoMatricula} disabled={loadingStatus}>Pagar taxa</Button></div> : <p className="mt-2 text-gray-500">Nenhum pagamento de matrícula está pendente para esta solicitação.</p>}{resultadoPagamento?.cobranca && <div className="mt-3 space-y-2"><p><b>Status da cobrança:</b> {resultadoPagamento.cobranca.status}</p>{metodoPagamento === "GPO" && <p>Confirme a notificação no telefone informado.</p>}{metodoPagamento === "REF" && <pre className="overflow-auto rounded bg-gray-50 p-3 text-xs dark:bg-gray-800">{JSON.stringify(resultadoPagamento.cobranca.response ?? {}, null, 2)}</pre>}{metodoPagamento === "GPO_QR" && <Qr value={resultadoPagamento.cobranca.qrCodeArr}/>}<Button size="sm" variant="outline" onClick={()=>consultarSolicitacao(solicitacao.codigo_solicitacao)}>Verificar status</Button></div>}</div>}
+          </section>
+        )}
+
+        {modo === "form" && (
+        <>
         <div className="mb-5 flex flex-wrap gap-2">
           {steps.map((item, index) => (
             <button
@@ -517,7 +571,7 @@ export default function MatriculaPublicPage() {
                   {loadingAcademia ? "Buscando..." : "Buscar código"}
                 </button>
               </div>
-              {academia && <InfoCard title={academia.nome} lines={[academia.codigo_academia, `${academia.endereco} — ${academia.provincia}`, academiaSuperior ? "Ensino superior" : `Escola ${academia.nivel_escolar ?? ""}`]} />}
+              {academia && <InfoCard title={academia.nome} lines={[academia.codigo_academia, `${academia.endereco} — ${academia.provincia}`, labelNivelAcademiaMatricula(academia)]} />}
             </section>
           )}
 
@@ -534,8 +588,29 @@ export default function MatriculaPublicPage() {
                 )}
                 {academiaMista && (
                   <div className="sm:col-span-2">
-                    <Label>Curso médio (se for matrícula no médio)</Label>
-                    <SearchableSelect value={curso?.id ?? ""} options={cursosMedio.map((item) => ({ value: item.id, label: item.nome }))} onChange={(value) => handleCursoChange(cursosMedio.find((item) => item.id === value) ?? null)} searchable placeholder="Selecione somente se o ano for do médio" />
+                    <Label>Nível pretendido *</Label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleNivelMistoChange("fundamental")}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${nivelMistoSelecionado === "fundamental" ? "border-brand-500 bg-brand-500 text-white" : "border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300"}`}
+                      >
+                        Ensino Primário ou Iº Ciclo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleNivelMistoChange("medio")}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${nivelMistoSelecionado === "medio" ? "border-brand-500 bg-brand-500 text-white" : "border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300"}`}
+                      >
+                        Ensino Médio
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {academiaMista && nivelMistoSelecionado === "medio" && (
+                  <div className="sm:col-span-2">
+                    <Label>Curso *</Label>
+                    <SearchableSelect value={curso?.id ?? ""} options={cursosMedio.map((item) => ({ value: item.id, label: item.nome }))} onChange={(value) => handleCursoChange(cursosMedio.find((item) => item.id === value) ?? null)} searchable placeholder="Selecione o curso" />
                   </div>
                 )}
                 <div className="sm:col-span-2">
@@ -545,8 +620,16 @@ export default function MatriculaPublicPage() {
                     options={anosDisponiveis}
                     onChange={(value) => handleAnoChange(value)}
                     searchable
-                    placeholder={(academiaSuperior || academiaMedia) && !curso ? "Selecione o curso primeiro" : "Selecione o ano acadêmico"}
-                    disabled={(academiaSuperior || academiaMedia) && !curso}
+                    placeholder={
+                      academiaMista && !nivelMistoSelecionado ? "Selecione o nível pretendido primeiro" :
+                      (academiaSuperior || academiaMedia || (academiaMista && nivelMistoSelecionado === "medio")) && !curso ? "Selecione o curso primeiro" :
+                      "Selecione o ano acadêmico"
+                    }
+                    disabled={
+                      ((academiaSuperior || academiaMedia) && !curso) ||
+                      (academiaMista && !nivelMistoSelecionado) ||
+                      (academiaMista && nivelMistoSelecionado === "medio" && !curso)
+                    }
                   />
                 </div>
               </div>
@@ -692,6 +775,8 @@ export default function MatriculaPublicPage() {
           <button type="button" onClick={voltar} disabled={step === 0 || loading} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 disabled:opacity-50 dark:border-gray-800 dark:text-gray-300">Voltar</button>
           {step < 4 ? <Button onClick={avancar}>Continuar</Button> : <Button disabled={loading || !!sucesso} onClick={submit}>{loading ? "Enviando..." : sucesso ? "Solicitação enviada" : "Solicitar matrícula"}</Button>}
         </div>
+        </>
+        )}
       </div>
     </div>
   );
