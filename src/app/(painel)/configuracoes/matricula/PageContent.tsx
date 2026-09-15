@@ -237,8 +237,8 @@ export default function PageContent() {
             </Section>
           </div>
 
-          <div className="mt-6 flex justify-end gap-3">
-            <Button variant="outline" onClick={voltarParaLista}>Cancelar</Button>
+          <div className="mt-6 flex justify-start gap-3">
+            <Button variant="outline" onClick={voltarParaLista} disabled={saving}>Voltar</Button>
             <Button onClick={salvar} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
           </div>
         </div>
