@@ -161,11 +161,11 @@ export default function PageContent() {
   if (view === "form") {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Documentos extra" />
+        <PageBreadcrumb pageTitle="Configurações de matrícula" />
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
           <PageHeading>{editing ? "Editar documento" : "Novo documento"}</PageHeading>
           <PageDescription>Configure o documento adicional exigido — ou apenas oferecido — no cadastro e na matrícula.</PageDescription>
-          {erro && <Alert variant="error" title="Documentos extra" message={erro} />}
+          {erro && <Alert variant="error" title="Configurações de matrícula" message={erro} />}
 
           <div className="mt-5 max-w-2xl space-y-5">
             <Section>
@@ -248,16 +248,16 @@ export default function PageContent() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Documentos extra" />
+      <PageBreadcrumb pageTitle="Configurações de matrícula" />
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Catálogo de documentos extra</h1>
-            <p className="mt-1 text-sm text-gray-500">Configure os documentos solicitados por ano acadêmico.</p>
+            <h1 className="text-xl font-semibold">Configurações de matrícula</h1>
+            <p className="mt-1 text-sm text-gray-500">Configure os documentos extra solicitados por ano acadêmico.</p>
           </div>
           <Button onClick={() => abrir()}>Adicionar documento</Button>
         </div>
-        {erro && <Alert variant="error" title="Documentos extra" message={erro} />}
+        {erro && <Alert variant="error" title="Configurações de matrícula" message={erro} />}
         {loading ? (
           <p className="py-8 text-center text-gray-500">Carregando documentos...</p>
         ) : docs.length === 0 ? (
