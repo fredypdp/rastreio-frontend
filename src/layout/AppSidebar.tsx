@@ -129,7 +129,7 @@ const navItems: NavItem[] = [
       { name: "Ano Letivo", path: "/configuracoes/ano-letivo" },
       { name: "Anos acadêmicos", path: "/configuracoes/anos-academicos" },
       { name: "Categorias de nota", path: "/configuracoes/categorias-nota" },
-      { name: "Documentos extra", path: "/configuracoes/matricula" },
+      { name: "Matrícula", path: "/configuracoes/matricula" },
       { name: "Regras de avaliação", path: "/configuracoes/regras-avaliacao-final" },
       { name: "Segurança", path: "/configuracoes/seguranca" },
     ],

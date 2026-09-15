@@ -1,4 +1,4 @@
 import type { Metadata } from "next";
 import PageContent from "./PageContent";
-export const metadata: Metadata = { title: "Documentos extra" };
+export const metadata: Metadata = { title: "Configurações de matrícula" };
 export default function DocumentosExtraPage() { return <PageContent />; }
