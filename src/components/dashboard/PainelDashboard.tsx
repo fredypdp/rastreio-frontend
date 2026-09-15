@@ -441,10 +441,10 @@ function DashboardAcademia({ user }: { user: MeuPerfilResponse }) {
   const nivelLabel = isSuperior
     ? "Superior"
     : academia.nivel_escolar === "fundamental"
-    ? "Fundamental"
+    ? "Ensino Primário e Iº Ciclo"
     : academia.nivel_escolar === "medio"
     ? "Médio"
-    : "Fundamental + Médio";
+    : "Ensino Primário e Iº Ciclo + Médio";
 
   return (
     <div className="space-y-6">

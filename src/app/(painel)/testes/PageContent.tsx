@@ -242,18 +242,18 @@ function tiposMateriaValidos(academia: AcademiaInfo): { value: "fundamental"|"me
     return [{ value: "superior", label: "Superior" }];
   }
   if (academia.nivel === "fundamental") {
-    return [{ value: "fundamental", label: "Fundamental" }];
+    return [{ value: "fundamental", label: "Ensino Primário e Iº Ciclo" }];
   }
   if (academia.nivel === "medio") {
     return [{ value: "medio", label: "Médio" }];
   }
   if (academia.nivel === "misto") {
     return [
-      { value: "fundamental", label: "Fundamental" },
+      { value: "fundamental", label: "Ensino Primário e Iº Ciclo" },
       { value: "medio", label: "Médio" },
     ];
   }
-  return [{ value: "fundamental", label: "Fundamental" }];
+  return [{ value: "fundamental", label: "Ensino Primário e Iº Ciclo" }];
 }
 
 function tiposCursoValidos(academia: AcademiaInfo): { value: "medio"|"superior"; label: string }[] {
@@ -1109,7 +1109,7 @@ export default function PageContent() {
       return;
     }
     if (modoAcademia === "misto" && !focoMisto) {
-      addLog("Escola mista: use os botões separados para criar estudantes do Fundamental ou do Médio sem misturar os níveis.", "warn");
+      addLog("Escola mista: use os botões separados para criar estudantes do Ensino Primário e Iº Ciclo ou do Médio sem misturar os níveis.", "warn");
       return;
     }
 
@@ -1978,7 +1978,7 @@ export default function PageContent() {
       ? { titulo: "Academia Escola — Médio", icon: "🧪", cor: "#b45309", descricao: "Cursos médios obrigatórios, trimestres escolares e categorias fixas conforme o ano acadêmico." }
       : academia?.nivel === "misto"
         ? { titulo: "Academia Escola — Misto", icon: "🧩", cor: "#0f766e", descricao: "Combina fundamental e médio com distribuição percentual e vínculos separados por nível/curso." }
-        : { titulo: "Academia Escola — Fundamental", icon: "📘", cor: "#2563eb", descricao: "Anos fundamentais próprios da academia, sem cursos, com notas escolares fixas." };
+        : { titulo: "Academia Escola — Ensino Primário e Iº Ciclo", icon: "📘", cor: "#2563eb", descricao: "Anos fundamentais próprios da academia, sem cursos, com notas escolares fixas." };
 
   // ─── Render helpers ────────────────────────────────────────────────────────────
 
@@ -2285,7 +2285,7 @@ export default function PageContent() {
                         <option value="random">Aleatório</option>
                         {(academia.nivel === "fundamental" || academia.nivel === "misto") &&
                           (academia.anos_academicos || []).filter(a => a.includes("fundamental")).map(a => (
-                            <option key={a} value={a}>{a.replace(/_ano_fundamental$/, "º Fundamental")}</option>
+                            <option key={a} value={a}>{a.replace(/_ano_fundamental$/, "ª Classe")}</option>
                           ))
                         }
                         {niveisParaTurma.filter(a => !a.includes("fundamental")).map(a => (
@@ -2297,7 +2297,7 @@ export default function PageContent() {
                     </Field>
                     {academia.nivel === "misto" ? (
                       <>
-                        <Btn onClick={() => withLoading(() => gerarTurmas("fundamental"))} color="#2563eb">Gerar turmas Fundamental</Btn>
+                        <Btn onClick={() => withLoading(() => gerarTurmas("fundamental"))} color="#2563eb">Gerar turmas — Primário/Iº Ciclo</Btn>
                         <Btn onClick={() => withLoading(() => gerarTurmas("medio"))} color="#b45309" disabled={cursosParaTurma.length === 0}>Gerar turmas Médio</Btn>
                       </>
                     ) : (
@@ -2325,7 +2325,7 @@ export default function PageContent() {
                               cursor: "pointer",
                             }}
                           >
-                            {nivel.replace(/_ano_fundamental$/, "º Fundamental").replace(/_ano_medio$/, "º Médio").replace(/_ano_superior$/, "º Superior")}
+                            {nivel.replace(/_ano_fundamental$/, "ª Classe").replace(/_ano_medio$/, "º Médio").replace(/_ano_superior$/, "º Superior")}
                           </button>
                         ))}
                       </div>
@@ -2360,14 +2360,14 @@ export default function PageContent() {
               </Row>
 
               {(modo === "fundamental" || modo === "misto") && (
-                <SubSection title="Ensino Fundamental">
+                <SubSection title="Ensino Primário e Iº Ciclo">
                   <Row>
                     <Field label="Ano escolar">
                       <Sel value={estudanteConfig.anoFundamental}
                         onChange={e => setEstudanteConfig(p => ({ ...p, anoFundamental: e.target.value }))}>
                         <option value="random">Aleatório</option>
                         {anosDispFundamental.map(a => (
-                          <option key={a} value={a}>{a.replace(/_ano_fundamental$/, "º Fundamental")}</option>
+                          <option key={a} value={a}>{a.replace(/_ano_fundamental$/, "ª Classe")}</option>
                         ))}
                       </Sel>
                     </Field>
@@ -2381,7 +2381,7 @@ export default function PageContent() {
                               onClick={() => setEstudanteConfig(p => ({ ...p, anosFundamentalSelecionados: toggleSelecionado(p.anosFundamentalSelecionados, a) }))}
                               style={{ border: "1px solid #334155", background: estudanteConfig.anosFundamentalSelecionados.includes(a) ? "#0f766e" : "#1e293b", color: "#e2e8f0", borderRadius: 999, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}
                             >
-                              {a.replace(/_ano_fundamental$/, "º Fundamental")}
+                              {a.replace(/_ano_fundamental$/, "ª Classe")}
                             </button>
                           ))}
                         </div>
@@ -2484,11 +2484,11 @@ export default function PageContent() {
               {modo === "misto" && (
                 <SubSection title="Geração separada — escola mista">
                   <p style={{ margin: "0 0 10px", fontSize: 11, color: "#94a3b8", lineHeight: 1.6 }}>
-                    Para não misturar níveis, cada clique cria apenas estudantes do Fundamental ou apenas do Médio usando as configurações acima.
+                    Para não misturar níveis, cada clique cria apenas estudantes do Ensino Primário e Iº Ciclo ou apenas do Médio usando as configurações acima.
                   </p>
                   <Row>
                     <Btn onClick={() => withLoading(() => gerarEstudantes("fundamental"))} color="#2563eb" disabled={anosDispFundamental.length === 0}>
-                      Criar {estudanteConfig.qtd} Fundamental
+                      Criar {estudanteConfig.qtd} Primário/Iº Ciclo
                     </Btn>
                     <Btn onClick={() => withLoading(() => gerarEstudantes("medio"))} color="#b45309" disabled={cursosMedioAtivos.length === 0}>
                       Criar {estudanteConfig.qtd} Médio

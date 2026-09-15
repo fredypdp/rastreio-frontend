@@ -10,7 +10,7 @@ import Input from "@/components/form/input/InputField";
 import BirthDatePicker from "@/components/form/BirthDatePicker";
 import DocumentUpload from "@/components/form/DocumentUpload";
 import SearchableSelect from "@/components/form/SearchableSelect";
-import type { Genero, Curso, Turma, DocumentoExtra } from '@/types/api';
+import type { Genero, Curso, Turma, DocumentoExtra, AnoAcademico } from '@/types/api';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -300,7 +300,7 @@ export default function CadastroSingularForm() {
     t.nivel === anoEscolarSelecionado && (cursoSelecionado?.id ? t.curso_id === cursoSelecionado.id : true)
   );
   const declaracaoAnoAcademico = getAnoAcademicoAnterior(anoEscolarSelecionado);
-  const documentosExtraDoAno = documentosExtra.filter((doc) => doc.ano_academico === anoEscolarSelecionado);
+  const documentosExtraDoAno = documentosExtra.filter((doc) => !!anoEscolarSelecionado && doc.anos_academicos.includes(anoEscolarSelecionado as AnoAcademico));
 
   const documentos: DocumentoOpcao[] = (() => {
     const anoAtual = anoEscolarSelecionado ?? undefined;

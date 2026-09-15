@@ -1627,6 +1627,11 @@ export const academiaService = {
     const query = qs.toString();
     return api.get<{ documentos_extra: DocumentoExtra[]; total: number }>(`/academia/documentos-extra${query ? `?${query}` : ''}`, { token: params?.token || tokenStorage.get() || undefined });
   },
+  // Rota pública (sem necessidade de sessão de academia) — usada pela tela
+  // pública de matrícula (/matricula) para saber, em segundo plano, se a
+  // academia escolhida tem documentos extra configurados. Mesmo padrão de
+  // `listarServicosExtrasDisponiveis` logo abaixo.
+  listarDocumentosExtraDisponiveis: (codigoAcademia: string, token?: string) => api.get<{ documentos_extra: DocumentoExtra[]; total: number }>(`/academia/documento/${encodeURIComponent(codigoAcademia)}/documentos-extra`, { token: token || tokenStorage.get() || undefined }),
   criarServicoExtra: (data: ServicoExtraPayload, token?: string) => api.post<{ message: string; data: ServicoExtra }, ServicoExtraPayload>('/academia/servicos-extras', data, { token: token || tokenStorage.get() || undefined }),
   atualizarServicoExtra: (id: string, data: ServicoExtraPayload, token?: string) => api.put<{ message: string; data: ServicoExtra }, ServicoExtraPayload>(`/academia/servicos-extras/${id}`, data, { token: token || tokenStorage.get() || undefined }),
   desativarServicoExtra: (id: string, token?: string) => api.put<{ data: ServicoExtra }>(`/academia/servicos-extras/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
