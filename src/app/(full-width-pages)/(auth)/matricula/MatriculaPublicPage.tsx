@@ -454,7 +454,8 @@ export default function MatriculaPublicPage() {
   async function buscarSolicitacoes() {
     setErro(""); setSolicitacoes([]);
     const params = { telefone: busca.telefone, email: busca.email, bilhete_identidade: busca.bi, bilhete_identidade_encarregado: busca.bi };
-    if (!params.telefone && !params.email && !params.bilhete_identidade) { setErro("Informe telefone, email ou BI para buscar solicitações."); return; }
+    const identificadoresSuficientes = Boolean(busca.bi) || (Boolean(busca.telefone) && Boolean(busca.email));
+    if (!identificadoresSuficientes) { setErro("Informe o BI, ou telefone e email juntos, para buscar solicitações."); return; }
     setLoadingStatus(true);
     try { const res = await solicitacaoMatriculaService.buscar(params); setSolicitacoes(res.solicitacoes ?? []); }
     catch (err: any) { setErro(err?.message ?? "Não foi possível buscar solicitações."); }
@@ -550,7 +551,7 @@ export default function MatriculaPublicPage() {
 
         {modo === "consulta" && (
           <section>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Informe o código recebido ou busque por telefone, email ou BI para consultar o estado da sua matrícula e pagar a taxa quando ela existir.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Informe o código recebido, ou busque pelo BI (ou por telefone e email juntos) para consultar o estado da sua matrícula e pagar a taxa quando ela existir.</p>
             <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]"><Input placeholder="Código da solicitação" defaultValue={busca.codigo} onChange={(e)=>setBusca((prev)=>({...prev,codigo:e.target.value}))}/><Button onClick={()=>consultarSolicitacao()} disabled={loadingStatus}>Consultar status</Button></div>
             <div className="mt-3 grid gap-3 md:grid-cols-4"><Input placeholder="Telefone" value={maskTelefoneAngola(busca.telefone)} onChange={(e)=>setBusca((prev)=>({...prev,telefone:onlyDigits(e.target.value).slice(0,9)}))}/><Input placeholder="Email" defaultValue={busca.email} onChange={(e)=>setBusca((prev)=>({...prev,email:e.target.value}))}/><Input placeholder="BI" defaultValue={busca.bi} onChange={(e)=>setBusca((prev)=>({...prev,bi:e.target.value}))}/><Button variant="outline" onClick={buscarSolicitacoes} disabled={loadingStatus}>Buscar solicitações</Button></div>
             {solicitacoes.length > 0 && <div className="mt-3 space-y-2">{solicitacoes.map((item)=><button key={item.codigo_solicitacao} type="button" onClick={()=>{setSolicitacao(item); void consultarSolicitacao(item.codigo_solicitacao);}} className="block w-full rounded-lg border bg-white p-3 text-left text-sm hover:border-brand-300 dark:border-gray-700 dark:bg-gray-900"><b>{item.codigo_solicitacao}</b> · {item.nome_estudante} · {item.status}</button>)}</div>}
