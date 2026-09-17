@@ -849,11 +849,26 @@ export default function PainelDashboard() {
     configuracaoStatus.completedCount < configuracaoStatus.totalCount
   );
 
+  // O cookie "user" pode ficar `loading: false` sem ainda ter os dados do
+  // sub-objeto correspondente ao `tipo` (ex.: cookie a meio caminho de ser
+  // renovado em segundo plano por PainelLayout). Só consideramos os dados
+  // essenciais prontos quando temos um `tipo` conhecido E o sub-objeto desse
+  // tipo — caso contrário nenhuma das três visões abaixo bate e a tela
+  // ficaria em branco mesmo com o skeleton já escondido.
+  const tipoReconhecido = tipo === "admin" || tipo === "academia" || tipo === "estudante";
+  const dadosDoTipoDisponiveis = !!user && (
+    (tipo === "admin" && !!user.admin) ||
+    (tipo === "academia" && !!user.academia) ||
+    (tipo === "estudante" && !!user.estudante)
+  );
+  const dadosEssenciaisProntos = !loadingUser && tipoReconhecido && dadosDoTipoDisponiveis;
+  const falhaAoIdentificarPerfil = !loadingUser && !dadosEssenciaisProntos;
+
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
       <div className="flex flex-col gap-1">
-        {loadingUser ? (
+        {!dadosEssenciaisProntos ? (
           <>
             <Skeleton className="h-8 w-56" />
             <Skeleton className="h-4 w-40" />
@@ -873,23 +888,43 @@ export default function PainelDashboard() {
       </div>
 
       {/* Conteúdo condicional por tipo */}
-      {loadingUser ? (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="p-5 rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-white/[0.03]"
+      {!dadosEssenciaisProntos ? (
+        falhaAoIdentificarPerfil ? (
+          <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white p-8 text-center dark:border-white/[0.06] dark:bg-white/[0.03]">
+            <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-white/[0.08] dark:text-gray-400">
+              <Icon icon="mdi:alert-circle-outline" width={26} />
+            </span>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Não foi possível carregar os seus dados</h2>
+            <p className="mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400">
+              Isto pode acontecer imediatamente após iniciar sessão. Recarregue a página para tentar novamente.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
-              <div className="flex items-start gap-4">
-                <Skeleton className="w-12 h-12 rounded-xl" />
-                <div className="flex-1 space-y-2 pt-1">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-7 w-16" />
+              <Icon icon="mdi:refresh" width={16} />
+              Tentar novamente
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="p-5 rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-white/[0.03]"
+              >
+                <div className="flex items-start gap-4">
+                  <Skeleton className="w-12 h-12 rounded-xl" />
+                  <div className="flex-1 space-y-2 pt-1">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-7 w-16" />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       ) : (
         <>
           {tipo === "admin" && user && <DashboardAdmin user={user} />}

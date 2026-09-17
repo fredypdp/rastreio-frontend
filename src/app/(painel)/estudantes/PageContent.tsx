@@ -1034,7 +1034,7 @@ export default function Estudantes() {
           </div>
         )}
 
-        {modoTela === 'lista' && vistaEscala && isAcademia && carregado && (
+        {modoTela === 'lista' && vistaEscala && isAcademia && carregado && !carregandoEstudantes && (
           <>
           <VistaEscala
             estudantes={estudantesEscala.length > 0 ? estudantesEscala : dataEstudantes?.estudantes ?? []}
@@ -1049,7 +1049,17 @@ export default function Estudantes() {
           </>
         )}
 
-        {modoTela === 'lista' && vistaEscala && isAcademia && !carregado && (
+        {/*
+          Skeleton exibido tanto na primeira carga (!carregado) quanto em
+          qualquer nova consulta de estudantes disparada depois (filtros,
+          "Atualizar lista", paginação etc.) — carregandoEstudantes volta a
+          true a cada chamada de carregarEstudantes, mesmo depois da
+          primeira. Sem o segundo termo, trocar de filtro na Vista em Escala
+          continuava a mostrar a lista antiga (estudantesEscala) parada até a
+          nova consulta terminar, em vez de indicar que uma consulta estava
+          em curso.
+        */}
+        {modoTela === 'lista' && vistaEscala && isAcademia && (!carregado || carregandoEstudantes) && (
           <div className="space-y-3" aria-busy="true" aria-label="Carregando estudantes">
             {[0, 1, 2].map((grupo) => (
               <div key={grupo} className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
