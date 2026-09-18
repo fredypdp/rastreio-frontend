@@ -1,0 +1,2202 @@
+diff --git a/src/app/(painel)/financas/configuracoes/mensalidade/criar/page.tsx b/src/app/(painel)/financas/configuracoes/mensalidade/criar/page.tsx
+new file mode 100644
+index 0000000..7da0ccf
+--- /dev/null
++++ b/src/app/(painel)/financas/configuracoes/mensalidade/criar/page.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next";
++import MensalidadeCriarPainel from "@/components/paineis/MensalidadeCriarPainel";
++
++export const metadata: Metadata = {
++  title: "Finanças - Definir Nova Mensalidade",
++  description: "Definir uma nova configuração de propina / mensalidade no Spuri.",
++};
++
++export default function MensalidadeCriarPage() {
++  return <MensalidadeCriarPainel />;
++}
+diff --git a/src/app/(painel)/financas/configuracoes/mensalidade/inicio-cobranca/page.tsx b/src/app/(painel)/financas/configuracoes/mensalidade/inicio-cobranca/page.tsx
+new file mode 100644
+index 0000000..073323a
+--- /dev/null
++++ b/src/app/(painel)/financas/configuracoes/mensalidade/inicio-cobranca/page.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next";
++import InicioCobrancaPainel from "@/components/paineis/InicioCobrancaPainel";
++
++export const metadata: Metadata = {
++  title: "Finanças - Início de Cobrança",
++  description: "Ajustar o início de cobrança da mensalidade para o ano letivo atual no Spuri.",
++};
++
++export default function InicioCobrancaPage() {
++  return <InicioCobrancaPainel />;
++}
+diff --git a/src/app/(painel)/financas/configuracoes/mensalidade/page.tsx b/src/app/(painel)/financas/configuracoes/mensalidade/page.tsx
+new file mode 100644
+index 0000000..c3c3232
+--- /dev/null
++++ b/src/app/(painel)/financas/configuracoes/mensalidade/page.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next";
++import MensalidadeListaPainel from "@/components/paineis/MensalidadeListaPainel";
++
++export const metadata: Metadata = {
++  title: "Finanças - Propina / Mensalidade",
++  description: "Configurações de propina e mensalidade da academia no Spuri.",
++};
++
++export default function MensalidadePage() {
++  return <MensalidadeListaPainel />;
++}
+diff --git a/src/app/(painel)/financas/configuracoes/page.tsx b/src/app/(painel)/financas/configuracoes/page.tsx
+index d9ea578..d54b1a3 100644
+--- a/src/app/(painel)/financas/configuracoes/page.tsx
++++ b/src/app/(painel)/financas/configuracoes/page.tsx
+@@ -1,11 +1,11 @@
+ import type { Metadata } from "next";
+-import FinanceiroConfiguracoesPainel from "@/components/paineis/FinanceiroConfiguracoesPainel";
++import FinanceiroConfiguracoesRootPainel from "@/components/paineis/FinanceiroConfiguracoesRootPainel";
+ 
+ export const metadata: Metadata = {
+   title: "Finanças - Configurações",
+-  description: "Configure propinas, matrículas, regras de cobrança e obrigações financeiras da academia no Spuri.",
++  description: "Configure propina, mensalidade e taxa de matrícula da academia no Spuri.",
+ };
+ 
+ export default function FinanceiroConfiguracoesPage() {
+-  return <FinanceiroConfiguracoesPainel />;
++  return <FinanceiroConfiguracoesRootPainel />;
+ }
+diff --git a/src/app/(painel)/financas/configuracoes/taxa-matricula/criar/page.tsx b/src/app/(painel)/financas/configuracoes/taxa-matricula/criar/page.tsx
+new file mode 100644
+index 0000000..81a6aac
+--- /dev/null
++++ b/src/app/(painel)/financas/configuracoes/taxa-matricula/criar/page.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next";
++import TaxaMatriculaCriarPainel from "@/components/paineis/TaxaMatriculaCriarPainel";
++
++export const metadata: Metadata = {
++  title: "Finanças - Definir Nova Taxa",
++  description: "Definir uma nova configuração de taxa de matrícula no Spuri.",
++};
++
++export default function TaxaMatriculaCriarPage() {
++  return <TaxaMatriculaCriarPainel />;
++}
+diff --git a/src/app/(painel)/financas/configuracoes/taxa-matricula/page.tsx b/src/app/(painel)/financas/configuracoes/taxa-matricula/page.tsx
+new file mode 100644
+index 0000000..7a117dc
+--- /dev/null
++++ b/src/app/(painel)/financas/configuracoes/taxa-matricula/page.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next";
++import TaxaMatriculaListaPainel from "@/components/paineis/TaxaMatriculaListaPainel";
++
++export const metadata: Metadata = {
++  title: "Finanças - Taxa de Matrícula",
++  description: "Configurações de taxa de matrícula da academia no Spuri.",
++};
++
++export default function TaxaMatriculaPage() {
++  return <TaxaMatriculaListaPainel />;
++}
+diff --git a/src/app/(painel)/financas/gestao-cobrancas/page.tsx b/src/app/(painel)/financas/gestao-cobrancas/page.tsx
+new file mode 100644
+index 0000000..4186bef
+--- /dev/null
++++ b/src/app/(painel)/financas/gestao-cobrancas/page.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next";
++import GestaoCobrancasPainel from "@/components/paineis/GestaoCobrancasPainel";
++
++export const metadata: Metadata = {
++  title: "Finanças - Gestão de Cobranças",
++  description: "Anular ou reativar obrigações financeiras pontuais de estudantes no Spuri.",
++};
++
++export default function GestaoCobrancasPage() {
++  return <GestaoCobrancasPainel />;
++}
+diff --git a/src/components/form/input/InputField.tsx b/src/components/form/input/InputField.tsx
+index 1ee2d2e..6eafaae 100644
+--- a/src/components/form/input/InputField.tsx
++++ b/src/components/form/input/InputField.tsx
+@@ -74,10 +74,10 @@ const Input: FC<InputProps> = ({
+         <p
+           className={`mt-1.5 text-xs ${
+             error
+-              ? "text-error-500"
++              ? "text-error-500 dark:text-error-400"
+               : success
+-              ? "text-success-500"
+-              : "text-gray-500"
++              ? "text-success-500 dark:text-success-400"
++              : "text-gray-500 dark:text-gray-400"
+           }`}
+         >
+           {hint}
+diff --git a/src/components/form/input/Radio.tsx b/src/components/form/input/Radio.tsx
+index 8c2ae50..14f2f62 100644
+--- a/src/components/form/input/Radio.tsx
++++ b/src/components/form/input/Radio.tsx
+@@ -5,7 +5,7 @@ interface RadioProps {
+   name: string; // Radio group name
+   value: string; // Value of the radio button
+   checked: boolean; // Whether the radio button is checked
+-  label: string; // Label for the radio button
++  label: React.ReactNode; // Label for the radio button — string ou um nó rico (ex.: resumo curto em negrito + texto explicativo abaixo)
+   onChange: (value: string) => void; // Handler for value change
+   className?: string; // Optional additional classes
+   disabled?: boolean; // Optional disabled state for the radio button
+@@ -24,7 +24,7 @@ const Radio: React.FC<RadioProps> = ({
+   return (
+     <label
+       htmlFor={id}
+-      className={`relative flex cursor-pointer  select-none items-center gap-3 text-sm font-medium ${
++      className={`relative flex cursor-pointer  select-none items-start gap-3 text-sm font-medium ${
+         disabled
+           ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+           : "text-gray-700 dark:text-gray-400"
+@@ -41,7 +41,7 @@ const Radio: React.FC<RadioProps> = ({
+         disabled={disabled} // Disable input
+       />
+       <span
+-        className={`flex h-5 w-5 items-center justify-center rounded-full border-[1.25px] ${
++        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[1.25px] ${
+           checked
+             ? "border-brand-500 bg-brand-500"
+             : "bg-transparent border-gray-300 dark:border-gray-700"
+diff --git a/src/components/form/input/TextArea.tsx b/src/components/form/input/TextArea.tsx
+index 6134419..1c80730 100644
+--- a/src/components/form/input/TextArea.tsx
++++ b/src/components/form/input/TextArea.tsx
+@@ -50,7 +50,7 @@ const TextArea: React.FC<TextareaProps> = ({
+       {hint && (
+         <p
+           className={`mt-2 text-sm ${
+-            error ? "text-error-500" : "text-gray-500 dark:text-gray-400"
++            error ? "text-error-500 dark:text-error-400" : "text-gray-500 dark:text-gray-400"
+           }`}
+         >
+           {hint}
+diff --git a/src/components/paineis/FinanceiroConfiguracoesPainel.tsx b/src/components/paineis/FinanceiroConfiguracoesPainel.tsx
+deleted file mode 100644
+index ca663d5..0000000
+--- a/src/components/paineis/FinanceiroConfiguracoesPainel.tsx
++++ /dev/null
+@@ -1,693 +0,0 @@
+-"use client";
+-
+-import { useEffect, useMemo, useState } from "react";
+-import Link from "next/link";
+-import { academiaService, ApiError, financeiroService, useApi } from "@/lib/api";
+-import { formatApiError } from "@/lib/api/client";
+-import { useUserType } from "@/hooks/useRoutePermission";
+-import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
+-import Alert from "@/components/ui/alert/Alert";
+-import Button from "@/components/ui/button/Button";
+-import Icon from "@/components/ui/Icon";
+-import Input from "@/components/form/input/InputField";
+-import Label from "@/components/form/Label";
+-import SearchableSelect from "@/components/form/SearchableSelect";
+-import Checkbox from "@/components/form/input/Checkbox";
+-import Radio from "@/components/form/input/Radio";
+-import AnularReativarObrigacoesForm from "@/components/paineis/AnularReativarObrigacoesForm";
+-import { LoadingState, METODO_PAGAMENTO_LABEL, NIVEL_LABEL, SubtelaPanel, SubtelasMenu, formatAnoLetivo, money, niveisDaAcademia, ConfirmDialog } from "@/components/paineis/financeiroShared";
+-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+-import type { Curso, FinanceiroMetodoPagamento, FinanceiroModoVigencia, FinanceiroNivel, MatriculaConfiguracaoInput, MatriculaConfiguracaoView, MensalidadeConfiguracaoInput, MensalidadeConfiguracaoView } from "@/types/api";
+-
+-const METODOS: FinanceiroMetodoPagamento[] = ["GPO", "REF", "GPO_QR"];
+-const MES_FIM_OPCOES = [
+-  { value: "6", label: "Junho" },
+-  { value: "7", label: "Julho" },
+-];
+-/** Nomes reais dos meses (pt-AO) — corrige o bug de exibir "Mês 1", "Mês 2"... */
+-const MES_NOME_OPCOES = Array.from({ length: 12 }, (_, i) => ({
+-  value: String(i + 1),
+-  label: new Intl.DateTimeFormat("pt-AO", { month: "long" }).format(new Date(2026, i, 1)),
+-}));
+-
+-function date(value: string) { const d = new Date(value); return Number.isNaN(d.getTime()) ? value : new Intl.DateTimeFormat("pt-AO", { dateStyle: "short", timeStyle: "short" }).format(d); }
+-
+-/** "6_ano_fundamental" → "6ª Classe"; "2_ano_medio" → "2.º Ano (Médio)". Mesmo padrão usado nas telas de matrícula/turmas. */
+-function labelAnoAcademico(codigo: string): string {
+-  const m = /^(\d+)_ano_(fundamental|medio|superior)$/.exec(codigo);
+-  if (!m) return codigo;
+-  const [, numero, nivel] = m;
+-  if (nivel === "fundamental") return `${numero}ª Classe`;
+-  if (nivel === "medio") return `${numero}.º Ano (Médio)`;
+-  return `${numero}.º Ano (Superior)`;
+-}
+-
+-function RegrasDeFuncionamento() {
+-  return (
+-    <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+-      <li>Cada configuração enviada cria uma <b>nova versão vigente a partir de agora</b> — não edita nem apaga versões passadas. Meses e matrículas já vencidos continuam usando o valor que estava vigente na época em que venceram.</li>
+-      <li>A configuração é específica por <b>nível de ensino</b> ({NIVEL_LABEL.fundamental}, {NIVEL_LABEL.medio} ou {NIVEL_LABEL.superior}) e, dentro dele, por <b>ano/classe</b> ({NIVEL_LABEL.fundamental}) ou por <b>curso e ano</b> ({NIVEL_LABEL.medio}/{NIVEL_LABEL.superior}) — por isso pode (e normalmente deve) haver várias configurações vigentes ao mesmo tempo, uma por combinação.</li>
+-      <li>Na Matrícula: se <b>nenhuma</b> configuração existir para a combinação nível/ano/curso de uma solicitação, a matrícula daquele candidato é <b>gratuita</b> e a academia aprova direto, sem cobrança.</li>
+-      <li>Pagamentos só podem ser feitos pelos métodos habilitados aqui: <b>{METODO_PAGAMENTO_LABEL.GPO}</b>, <b>{METODO_PAGAMENTO_LABEL.REF}</b> e <b>{METODO_PAGAMENTO_LABEL.GPO_QR}</b> (exibido para o pagador escanear no momento em que ele escolhe pagar).</li>
+-      <li>É <b>obrigatório configurar as credenciais AppyPay antes</b> — sem isso, nenhuma cobrança pode ser criada mesmo com o valor já configurado aqui. <Link href="/financas/credenciais" className="font-medium underline">Configurar credenciais</Link>.</li>
+-    </ul>
+-  );
+-}
+-
+-type NivelFormState = {
+-  nivel: FinanceiroNivel;
+-  ano_academico: string;
+-  curso_id: string;
+-  valor: string;
+-  metodos_pagamento: FinanceiroMetodoPagamento[];
+-  modo_vigencia: "" | FinanceiroModoVigencia;
+-};
+-
+-type FormFieldErrors = Partial<Record<"ano_academico" | "curso_id" | "valor" | "modo_vigencia", string>>;
+-
+-type Tela = "menu" | "mensalidade" | "matricula" | "inicio-cobranca" | "anular-reativar" | "regras";
+-
+-/**
+- * Painel de configurações financeiras, dividido em subtelas: cada
+- * configuração — propina, matrícula, início de cobrança fora do padrão,
+- * anular/reativar obrigações — é a sua própria subtela, aberta a partir de
+- * um menu com no máximo 2 colunas (2 cartões por linha; 1 por linha em
+- * telas pequenas). As configurações já salvas de cada tipo aparecem
+- * dentro da própria subtela daquele tipo (não existe mais uma tela de
+- * "Histórico de versões" separada).
+- *
+- * Visão de admin (FPP): configuração de propina/matrícula é uma
+- * responsabilidade exclusiva de cada academia — não existe hoje nenhuma
+- * configuração financeira que pertença ao administrador. Por isso o admin
+- * não vê o menu de subtelas: só o aviso "indisponível no momento".
+- */
+-export default function FinanceiroConfiguracoesPainel() {
+-  const { user, isAdmin, isAcademia, loading } = useUserType();
+-  const isFpp = isAdmin && user?.admin?.role === "fpp";
+-  const codigoAcademia = user?.academia?.codigo_academia ?? "";
+-  const anosAcademicosAcademia = useMemo(() => user?.academia?.anos_academicos ?? [], [user?.academia?.anos_academicos]);
+-  /** Níveis que a academia realmente oferece — nunca uma lista fixa fundamental/médio/superior. */
+-  const niveisDisponiveis = useMemo(() => niveisDaAcademia(user?.academia), [user?.academia]);
+-
+-  const [tela, setTela] = useState<Tela>("menu");
+-  const [alert, setAlert] = useState<{ variant: "success" | "error" | "warning" | "info"; message: string } | null>(null);
+-  const [mensalidadeForm, setMensalidadeForm] = useState<NivelFormState>({ nivel: niveisDisponiveis[0] ?? "fundamental", ano_academico: "", curso_id: "", valor: "", metodos_pagamento: ["GPO"], modo_vigencia: "" });
+-  const [mensalidadeMesFim, setMensalidadeMesFim] = useState("6");
+-  const [mensalidadeErrors, setMensalidadeErrors] = useState<FormFieldErrors>({});
+-  const [matriculaForm, setMatriculaForm] = useState<NivelFormState>({ nivel: niveisDisponiveis[0] ?? "fundamental", ano_academico: "", curso_id: "", valor: "", metodos_pagamento: ["GPO"], modo_vigencia: "" });
+-  const [matriculaErrors, setMatriculaErrors] = useState<FormFieldErrors>({});
+-  const [cursos, setCursos] = useState<Curso[]>([]);
+-
+-  const mensalidadesApi = useApi(financeiroService.listarConfiguracoesMensalidade);
+-  const matriculasApi = useApi(financeiroService.listarConfiguracoesMatricula);
+-  const salvarMensalidade = useApi(financeiroService.configurarMensalidade);
+-  const salvarMatricula = useApi(financeiroService.configurarMatricula);
+-  const atualizarMensalidade = useApi(financeiroService.atualizarConfiguracaoMensalidade);
+-  const atualizarMatricula = useApi(financeiroService.atualizarConfiguracaoMatricula);
+-  const removerMensalidade = useApi(financeiroService.removerConfiguracaoMensalidade);
+-  const removerMatricula = useApi(financeiroService.removerConfiguracaoMatricula);
+-  const credenciaisApi = useApi(financeiroService.listarCredenciais);
+-  const [removendoConfig, setRemovendoConfig] = useState<string | null>(null);
+-  // Configuração (mensalidade ou matrícula) selecionada para remoção —
+-  // controla a exibição do ConfirmDialog dentro de renderConfiguracoesSalvas
+-  // (ver handleRemoverMensalidade/handleRemoverMatricula, abaixo).
+-  const [configParaRemover, setConfigParaRemover] = useState<{ kind: "mensalidade" | "matricula"; config: { nivel: FinanceiroNivel; ano_academico?: string; curso_id?: string } } | null>(null);
+-
+-  useEffect(() => {
+-    if (niveisDisponiveis.length === 0) return;
+-    setMensalidadeForm((prev) => (niveisDisponiveis.includes(prev.nivel) ? prev : { ...prev, nivel: niveisDisponiveis[0], curso_id: "", ano_academico: "" }));
+-    setMatriculaForm((prev) => (niveisDisponiveis.includes(prev.nivel) ? prev : { ...prev, nivel: niveisDisponiveis[0], curso_id: "", ano_academico: "" }));
+-  }, [niveisDisponiveis]);
+-
+-  const reload = async () => {
+-    if (!codigoAcademia) return;
+-    await Promise.all([
+-      mensalidadesApi.execute({ codigo_academia: codigoAcademia }),
+-      matriculasApi.execute({ codigo_academia: codigoAcademia }),
+-    ]);
+-  };
+-
+-  useEffect(() => {
+-    if (!loading && isAcademia && codigoAcademia) void reload().catch((err) => setAlert({ variant: "error", message: formatApiError(err, "Não foi possível carregar configurações.") }));
+-    // eslint-disable-next-line react-hooks/exhaustive-deps
+-  }, [loading, isAcademia, codigoAcademia]);
+-
+-  useEffect(() => {
+-    if (!isAcademia || !codigoAcademia) { setCursos([]); return; }
+-    academiaService.listarCursos({ codigo_academia: codigoAcademia })
+-      .then((r) => setCursos((r.cursos ?? []).filter((c) => c.status === "ativo")))
+-      .catch(() => setCursos([]));
+-  }, [isAcademia, codigoAcademia]);
+-
+-  useEffect(() => {
+-    if (!isAcademia || !codigoAcademia) return;
+-    void credenciaisApi.execute({ contexto_tipo: "academia", codigo_academia: codigoAcademia });
+-    // eslint-disable-next-line react-hooks/exhaustive-deps
+-  }, [isAcademia, codigoAcademia]);
+-
+-  if (loading) return <LoadingState label="Carregando configurações..." />;
+-  if (!isAcademia && !isFpp) return <UnauthorizedAccess requiredTypes={["Admin FPP", "Academia"]} message="O módulo financeiro é exclusivo de administradores FPP e academias." />;
+-
+-  if (isFpp) {
+-    return (
+-      <section className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
+-        <div className="flex items-start gap-3">
+-          <Icon icon="mdi:cog-outline" width={24} className="text-gray-800 dark:text-white/90" />
+-          <div>
+-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Configurações financeiras</h2>
+-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+-              Propina, matrícula e as demais configurações desta página pertencem a cada academia, não ao administrador —
+-              indisponível no momento. Ainda não existe nenhuma configuração financeira própria do Spuri.
+-            </p>
+-          </div>
+-        </div>
+-      </section>
+-    );
+-  }
+-
+-  const toggleMetodo = (kind: "mensalidade" | "matricula", metodo: FinanceiroMetodoPagamento) => {
+-    const setter = kind === "mensalidade" ? setMensalidadeForm : setMatriculaForm;
+-    setter((prev) => ({ ...prev, metodos_pagamento: prev.metodos_pagamento.includes(metodo) ? prev.metodos_pagamento.filter((m) => m !== metodo) : [...prev.metodos_pagamento, metodo] }));
+-  };
+-
+-  const cursosDoNivel = (nivel: FinanceiroNivel) => cursos.filter((c) => c.type === nivel);
+-  const anosDoFormulario = (form: NivelFormState): string[] => {
+-    if (form.nivel === "fundamental") return anosAcademicosAcademia.filter((a) => a.endsWith("_ano_fundamental"));
+-    const curso = cursos.find((c) => c.id === form.curso_id);
+-    return curso?.anos_academicos ?? [];
+-  };
+-
+-  const validarValorEAno = (form: NivelFormState): FormFieldErrors => {
+-    const errors: FormFieldErrors = {};
+-    const valorNumero = Number(form.valor);
+-    if (!form.valor.trim() || !(valorNumero > 0)) errors.valor = "Informe um valor maior que zero.";
+-    if (!form.modo_vigencia) errors.modo_vigencia = "Escolha o que acontece com quem já está pendente.";
+-    if (form.nivel === "fundamental") {
+-      if (!form.ano_academico) errors.ano_academico = "Selecione o ano/classe.";
+-    } else {
+-      if (!form.curso_id) errors.curso_id = "Selecione o curso.";
+-      if (!form.ano_academico) errors.ano_academico = "Selecione o ano do curso.";
+-    }
+-    return errors;
+-  };
+-
+-  const matches = (c: { nivel: string; curso_id?: string; ano_academico?: string }, form: NivelFormState) =>
+-    c.nivel === form.nivel && (form.nivel === "fundamental" ? c.ano_academico === form.ano_academico : c.curso_id === form.curso_id && c.ano_academico === form.ano_academico);
+-
+-  const submitMensalidade = async () => {
+-    const errors = validarValorEAno(mensalidadeForm);
+-    setMensalidadeErrors(errors);
+-    if (Object.keys(errors).length > 0) return;
+-    try {
+-      if (!codigoAcademia) throw new Error("Academia não identificada.");
+-      const p: MensalidadeConfiguracaoInput = {
+-        codigo_academia: codigoAcademia,
+-        nivel: mensalidadeForm.nivel,
+-        ano_academico: mensalidadeForm.ano_academico,
+-        curso_id: mensalidadeForm.nivel === "fundamental" ? undefined : mensalidadeForm.curso_id,
+-        valor: Number(mensalidadeForm.valor),
+-        mes_fim_cobranca: Number(mensalidadeMesFim) as 6 | 7,
+-        metodos_pagamento: mensalidadeForm.metodos_pagamento,
+-        modo_vigencia: mensalidadeForm.modo_vigencia as FinanceiroModoVigencia,
+-      };
+-      const exists = (mensalidadesApi.data?.configuracoes ?? []).some((c) => matches(c, mensalidadeForm));
+-      await (exists ? atualizarMensalidade.execute(p) : salvarMensalidade.execute(p));
+-      setAlert({ variant: "success", message: "Configuração de mensalidade versionada com sucesso." });
+-      await reload();
+-    } catch (err) {
+-      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível salvar mensalidade.") });
+-    }
+-  };
+-
+-  const submitMatricula = async () => {
+-    const errors = validarValorEAno(matriculaForm);
+-    setMatriculaErrors(errors);
+-    if (Object.keys(errors).length > 0) return;
+-    try {
+-      if (!codigoAcademia) throw new Error("Academia não identificada.");
+-      const p: MatriculaConfiguracaoInput = {
+-        codigo_academia: codigoAcademia,
+-        nivel: matriculaForm.nivel,
+-        ano_academico: matriculaForm.ano_academico,
+-        curso_id: matriculaForm.nivel === "fundamental" ? undefined : matriculaForm.curso_id,
+-        valor: Number(matriculaForm.valor),
+-        metodos_pagamento: matriculaForm.metodos_pagamento,
+-        modo_vigencia: matriculaForm.modo_vigencia as FinanceiroModoVigencia,
+-      };
+-      const exists = (matriculasApi.data?.configuracoes ?? []).some((c) => matches(c, matriculaForm));
+-      const resultado = await (exists ? atualizarMatricula.execute(p) : salvarMatricula.execute(p));
+-      const resumo = resultado?.repricing_pendentes;
+-      setAlert({
+-        variant: "success",
+-        message: resumo
+-          ? `Configuração de matrícula versionada com sucesso. ${resumo.atualizadas} solicitação(ões) já aprovada(s) foram atualizadas para o novo valor${resumo.ignoradas ? `; ${resumo.ignoradas} não foram alteradas por já terem cobrança em aberto` : ""}.`
+-          : "Configuração de matrícula versionada com sucesso.",
+-      });
+-      await reload();
+-    } catch (err) {
+-      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível salvar matrícula.") });
+-    }
+-  };
+-
+-  /** Chave estável para identificar qual linha está com remoção em andamento (desabilita só o botão daquela linha). */
+-  const configKey = (kind: "mensalidade" | "matricula", c: { nivel: string; ano_academico?: string; curso_id?: string }) =>
+-    `${kind}|${c.nivel}|${c.ano_academico ?? ""}|${c.curso_id ?? ""}`;
+-
+-  const labelEscopo = (c: { ano_academico?: string; curso_id?: string }) =>
+-    c.ano_academico ? labelAnoAcademico(c.ano_academico) : (cursos.find((cu) => cu.id === c.curso_id)?.nome ?? "este escopo");
+-
+-  /**
+-   * Remove a configuração vigente de propina do escopo da linha clicada.
+-   * O backend nunca reescreve o preço de meses já cobrados antes da
+-   * remoção (event sourcing) — só deixa de haver configuração ativa daqui
+-   * para frente, até uma nova versão ser salva.
+-   */
+-  const handleRemoverMensalidade = async (c: { nivel: FinanceiroNivel; ano_academico?: string; curso_id?: string }) => {
+-    setAlert(null);
+-    setRemovendoConfig(configKey("mensalidade", c));
+-    try {
+-      await removerMensalidade.execute({ codigo_academia: codigoAcademia, nivel: c.nivel, ano_academico: c.ano_academico, curso_id: c.curso_id });
+-      setAlert({ variant: "success", message: "Configuração de mensalidade removida com sucesso." });
+-      await reload();
+-    } catch (err) {
+-      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível remover a configuração de mensalidade.") });
+-    } finally {
+-      setRemovendoConfig(null);
+-    }
+-  };
+-
+-  /** Remove a configuração vigente de taxa de matrícula do escopo da linha clicada — a matrícula volta a ser gratuita para ele. */
+-  const handleRemoverMatricula = async (c: { nivel: FinanceiroNivel; ano_academico?: string; curso_id?: string }) => {
+-    setAlert(null);
+-    setRemovendoConfig(configKey("matricula", c));
+-    try {
+-      await removerMatricula.execute({ codigo_academia: codigoAcademia, nivel: c.nivel, ano_academico: c.ano_academico, curso_id: c.curso_id });
+-      setAlert({ variant: "success", message: "Configuração de matrícula removida com sucesso." });
+-      await reload();
+-    } catch (err) {
+-      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível remover a configuração de matrícula.") });
+-    } finally {
+-      setRemovendoConfig(null);
+-    }
+-  };
+-
+-  const updateNivel = (kind: "mensalidade" | "matricula", nivel: FinanceiroNivel) => {
+-    const setter = kind === "mensalidade" ? setMensalidadeForm : setMatriculaForm;
+-    const setErrors = kind === "mensalidade" ? setMensalidadeErrors : setMatriculaErrors;
+-    setter((prev) => ({ ...prev, nivel, curso_id: "", ano_academico: "" }));
+-    setErrors({});
+-  };
+-
+-  const renderMetodos = (kind: "mensalidade" | "matricula", selected: FinanceiroMetodoPagamento[]) => (
+-    <div className="flex flex-wrap gap-4">
+-      {METODOS.map((m) => (
+-        <Checkbox key={m} id={`${kind}-metodo-${m}`} label={METODO_PAGAMENTO_LABEL[m]} checked={selected.includes(m)} onChange={() => toggleMetodo(kind, m)} />
+-      ))}
+-    </div>
+-  );
+-
+-  /** Nível só aparece como escolha quando a academia oferece mais de um (ex.: nivel_escolar="misto"). Com um único nível, ele é aplicado direto, sem select. */
+-  const renderNivelFields = (kind: "mensalidade" | "matricula", form: NivelFormState, errors: FormFieldErrors, setForm: (updater: (prev: NivelFormState) => NivelFormState) => void) => (
+-    <>
+-      {niveisDisponiveis.length > 1 ? (
+-        <>
+-          <Label>Nível</Label>
+-          <SearchableSelect
+-            value={form.nivel}
+-            options={niveisDisponiveis.map((n) => ({ value: n, label: NIVEL_LABEL[n] }))}
+-            onChange={(v) => updateNivel(kind, (v || niveisDisponiveis[0]) as FinanceiroNivel)}
+-            isSearchable={false}
+-            isClearable={false}
+-            inputId={`${kind}-nivel`}
+-            name={`${kind}-nivel`}
+-          />
+-        </>
+-      ) : (
+-        <p className="text-sm text-gray-500 dark:text-gray-400">Nível: <span className="font-medium text-gray-800 dark:text-white/90">{NIVEL_LABEL[form.nivel]}</span></p>
+-      )}
+-      {form.nivel !== "fundamental" && (
+-        <>
+-          <Label>Curso</Label>
+-          <SearchableSelect
+-            value={form.curso_id}
+-            options={cursosDoNivel(form.nivel).map((c) => ({ value: c.id, label: c.nome }))}
+-            onChange={(v) => setForm((prev) => ({ ...prev, curso_id: v, ano_academico: "" }))}
+-            placeholder={cursosDoNivel(form.nivel).length ? "Selecione um curso" : "Nenhum curso cadastrado para este nível"}
+-            isClearable
+-            inputId={`${kind}-curso`}
+-            name={`${kind}-curso`}
+-            error={errors.curso_id}
+-          />
+-        </>
+-      )}
+-      <Label>{form.nivel === "fundamental" ? "Ano / classe" : "Ano do curso"}</Label>
+-      <SearchableSelect
+-        value={form.ano_academico}
+-        options={anosDoFormulario(form).map((a) => ({ value: a, label: labelAnoAcademico(a) }))}
+-        onChange={(v) => setForm((prev) => ({ ...prev, ano_academico: v }))}
+-        placeholder={anosDoFormulario(form).length ? "Selecione o ano" : "Selecione um curso primeiro"}
+-        isDisabled={form.nivel !== "fundamental" && !form.curso_id}
+-        isClearable
+-        inputId={`${kind}-ano-academico`}
+-        name={`${kind}-ano-academico`}
+-        error={errors.ano_academico}
+-      />
+-      <Label>Valor (Kz)</Label>
+-      <Input
+-        type="number"
+-        min="0.01"
+-        step={0.01}
+-        value={form.valor}
+-        onChange={(e) => setForm((prev) => ({ ...prev, valor: e.target.value }))}
+-        error={!!errors.valor}
+-        hint={errors.valor}
+-      />
+-      <Label>O que acontece com quem já está pendente?</Label>
+-      <div className="flex flex-col gap-3">
+-        <Radio
+-          id={`${kind}-modo-vigencia-pendentes`}
+-          name={`${kind}-modo-vigencia`}
+-          value="cobrancas_pendentes"
+-          checked={form.modo_vigencia === "cobrancas_pendentes"}
+-          label={
+-            kind === "mensalidade"
+-              ? "Aplicar já a todas as mensalidades em atraso ainda não pagas (mesmo de meses anteriores)"
+-              : "Aplicar já a todas as matrículas já aprovadas que ainda não foram pagas"
+-          }
+-          onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "cobrancas_pendentes" }))}
+-        />
+-        <Radio
+-          id={`${kind}-modo-vigencia-futuro`}
+-          name={`${kind}-modo-vigencia`}
+-          value="a_partir_da_atualizacao"
+-          checked={form.modo_vigencia === "a_partir_da_atualizacao"}
+-          label="Só a partir de agora — quem já está pendente continua no valor antigo até pagar"
+-          onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "a_partir_da_atualizacao" }))}
+-        />
+-      </div>
+-      {errors.modo_vigencia && <p className="text-sm text-error-500">{errors.modo_vigencia}</p>}
+-    </>
+-  );
+-
+-  /** Configurações já salvas de um tipo, exibidas dentro da própria subtela — substitui a antiga tela separada "Histórico de versões". */
+-  const renderConfiguracoesSalvas = (linhas: (MensalidadeConfiguracaoView | MatriculaConfiguracaoView)[], comMesFim: boolean, kind: "mensalidade" | "matricula") => {
+-    if (linhas.length === 0) {
+-      return <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma configuração salva ainda.</p>;
+-    }
+-    const onRemover = kind === "mensalidade" ? handleRemoverMensalidade : handleRemoverMatricula;
+-    const alvoRemocao = configParaRemover && configParaRemover.kind === kind ? configParaRemover.config : null;
+-    return (
+-      <div className="overflow-x-auto">
+-        {alvoRemocao && (
+-          <ConfirmDialog
+-            title={kind === "mensalidade" ? "Remover configuração de propina" : "Remover taxa de matrícula"}
+-            message={
+-              kind === "mensalidade"
+-                ? `Tem certeza que deseja remover a configuração de propina de ${NIVEL_LABEL[alvoRemocao.nivel]} — ${labelEscopo(alvoRemocao)}? Meses já cobrados não são afetados; a partir de agora, novas mensalidades desse escopo ficam sem valor definido até configurar de novo.`
+-                : `Tem certeza que deseja remover a configuração de taxa de matrícula de ${NIVEL_LABEL[alvoRemocao.nivel]} — ${labelEscopo(alvoRemocao)}? A matrícula volta a ser gratuita para este escopo até configurar de novo.`
+-            }
+-            confirmLabel="Remover"
+-            onConfirm={() => onRemover(alvoRemocao)}
+-            onClose={() => setConfigParaRemover(null)}
+-          />
+-        )}
+-        <Table>
+-          <TableHeader>
+-            <TableRow>
+-              {["Nível", "Ano/Curso", "Valor", ...(comMesFim ? ["Fim"] : []), "Métodos", "Vigente em", ""].map((h) => (
+-                <TableCell key={h || "acoes"} isHeader className="px-3 py-2 text-xs uppercase text-gray-500 dark:text-gray-400">{h}</TableCell>
+-              ))}
+-            </TableRow>
+-          </TableHeader>
+-          <TableBody>
+-            {linhas.map((c, i) => {
+-              const key = configKey(kind, c);
+-              return (
+-                <TableRow key={i}>
+-                  <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{NIVEL_LABEL[c.nivel]}</TableCell>
+-                  <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{c.ano_academico ? labelAnoAcademico(c.ano_academico) : (cursos.find((cu) => cu.id === c.curso_id)?.nome ?? c.curso_id ?? "—")}</TableCell>
+-                  <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{money(c.valor)}</TableCell>
+-                  {comMesFim && (
+-                    <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">
+-                      {"mes_fim_cobranca" in c ? (c.mes_fim_cobranca === 6 ? "Junho" : c.mes_fim_cobranca === 7 ? "Julho" : c.mes_fim_cobranca) : "—"}
+-                    </TableCell>
+-                  )}
+-                  <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{c.metodos_pagamento.map((m) => METODO_PAGAMENTO_LABEL[m]).join(", ")}</TableCell>
+-                  <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{date(c.vigente_em)}</TableCell>
+-                  <TableCell className="px-3 py-2">
+-                    <Button size="sm" variant="danger" disabled={removendoConfig === key} onClick={() => setConfigParaRemover({ kind, config: c })} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
+-                      {removendoConfig === key ? "Removendo..." : "Remover"}
+-                    </Button>
+-                  </TableCell>
+-                </TableRow>
+-              );
+-            })}
+-          </TableBody>
+-        </Table>
+-      </div>
+-    );
+-  };
+-
+-  const temCredenciais = (credenciaisApi.data?.length ?? 0) > 0;
+-  const bloquearSubtelas = credenciaisApi.loading || !temCredenciais;
+-  const avisoCredenciais = bloquearSubtelas && (
+-    <div className="space-y-3">
+-      <Alert variant="warning" title="Adesão ao Gateway de Pagamento Online" message="A sua instituição precisa aderir ao Gateway de Pagamento Online." />
+-      <Link href="/financas/credenciais" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600">
+-        Siga as instruções aqui <Icon icon="mdi:arrow-right" width={16} />
+-      </Link>
+-    </div>
+-  );
+-
+-  if (tela === "menu") {
+-    return (
+-      <div className="space-y-6">
+-        {alert && <Alert variant={alert.variant} title="Finanças" message={alert.message} />}
+-        <div className="flex justify-end">
+-          <Button size="sm" variant="outline" onClick={() => setTela("regras")} startIcon={<Icon icon="mdi:information-outline" width={16} />}>
+-            Regras de funcionamento
+-          </Button>
+-        </div>
+-        <SubtelasMenu
+-          opcoes={[
+-            { id: "mensalidade", icon: "mdi:calendar-month-outline", label: "Propina / mensalidade", descricao: "Definir o valor e os métodos aceites por ano/curso.", onClick: () => setTela("mensalidade"), disabled: bloquearSubtelas },
+-            { id: "matricula", icon: "mdi:school-outline", label: "Taxa de matrícula", descricao: "Definir o valor e os métodos aceites por ano/curso.", onClick: () => setTela("matricula"), disabled: bloquearSubtelas },
+-            { id: "inicio-cobranca", icon: "mdi:calendar-start", label: "Início de cobrança fora do padrão", descricao: "Ajustar a partir de qual mês a propina passa a valer num ano letivo específico.", onClick: () => setTela("inicio-cobranca"), disabled: bloquearSubtelas },
+-            { id: "anular-reativar", icon: "mdi:receipt-text-remove-outline", label: "Anular ou reativar obrigações", descricao: "Anular ou reativar mensalidades pontuais de um estudante específico.", onClick: () => setTela("anular-reativar"), disabled: bloquearSubtelas },
+-          ]}
+-        />
+-        {avisoCredenciais}
+-      </div>
+-    );
+-  }
+-
+-  if (tela === "regras") {
+-    return (
+-      <SubtelaPanel title="Regras de funcionamento" icon="mdi:information-outline" onVoltar={() => setTela("menu")}>
+-        <RegrasDeFuncionamento />
+-      </SubtelaPanel>
+-    );
+-  }
+-
+-  if (tela === "mensalidade") {
+-    return (
+-      <SubtelaPanel title="Propina / mensalidade" icon="mdi:calendar-month-outline" onVoltar={() => setTela("menu")}>
+-        {alert && <Alert variant={alert.variant} title="Finanças" message={alert.message} />}
+-        <div className="grid gap-4">
+-          {renderNivelFields("mensalidade", mensalidadeForm, mensalidadeErrors, setMensalidadeForm)}
+-          <Label>Mês de encerramento da cobrança</Label>
+-          <SearchableSelect
+-            value={mensalidadeMesFim}
+-            options={MES_FIM_OPCOES}
+-            onChange={(v) => setMensalidadeMesFim(v || "6")}
+-            isSearchable={false}
+-            isClearable={false}
+-            inputId="mensalidade-mes-fim"
+-            name="mensalidade-mes-fim"
+-          />
+-          <Label>Métodos de pagamento aceites</Label>
+-          {renderMetodos("mensalidade", mensalidadeForm.metodos_pagamento)}
+-          <Button onClick={submitMensalidade} disabled={!mensalidadeForm.modo_vigencia || salvarMensalidade.loading || atualizarMensalidade.loading} startIcon={<Icon icon="mdi:content-save-outline" width={16} />}>
+-            Salvar nova versão
+-          </Button>
+-        </div>
+-        <div className="mt-6 border-t border-gray-100 pt-5 dark:border-white/[0.05]">
+-          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Configurações já feitas</h3>
+-          {renderConfiguracoesSalvas(mensalidadesApi.data?.configuracoes ?? [], true, "mensalidade")}
+-        </div>
+-      </SubtelaPanel>
+-    );
+-  }
+-
+-  if (tela === "matricula") {
+-    return (
+-      <SubtelaPanel title="Taxa de matrícula" icon="mdi:school-outline" onVoltar={() => setTela("menu")}>
+-        {alert && <Alert variant={alert.variant} title="Finanças" message={alert.message} />}
+-        <div className="grid gap-4">
+-          {renderNivelFields("matricula", matriculaForm, matriculaErrors, setMatriculaForm)}
+-          <Label>Métodos de pagamento aceites</Label>
+-          {renderMetodos("matricula", matriculaForm.metodos_pagamento)}
+-          <Button onClick={submitMatricula} disabled={!matriculaForm.modo_vigencia || salvarMatricula.loading || atualizarMatricula.loading} startIcon={<Icon icon="mdi:content-save-outline" width={16} />}>
+-            Salvar nova versão
+-          </Button>
+-        </div>
+-        <div className="mt-6 border-t border-gray-100 pt-5 dark:border-white/[0.05]">
+-          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Configurações já feitas</h3>
+-          {renderConfiguracoesSalvas(matriculasApi.data?.configuracoes ?? [], false, "matricula")}
+-        </div>
+-      </SubtelaPanel>
+-    );
+-  }
+-
+-  if (tela === "inicio-cobranca") {
+-    return (
+-      <SubtelaPanel title="Início de cobrança fora do padrão" icon="mdi:calendar-start" onVoltar={() => setTela("menu")}>
+-        <p className="text-sm text-gray-500 dark:text-gray-400">
+-          Use apenas se o ano letivo começou fora do padrão (ex.: turma que iniciou em março em vez de fevereiro) — isso ajusta a partir de qual mês a cobrança de propina passa a valer para esse ano letivo.
+-        </p>
+-        <div className="mt-4">
+-          <DefinirInicioCobrancaForm codigoAcademia={codigoAcademia} />
+-        </div>
+-      </SubtelaPanel>
+-    );
+-  }
+-
+-  // tela === "anular-reativar"
+-  return (
+-    <SubtelaPanel title="Anular ou reativar obrigações" icon="mdi:receipt-text-remove-outline" onVoltar={() => setTela("menu")}>
+-      <p className="text-sm text-gray-500 dark:text-gray-400">Anule ou reative mensalidades pontuais de um estudante específico (ex.: bolsa concedida, erro de lançamento).</p>
+-      <div className="mt-4">
+-        <AnularReativarObrigacoesForm codigoAcademia={codigoAcademia} onSuccess={reload} />
+-      </div>
+-    </SubtelaPanel>
+-  );
+-}
+-
+-/**
+- * Formulário de "definir início de cobrança fora do padrão". Extraído do
+- * corpo do painel para poder buscar o ano letivo real da academia (em vez
+- * de texto livre) sem misturar essa busca com o resto do estado da página.
+- */
+-function DefinirInicioCobrancaForm({ codigoAcademia }: { codigoAcademia: string }) {
+-  const [anosLetivos, setAnosLetivos] = useState<string[]>([]);
+-  const [anoLetivo, setAnoLetivo] = useState("");
+-  const [mesInicio, setMesInicio] = useState("2");
+-  const [alert, setAlert] = useState<{ variant: "success" | "error" | "info"; message: string } | null>(null);
+-  const definirInicio = useApi(financeiroService.definirInicioCobranca);
+-  const removerInicio = useApi(financeiroService.removerInicioCobranca);
+-  // Controla a exibição do ConfirmDialog antes de remover a exceção (ver
+-  // abrirConfirmacaoRemocao/removerException, abaixo).
+-  const [confirmandoRemocao, setConfirmandoRemocao] = useState(false);
+-
+-  useEffect(() => {
+-    if (!codigoAcademia) return;
+-    Promise.all([
+-      academiaService.getAnoLetivo({ codigo_academia: codigoAcademia }),
+-      academiaService.listarAnosLetivosLista({ codigo_academia: codigoAcademia }),
+-    ]).then(([atual, lista]) => {
+-      const anos = Array.from(new Set([atual?.ano_letivo, ...((lista?.anos_letivos_lista ?? []).map((a) => a.ano_letivo))].filter((a): a is string => !!a)));
+-      setAnosLetivos(anos);
+-      setAnoLetivo((prev) => prev || atual?.ano_letivo || anos[0] || "");
+-    }).catch(() => setAnosLetivos([]));
+-  }, [codigoAcademia]);
+-
+-  const submit = async () => {
+-    setAlert(null);
+-    if (!anoLetivo) { setAlert({ variant: "error", message: "Selecione o ano letivo." }); return; }
+-    try {
+-      await definirInicio.execute({ codigo_academia: codigoAcademia, ano_letivo: anoLetivo, mes_inicio: Number(mesInicio) });
+-      setAlert({ variant: "success", message: "Início de cobrança definido com sucesso." });
+-    } catch (err) {
+-      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível definir o início de cobrança.") });
+-    }
+-  };
+-
+-  /**
+-   * Valida o ano letivo selecionado e, se válido, abre o ConfirmDialog de
+-   * remoção (removerException só executa a ação em si, chamada pelo
+-   * modal).
+-   */
+-  const abrirConfirmacaoRemocao = () => {
+-    setAlert(null);
+-    if (!anoLetivo) { setAlert({ variant: "error", message: "Selecione o ano letivo." }); return; }
+-    setConfirmandoRemocao(true);
+-  };
+-
+-  /**
+-   * Remove a exceção de início de cobrança do ano letivo selecionado,
+-   * revertendo ao mês natural (setembro para Ensino Primário/Iº Ciclo e
+-   * Médio, outubro para Superior). Não há como esta tela saber de antemão
+-   * se existe uma exceção definida para o ano letivo escolhido (não existe
+-   * uma consulta dedicada para isso) — por isso o botão fica sempre
+-   * disponível, e um 404 do backend (nada para remover) é tratado como
+-   * informação neutra, não como erro.
+-   */
+-  const removerException = async () => {
+-    try {
+-      await removerInicio.execute({ codigo_academia: codigoAcademia, ano_letivo: anoLetivo });
+-      setAlert({ variant: "success", message: "Início de cobrança removido — voltou ao mês natural do ano letivo." });
+-    } catch (err) {
+-      if (err instanceof ApiError && err.status === 404) {
+-        setAlert({ variant: "info", message: "Não havia nenhuma exceção de início de cobrança definida para este ano letivo — já está no mês natural." });
+-        return;
+-      }
+-      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível remover o início de cobrança.") });
+-    }
+-  };
+-
+-  return (
+-    <div className="space-y-3">
+-      {confirmandoRemocao && (
+-        <ConfirmDialog
+-          title="Remover início de cobrança"
+-          message={`Tem certeza que deseja remover a exceção de início de cobrança de ${formatAnoLetivo(anoLetivo)}? A cobrança volta a considerar o mês natural do ano letivo.`}
+-          confirmLabel="Remover"
+-          onConfirm={removerException}
+-          onClose={() => setConfirmandoRemocao(false)}
+-        />
+-      )}
+-      {alert && <Alert variant={alert.variant} title="Início de cobrança" message={alert.message} />}
+-      <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
+-        <div>
+-          <Label>Ano letivo</Label>
+-          <SearchableSelect
+-            value={anoLetivo}
+-            options={anosLetivos.map((a) => ({ value: a, label: formatAnoLetivo(a) }))}
+-            onChange={(v) => setAnoLetivo(v)}
+-            placeholder={anosLetivos.length ? "Selecione o ano letivo" : "Nenhum ano letivo definido para esta academia"}
+-            isSearchable={false}
+-            inputId="inicio-cobranca-ano-letivo"
+-            name="inicio-cobranca-ano-letivo"
+-          />
+-        </div>
+-        <div>
+-          <Label>Mês início</Label>
+-          <SearchableSelect
+-            value={mesInicio}
+-            options={MES_NOME_OPCOES}
+-            onChange={(v) => setMesInicio(v || "2")}
+-            isSearchable={false}
+-            isClearable={false}
+-            inputId="inicio-cobranca-mes"
+-            name="inicio-cobranca-mes"
+-          />
+-        </div>
+-        <div className="self-end">
+-          <Button onClick={submit} disabled={!anoLetivo || definirInicio.loading} startIcon={<Icon icon="mdi:calendar-start" width={16} />}>
+-            Definir início de cobrança
+-          </Button>
+-        </div>
+-      </div>
+-      <div className="border-t border-gray-100 pt-4 dark:border-white/[0.05]">
+-        <p className="text-xs text-gray-500 dark:text-gray-400">
+-          Se este ano letivo não deveria mais ter um início de cobrança fora do padrão, remova a exceção — a cobrança volta a considerar o mês natural.
+-        </p>
+-        <div className="mt-2">
+-          <Button size="sm" variant="danger" onClick={abrirConfirmacaoRemocao} disabled={!anoLetivo || removerInicio.loading} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
+-            {removerInicio.loading ? "Removendo..." : "Remover início de cobrança deste ano letivo"}
+-          </Button>
+-        </div>
+-      </div>
+-    </div>
+-  );
+-}
+diff --git a/src/components/paineis/FinanceiroConfiguracoesRootPainel.tsx b/src/components/paineis/FinanceiroConfiguracoesRootPainel.tsx
+new file mode 100644
+index 0000000..6bd8e8f
+--- /dev/null
++++ b/src/components/paineis/FinanceiroConfiguracoesRootPainel.tsx
+@@ -0,0 +1,40 @@
++"use client";
++
++import Link from "next/link";
++import { SubtelasMenu } from "@/components/paineis/financeiroShared";
++import { FinanceiroAcessoGuard, ManualDeFuncionamento, useFinanceiroNivelContext } from "@/components/paineis/financeiroNivelShared";
++
++/**
++ * Página raiz de /financas/configuracoes (Tarefa 11). Só existem 2 áreas de
++ * configuração — Propina / Mensalidade e Taxa de Matrícula, cada uma agora
++ * é a sua própria página (não mais uma subtela) — e o "Início de cobrança"
++ * (que antes era um card aqui) passou a viver só dentro de Propina /
++ * Mensalidade, já que só faz sentido para mensalidade.
++ *
++ * "Anular ou reativar obrigações" saiu daqui de vez — mudou-se para a nova
++ * página /financas/gestao-cobrancas.
++ */
++export default function FinanceiroConfiguracoesRootPainel() {
++  const ctx = useFinanceiroNivelContext();
++
++  return (
++    <FinanceiroAcessoGuard ctx={ctx}>
++      <div className="space-y-6">
++        <ManualDeFuncionamento>
++          <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
++            <li>Aqui você define quanto cobrar de <b>Propina / Mensalidade</b> e de <b>Taxa de Matrícula</b>, por nível de ensino e, quando aplicável, por curso e ano.</li>
++            <li>Cada configuração vale <b>a partir do momento em que é salva</b> — o que já foi cobrado antes não muda.</li>
++            <li>Sem nenhuma configuração de matrícula, a matrícula é <b>gratuita</b> por padrão.</li>
++            <li>É preciso <b>aderir ao Gateway de Pagamento Online</b> antes de conseguir configurar qualquer valor — veja <Link href="/financas/credenciais" className="font-medium underline">Credenciais</Link>.</li>
++          </ul>
++        </ManualDeFuncionamento>
++        <SubtelasMenu
++          opcoes={[
++            { id: "mensalidade", icon: "mdi:calendar-month-outline", label: "Propina / Mensalidade", descricao: "Definir o valor e os métodos aceites por ano/curso.", href: "/financas/configuracoes/mensalidade" },
++            { id: "taxa-matricula", icon: "mdi:school-outline", label: "Taxa de Matrícula", descricao: "Definir o valor e os métodos aceites por ano/curso.", href: "/financas/configuracoes/taxa-matricula" },
++          ]}
++        />
++      </div>
++    </FinanceiroAcessoGuard>
++  );
++}
+diff --git a/src/components/paineis/FinanceiroCredenciaisPainel.tsx b/src/components/paineis/FinanceiroCredenciaisPainel.tsx
+index 8816ec2..cda9a58 100644
+--- a/src/components/paineis/FinanceiroCredenciaisPainel.tsx
++++ b/src/components/paineis/FinanceiroCredenciaisPainel.tsx
+@@ -379,7 +379,7 @@ export default function FinanceiroCredenciaisPainel() {
+           <Button variant="outline" size="sm" onClick={closeForm} disabled={saving} startIcon={<Icon icon="mdi:arrow-left" width={16} />}>Voltar</Button>
+           <div>
+             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{editing ? "Atualizar credencial" : "Configurar credenciais"}</h3>
+-            {formErrors.contexto && <p className="mt-1 text-xs text-error-500">{formErrors.contexto}</p>}
++            {formErrors.contexto && <p className="mt-1 text-xs text-error-500 dark:text-error-400">{formErrors.contexto}</p>}
+           </div>
+           {/* Erro/sucesso do envio deste formulário — visível aqui dentro, não no topo da página. */}
+           {formAlert && <Alert variant={formAlert.variant} title={formAlert.variant === "success" ? "Sucesso" : "Não foi possível salvar"} message={formAlert.message} />}
+@@ -500,7 +500,7 @@ function WebhookSecretPanel({ credencialId, podeRotacionar }: { credencialId: st
+           <Button size="sm" variant="outline" disabled={rotacionar.loading} onClick={() => setConfirmandoRotacao(true)}>Rotacionar</Button>
+         )}
+       </div>
+-      {erro && <p className="text-xs text-error-500">{erro}</p>}
++      {erro && <p className="text-xs text-error-500 dark:text-error-400">{erro}</p>}
+     </div>
+   );
+ }
+diff --git a/src/components/paineis/GestaoCobrancasPainel.tsx b/src/components/paineis/GestaoCobrancasPainel.tsx
+new file mode 100644
+index 0000000..21e7ae3
+--- /dev/null
++++ b/src/components/paineis/GestaoCobrancasPainel.tsx
+@@ -0,0 +1,54 @@
++"use client";
++
++import { useState } from "react";
++import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
++import { useUserType } from "@/hooks/useRoutePermission";
++import AnularReativarObrigacoesForm from "@/components/paineis/AnularReativarObrigacoesForm";
++import { LoadingState, SubtelaPanel, SubtelasMenu } from "@/components/paineis/financeiroShared";
++import { ManualDeFuncionamento } from "@/components/paineis/financeiroNivelShared";
++
++/**
++ * /financas/gestao-cobrancas (Tarefa 11). Página nova — "Anular ou reativar
++ * obrigações" saiu de dentro de /financas/configuracoes e passou a ser uma
++ * subtela desta página, separada das configurações de valores (propina e
++ * taxa de matrícula são "quanto cobrar"; isto aqui é "o que fazer com uma
++ * cobrança pontual já gerada").
++ */
++export default function GestaoCobrancasPainel() {
++  const { user, isAdmin, isAcademia, loading } = useUserType();
++  const isFpp = isAdmin && user?.admin?.role === "fpp";
++  const codigoAcademia = user?.academia?.codigo_academia ?? "";
++  const [subtela, setSubtela] = useState<"menu" | "anular-reativar">("menu");
++
++  if (loading) return <LoadingState label="Carregando gestão de cobranças..." />;
++  if (!isAcademia && !isFpp) return <UnauthorizedAccess requiredTypes={["Admin FPP", "Academia"]} message="A gestão de cobranças é exclusiva de administradores FPP e academias." />;
++  if (isFpp) return <UnauthorizedAccess requiredTypes={["Academia"]} message="A gestão de cobranças pertence a cada academia — indisponível para o administrador FPP." />;
++
++  if (subtela === "anular-reativar") {
++    return (
++      <SubtelaPanel title="Anular ou reativar obrigações" icon="mdi:receipt-text-remove-outline" onVoltar={() => setSubtela("menu")}>
++        <p className="text-sm text-gray-500 dark:text-gray-400">Anule ou reative mensalidades pontuais de um estudante específico (ex.: bolsa concedida, erro de lançamento).</p>
++        <div className="mt-4">
++          <AnularReativarObrigacoesForm codigoAcademia={codigoAcademia} />
++        </div>
++      </SubtelaPanel>
++    );
++  }
++
++  return (
++    <div className="space-y-6">
++      <ManualDeFuncionamento>
++        <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
++          <li>Aqui você atua sobre <b>cobranças pontuais já geradas</b> de um estudante específico — diferente das configurações de valor em Finanças &gt; Configurações, que valem para todos.</li>
++          <li><b>Anular</b> uma obrigação a torna sem efeito (ex.: bolsa concedida, erro de lançamento) — o estudante deixa de precisar pagá-la.</li>
++          <li><b>Reativar</b> volta uma obrigação anulada a valer novamente.</li>
++        </ul>
++      </ManualDeFuncionamento>
++      <SubtelasMenu
++        opcoes={[
++          { id: "anular-reativar", icon: "mdi:receipt-text-remove-outline", label: "Anular ou reativar obrigações", descricao: "Anular ou reativar mensalidades pontuais de um estudante específico.", onClick: () => setSubtela("anular-reativar") },
++        ]}
++      />
++    </div>
++  );
++}
+diff --git a/src/components/paineis/InicioCobrancaPainel.tsx b/src/components/paineis/InicioCobrancaPainel.tsx
+new file mode 100644
+index 0000000..6d1d3ff
+--- /dev/null
++++ b/src/components/paineis/InicioCobrancaPainel.tsx
+@@ -0,0 +1,171 @@
++"use client";
++
++import { useEffect, useMemo, useState } from "react";
++import Alert from "@/components/ui/alert/Alert";
++import Button from "@/components/ui/button/Button";
++import Icon from "@/components/ui/Icon";
++import Label from "@/components/form/Label";
++import SearchableSelect from "@/components/form/SearchableSelect";
++import { academiaService, ApiError, financeiroService, useApi } from "@/lib/api";
++import { formatApiError } from "@/lib/api/client";
++import { useUserType } from "@/hooks/useRoutePermission";
++import { ConfirmDialog, SubtelaPanel, formatAnoLetivo, capitalizar } from "@/components/paineis/financeiroShared";
++import { FinanceiroAcessoGuard, ManualDeFuncionamento, useFinanceiroNivelContext, MES_NOME_OPCOES } from "@/components/paineis/financeiroNivelShared";
++
++/** /financas/configuracoes/mensalidade/inicio-cobranca (Tarefa 11) — antes era a subtela de topo "Início de cobrança fora do padrão"; agora vive só dentro de Mensalidade, já que não se aplica a taxa de matrícula. */
++export default function InicioCobrancaPainel() {
++  const ctx = useFinanceiroNivelContext();
++  return (
++    <FinanceiroAcessoGuard ctx={ctx}>
++      <SubtelaPanel title="Início de cobrança" icon="mdi:calendar-start" onVoltar="/financas/configuracoes/mensalidade">
++        <ManualDeFuncionamento>
++          <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
++            <li>Use isto só se o ano letivo <b>começou fora do mês habitual</b> (ex.: turma que iniciou em março em vez de fevereiro).</li>
++            <li>A mudança vale só para o <b>ano letivo atual</b> — no próximo ano letivo, a cobrança volta ao mês habitual automaticamente, a menos que você defina uma nova exceção para ele também.</li>
++            <li>Se este ano letivo não deveria mais ter uma exceção, use &ldquo;Remover início de cobrança&rdquo; para voltar ao mês habitual.</li>
++          </ul>
++        </ManualDeFuncionamento>
++        <DefinirInicioCobrancaForm codigoAcademia={ctx.codigoAcademia} />
++      </SubtelaPanel>
++    </FinanceiroAcessoGuard>
++  );
++}
++
++/**
++ * Formulário de "definir início de cobrança fora do padrão".
++ *
++ * Tarefa 11: o ano letivo deixou de ser selecionável — a configuração
++ * sempre se aplica ao ano letivo ATUAL da academia (inferido
++ * automaticamente via academiaService.getAnoLetivo), nunca a um ano letivo
++ * passado ou futuro escolhido à mão. Em compensação, cada opção do seletor
++ * de mês agora mostra o ano civil correspondente (ex.: "Setembro de 2026",
++ * "Março de 2027"), calculado no frontend com a MESMA regra que o backend já
++ * usa para resolver isso (mesNaturalInicioAnoLetivo/posicaoNoAnoLetivo em
++ * internal/finance/mensalidade.go: setembro é o mês natural de início para
++ * academias de nível "escola", outubro para "superior"; qualquer mês a
++ * partir do natural pertence ao primeiro ano civil do ano letivo, os meses
++ * anteriores pertencem ao segundo). Isso é só uma anotação de apresentação
++ * — o valor enviado à API continua sendo só o número do mês (1–12), porque
++ * o backend já resolve sozinho a qual ano civil ele pertence a partir do
++ * ano_letivo configurado.
++ */
++function DefinirInicioCobrancaForm({ codigoAcademia }: { codigoAcademia: string }) {
++  const { user } = useUserType();
++  const [anoLetivo, setAnoLetivo] = useState("");
++  const [mesInicio, setMesInicio] = useState("2");
++  const [alert, setAlert] = useState<{ variant: "success" | "error" | "info"; message: string } | null>(null);
++  const definirInicio = useApi(financeiroService.definirInicioCobranca);
++  const removerInicio = useApi(financeiroService.removerInicioCobranca);
++  // Controla a exibição do ConfirmDialog antes de remover a exceção (ver
++  // abrirConfirmacaoRemocao/removerException, abaixo).
++  const [confirmandoRemocao, setConfirmandoRemocao] = useState(false);
++
++  useEffect(() => {
++    if (!codigoAcademia) return;
++    academiaService.getAnoLetivo({ codigo_academia: codigoAcademia })
++      .then((atual) => setAnoLetivo(atual?.ano_letivo || ""))
++      .catch(() => setAnoLetivo(""));
++  }, [codigoAcademia]);
++
++  const mesNatural = user?.academia?.nivel === "superior" ? 10 : 9;
++
++  const mesOpcoes = useMemo(() => {
++    const [primeiroAno, segundoAno] = anoLetivo.split("_");
++    return MES_NOME_OPCOES.map((opt) => {
++      const mes = Number(opt.value);
++      const anoCivil = mes >= mesNatural ? primeiroAno : segundoAno;
++      return { value: opt.value, label: anoCivil ? `${capitalizar(opt.label)} de ${anoCivil}` : capitalizar(opt.label) };
++    });
++  }, [anoLetivo, mesNatural]);
++
++  const submit = async () => {
++    setAlert(null);
++    if (!anoLetivo) { setAlert({ variant: "error", message: "Não foi possível carregar o ano letivo atual. Tente novamente em instantes." }); return; }
++    try {
++      await definirInicio.execute({ codigo_academia: codigoAcademia, ano_letivo: anoLetivo, mes_inicio: Number(mesInicio) });
++      setAlert({ variant: "success", message: "Início de cobrança definido com sucesso." });
++    } catch (err) {
++      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível definir o início de cobrança.") });
++    }
++  };
++
++  /**
++   * Valida que o ano letivo atual já foi carregado e, se sim, abre o
++   * ConfirmDialog de remoção (removerException só executa a ação em si,
++   * chamada pelo modal).
++   */
++  const abrirConfirmacaoRemocao = () => {
++    setAlert(null);
++    if (!anoLetivo) { setAlert({ variant: "error", message: "Não foi possível carregar o ano letivo atual. Tente novamente em instantes." }); return; }
++    setConfirmandoRemocao(true);
++  };
++
++  /**
++   * Remove a exceção de início de cobrança do ano letivo atual, revertendo
++   * ao mês natural (setembro para Ensino Primário/Iº Ciclo e Médio, outubro
++   * para Superior). Não há como esta tela saber de antemão se existe uma
++   * exceção definida para o ano letivo atual (não existe uma consulta
++   * dedicada para isso) — por isso o botão fica sempre disponível, e um 404
++   * do backend (nada para remover) é tratado como informação neutra, não
++   * como erro.
++   */
++  const removerException = async () => {
++    try {
++      await removerInicio.execute({ codigo_academia: codigoAcademia, ano_letivo: anoLetivo });
++      setAlert({ variant: "success", message: "Início de cobrança removido — voltou ao mês natural do ano letivo." });
++    } catch (err) {
++      if (err instanceof ApiError && err.status === 404) {
++        setAlert({ variant: "info", message: "Não havia nenhuma exceção de início de cobrança definida para este ano letivo — já está no mês natural." });
++        return;
++      }
++      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível remover o início de cobrança.") });
++    }
++  };
++
++  return (
++    <div className="space-y-3">
++      {confirmandoRemocao && (
++        <ConfirmDialog
++          title="Remover início de cobrança"
++          message={`Tem certeza que deseja remover a exceção de início de cobrança de ${formatAnoLetivo(anoLetivo)}? A cobrança volta a considerar o mês natural do ano letivo.`}
++          confirmLabel="Remover"
++          onConfirm={removerException}
++          onClose={() => setConfirmandoRemocao(false)}
++        />
++      )}
++      {alert && <Alert variant={alert.variant} title="Início de cobrança" message={alert.message} />}
++      <p className="text-xs text-gray-500 dark:text-gray-400">
++        Isto define o início de cobrança para o ano letivo atual{anoLetivo ? ` (${formatAnoLetivo(anoLetivo)})` : ""} — o ano letivo é sempre o vigente no momento, não é possível escolher outro aqui.
++      </p>
++      <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
++        <div>
++          <Label>Mês início</Label>
++          <SearchableSelect
++            value={mesInicio}
++            options={mesOpcoes}
++            onChange={(v) => setMesInicio(v || "2")}
++            isSearchable={false}
++            isClearable={false}
++            inputId="inicio-cobranca-mes"
++            name="inicio-cobranca-mes"
++          />
++        </div>
++        <div className="self-end">
++          <Button onClick={submit} disabled={!anoLetivo || definirInicio.loading} startIcon={<Icon icon="mdi:calendar-start" width={16} />}>
++            Definir início de cobrança
++          </Button>
++        </div>
++      </div>
++      <div className="border-t border-gray-100 pt-4 dark:border-white/[0.05]">
++        <p className="text-xs text-gray-500 dark:text-gray-400">
++          Se este ano letivo não deveria mais ter um início de cobrança fora do padrão, remova a exceção — a cobrança volta a considerar o mês natural.
++        </p>
++        <div className="mt-2">
++          <Button size="sm" variant="danger" onClick={abrirConfirmacaoRemocao} disabled={!anoLetivo || removerInicio.loading} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
++            {removerInicio.loading ? "Removendo..." : "Remover início de cobrança deste ano letivo"}
++          </Button>
++        </div>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/components/paineis/MensalidadeCriarPainel.tsx b/src/components/paineis/MensalidadeCriarPainel.tsx
+new file mode 100644
+index 0000000..01a9a1c
+--- /dev/null
++++ b/src/components/paineis/MensalidadeCriarPainel.tsx
+@@ -0,0 +1,102 @@
++"use client";
++
++import { useEffect, useState } from "react";
++import Link from "next/link";
++import Alert from "@/components/ui/alert/Alert";
++import Button from "@/components/ui/button/Button";
++import Icon from "@/components/ui/Icon";
++import Label from "@/components/form/Label";
++import SearchableSelect from "@/components/form/SearchableSelect";
++import { financeiroService, useApi } from "@/lib/api";
++import { formatApiError } from "@/lib/api/client";
++import { SubtelaPanel } from "@/components/paineis/financeiroShared";
++import {
++  FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, NivelCamposFields, MetodosPagamentoCheckboxes,
++  validarValorEAno, useFinanceiroNivelContext, MES_FIM_OPCOES, type NivelFormState, type FormFieldErrors,
++} from "@/components/paineis/financeiroNivelShared";
++import type { FinanceiroModoVigencia, MensalidadeConfiguracaoInput } from "@/types/api";
++
++/** /financas/configuracoes/mensalidade/criar (Tarefa 11) — antes era o formulário embutido na subtela "mensalidade"; agora é a página "Definir Nova Mensalidade". */
++export default function MensalidadeCriarPainel() {
++  const ctx = useFinanceiroNivelContext();
++  const [form, setForm] = useState<NivelFormState>({ nivel: "fundamental", ano_academico: "", curso_id: "", valor: "", metodos_pagamento: ["GPO"], modo_vigencia: "" });
++  const [mesFim, setMesFim] = useState("6");
++  const [errors, setErrors] = useState<FormFieldErrors>({});
++  const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
++  const salvar = useApi(financeiroService.configurarMensalidade);
++  const atualizar = useApi(financeiroService.atualizarConfiguracaoMensalidade);
++
++  useEffect(() => {
++    if (ctx.niveisDisponiveis.length === 0) return;
++    setForm((prev) => (ctx.niveisDisponiveis.includes(prev.nivel) ? prev : { ...prev, nivel: ctx.niveisDisponiveis[0], curso_id: "", ano_academico: "" }));
++  }, [ctx.niveisDisponiveis]);
++
++  const submit = async () => {
++    const errs = validarValorEAno(form);
++    setErrors(errs);
++    if (Object.keys(errs).length > 0) return;
++    try {
++      if (!ctx.codigoAcademia) throw new Error("Academia não identificada.");
++      const p: MensalidadeConfiguracaoInput = {
++        codigo_academia: ctx.codigoAcademia,
++        nivel: form.nivel,
++        ano_academico: form.ano_academico,
++        curso_id: form.nivel === "fundamental" ? undefined : form.curso_id,
++        valor: Number(form.valor),
++        mes_fim_cobranca: Number(mesFim) as 6 | 7,
++        metodos_pagamento: form.metodos_pagamento,
++        modo_vigencia: form.modo_vigencia as FinanceiroModoVigencia,
++      };
++      const existe = (ctx.mensalidadesApi.data?.configuracoes ?? []).some((c) =>
++        c.nivel === form.nivel && (form.nivel === "fundamental" ? c.ano_academico === form.ano_academico : c.curso_id === form.curso_id && c.ano_academico === form.ano_academico));
++      await (existe ? atualizar.execute(p) : salvar.execute(p));
++      setAlert({ variant: "success", message: "Configuração de mensalidade versionada com sucesso. Você pode configurar outro nível/curso agora, ou voltar para a lista." });
++      await ctx.reload();
++    } catch (err) {
++      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível salvar mensalidade.") });
++    }
++  };
++
++  return (
++    <FinanceiroAcessoGuard ctx={ctx}>
++      <SubtelaPanel title="Definir Nova Mensalidade" icon="mdi:calendar-month-outline" onVoltar="/financas/configuracoes/mensalidade">
++        <ManualDeFuncionamento>
++          <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
++            <li>O <b>valor</b> definido aqui passa a valer a partir de agora, para todos os estudantes do nível/ano/curso escolhido.</li>
++            <li>Escolha com atenção <b>o que acontece com quem já está pendente</b>: isso decide se cobranças de meses anteriores (ainda não pagas) também mudam para o novo valor, ou se continuam no valor antigo.</li>
++            <li>O <b>mês de encerramento da cobrança</b> define até quando a mensalidade é cobrada dentro do ano letivo — depois desse mês, a cobrança para automaticamente até o próximo ano letivo.</li>
++            <li>Só é possível salvar depois de aderir ao Gateway de Pagamento Online e escolher pelo menos um método de pagamento aceite.</li>
++          </ul>
++        </ManualDeFuncionamento>
++        {alert && <Alert variant={alert.variant} title="Finanças" message={alert.message} />}
++        {ctx.bloquear && <AvisoCredenciais />}
++        <div className="grid gap-4">
++          <NivelCamposFields kind="mensalidade" form={form} errors={errors} setForm={setForm} niveisDisponiveis={ctx.niveisDisponiveis} cursos={ctx.cursos} anosAcademicosAcademia={ctx.anosAcademicosAcademia} />
++          <Label>Mês de encerramento da cobrança</Label>
++          <SearchableSelect
++            value={mesFim}
++            options={MES_FIM_OPCOES}
++            onChange={(v) => setMesFim(v || "6")}
++            isSearchable={false}
++            isClearable={false}
++            inputId="mensalidade-mes-fim"
++            name="mensalidade-mes-fim"
++          />
++          <p className="-mt-2 text-xs text-gray-500 dark:text-gray-400">
++            Como nem todos os níveis académicos terminam as aulas no mesmo mês, é preciso definir em que mês a cobrança da mensalidade desta configuração termina — a partir desse mês, a mensalidade deixa de ser cobrada até o próximo ano letivo.
++          </p>
++          <Label>Métodos de pagamento aceites</Label>
++          <MetodosPagamentoCheckboxes kind="mensalidade" selected={form.metodos_pagamento} onToggle={(m) => setForm((prev) => ({ ...prev, metodos_pagamento: prev.metodos_pagamento.includes(m) ? prev.metodos_pagamento.filter((x) => x !== m) : [...prev.metodos_pagamento, m] }))} />
++          <div className="flex flex-wrap items-center gap-3">
++            <Button onClick={submit} disabled={ctx.bloquear || !form.modo_vigencia || salvar.loading || atualizar.loading} startIcon={<Icon icon="mdi:content-save-outline" width={16} />}>
++              Salvar nova versão
++            </Button>
++            <Link href="/financas/configuracoes/mensalidade" className="text-sm font-medium text-gray-600 underline dark:text-gray-300">
++              Voltar para a lista de mensalidades
++            </Link>
++          </div>
++        </div>
++      </SubtelaPanel>
++    </FinanceiroAcessoGuard>
++  );
++}
+diff --git a/src/components/paineis/MensalidadeListaPainel.tsx b/src/components/paineis/MensalidadeListaPainel.tsx
+new file mode 100644
+index 0000000..859e6e5
+--- /dev/null
++++ b/src/components/paineis/MensalidadeListaPainel.tsx
+@@ -0,0 +1,54 @@
++"use client";
++
++import { useState } from "react";
++import Alert from "@/components/ui/alert/Alert";
++import { SubtelasMenu } from "@/components/paineis/financeiroShared";
++import { FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, ConfiguracoesSalvasTable, useFinanceiroNivelContext } from "@/components/paineis/financeiroNivelShared";
++
++/**
++ * /financas/configuracoes/mensalidade (Tarefa 11). Antes era a subtela
++ * "mensalidade" — que misturava, numa única tela, o formulário de criação e
++ * a lista de configurações já feitas. Agora o formulário de criação vive
++ * numa página própria (/mensalidade/criar) e esta página passa a ser só a
++ * lista + os cards de navegação (Início de cobrança e Definir Nova
++ * Mensalidade).
++ */
++export default function MensalidadeListaPainel() {
++  const ctx = useFinanceiroNivelContext();
++  const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
++
++  return (
++    <FinanceiroAcessoGuard ctx={ctx}>
++      <div className="space-y-6">
++        <ManualDeFuncionamento>
++          <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
++            <li>Cada configuração enviada cria uma <b>nova versão vigente a partir de agora</b> — não edita nem apaga versões passadas. Meses já vencidos continuam usando o valor que estava vigente na época em que venceram.</li>
++            <li>A configuração é específica por <b>nível de ensino</b> e, dentro dele, por <b>ano/classe</b> (Ensino Primário) ou por <b>curso e ano</b> (Iº Ciclo, Médio ou Superior) — por isso pode (e normalmente deve) haver várias configurações vigentes ao mesmo tempo, uma por combinação.</li>
++            <li>Use <b>Início de cobrança</b> só quando o ano letivo começou fora do mês habitual (ex.: turma que iniciou em março em vez de fevereiro).</li>
++            <li>Pagamentos só podem ser feitos pelos métodos habilitados na criação de cada mensalidade.</li>
++          </ul>
++        </ManualDeFuncionamento>
++        {alert && <Alert variant={alert.variant} title="Finanças" message={alert.message} />}
++        <SubtelasMenu
++          opcoes={[
++            { id: "inicio-cobranca", icon: "mdi:calendar-start", label: "Início de cobrança", descricao: "Ajustar a partir de qual mês a propina passa a valer no ano letivo atual.", href: "/financas/configuracoes/mensalidade/inicio-cobranca", disabled: ctx.bloquear },
++            { id: "criar", icon: "mdi:calendar-month-outline", label: "Definir Nova Mensalidade", descricao: "Definir o valor e os métodos aceites por ano/curso.", href: "/financas/configuracoes/mensalidade/criar", disabled: ctx.bloquear },
++          ]}
++        />
++        {ctx.bloquear && <AvisoCredenciais />}
++        <div className="border-t border-gray-100 pt-5 dark:border-white/[0.05]">
++          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Configurações já feitas</h3>
++          <ConfiguracoesSalvasTable
++            linhas={ctx.mensalidadesApi.data?.configuracoes ?? []}
++            comMesFim
++            kind="mensalidade"
++            cursos={ctx.cursos}
++            codigoAcademia={ctx.codigoAcademia}
++            reload={ctx.reload}
++            onAlert={setAlert}
++          />
++        </div>
++      </div>
++    </FinanceiroAcessoGuard>
++  );
++}
+diff --git a/src/components/paineis/TaxaMatriculaCriarPainel.tsx b/src/components/paineis/TaxaMatriculaCriarPainel.tsx
+new file mode 100644
+index 0000000..2732bf2
+--- /dev/null
++++ b/src/components/paineis/TaxaMatriculaCriarPainel.tsx
+@@ -0,0 +1,91 @@
++"use client";
++
++import { useEffect, useState } from "react";
++import Link from "next/link";
++import Alert from "@/components/ui/alert/Alert";
++import Button from "@/components/ui/button/Button";
++import Icon from "@/components/ui/Icon";
++import Label from "@/components/form/Label";
++import { financeiroService, useApi } from "@/lib/api";
++import { formatApiError } from "@/lib/api/client";
++import { SubtelaPanel } from "@/components/paineis/financeiroShared";
++import {
++  FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, NivelCamposFields, MetodosPagamentoCheckboxes,
++  validarValorEAno, useFinanceiroNivelContext, type NivelFormState, type FormFieldErrors,
++} from "@/components/paineis/financeiroNivelShared";
++import type { FinanceiroModoVigencia, MatriculaConfiguracaoInput } from "@/types/api";
++
++/** /financas/configuracoes/taxa-matricula/criar (Tarefa 11) — antes era o formulário embutido na subtela "matricula"; agora é a página "Definir Nova Taxa". */
++export default function TaxaMatriculaCriarPainel() {
++  const ctx = useFinanceiroNivelContext();
++  const [form, setForm] = useState<NivelFormState>({ nivel: "fundamental", ano_academico: "", curso_id: "", valor: "", metodos_pagamento: ["GPO"], modo_vigencia: "" });
++  const [errors, setErrors] = useState<FormFieldErrors>({});
++  const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
++  const salvar = useApi(financeiroService.configurarMatricula);
++  const atualizar = useApi(financeiroService.atualizarConfiguracaoMatricula);
++
++  useEffect(() => {
++    if (ctx.niveisDisponiveis.length === 0) return;
++    setForm((prev) => (ctx.niveisDisponiveis.includes(prev.nivel) ? prev : { ...prev, nivel: ctx.niveisDisponiveis[0], curso_id: "", ano_academico: "" }));
++  }, [ctx.niveisDisponiveis]);
++
++  const submit = async () => {
++    const errs = validarValorEAno(form);
++    setErrors(errs);
++    if (Object.keys(errs).length > 0) return;
++    try {
++      if (!ctx.codigoAcademia) throw new Error("Academia não identificada.");
++      const p: MatriculaConfiguracaoInput = {
++        codigo_academia: ctx.codigoAcademia,
++        nivel: form.nivel,
++        ano_academico: form.ano_academico,
++        curso_id: form.nivel === "fundamental" ? undefined : form.curso_id,
++        valor: Number(form.valor),
++        metodos_pagamento: form.metodos_pagamento,
++        modo_vigencia: form.modo_vigencia as FinanceiroModoVigencia,
++      };
++      const existe = (ctx.matriculasApi.data?.configuracoes ?? []).some((c) =>
++        c.nivel === form.nivel && (form.nivel === "fundamental" ? c.ano_academico === form.ano_academico : c.curso_id === form.curso_id && c.ano_academico === form.ano_academico));
++      const resultado = await (existe ? atualizar.execute(p) : salvar.execute(p));
++      const resumo = resultado?.repricing_pendentes;
++      setAlert({
++        variant: "success",
++        message: resumo
++          ? `Configuração de matrícula versionada com sucesso. ${resumo.atualizadas} solicitação(ões) já aprovada(s) foram atualizadas para o novo valor${resumo.ignoradas ? `; ${resumo.ignoradas} não foram alteradas por já terem cobrança em aberto` : ""}. Você pode configurar outro nível/curso agora, ou voltar para a lista.`
++          : "Configuração de matrícula versionada com sucesso. Você pode configurar outro nível/curso agora, ou voltar para a lista.",
++      });
++      await ctx.reload();
++    } catch (err) {
++      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível salvar matrícula.") });
++    }
++  };
++
++  return (
++    <FinanceiroAcessoGuard ctx={ctx}>
++      <SubtelaPanel title="Definir Nova Taxa" icon="mdi:school-outline" onVoltar="/financas/configuracoes/taxa-matricula">
++        <ManualDeFuncionamento>
++          <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
++            <li>O <b>valor</b> definido aqui passa a valer a partir de agora, para novas solicitações de matrícula do nível/ano/curso escolhido.</li>
++            <li>Escolha com atenção <b>o que acontece com quem já está pendente</b>: isso decide se matrículas já aprovadas (ainda não pagas) também mudam para o novo valor, ou se continuam no valor antigo.</li>
++            <li>Só é possível salvar depois de aderir ao Gateway de Pagamento Online e escolher pelo menos um método de pagamento aceite.</li>
++          </ul>
++        </ManualDeFuncionamento>
++        {alert && <Alert variant={alert.variant} title="Finanças" message={alert.message} />}
++        {ctx.bloquear && <AvisoCredenciais />}
++        <div className="grid gap-4">
++          <NivelCamposFields kind="matricula" form={form} errors={errors} setForm={setForm} niveisDisponiveis={ctx.niveisDisponiveis} cursos={ctx.cursos} anosAcademicosAcademia={ctx.anosAcademicosAcademia} />
++          <Label>Métodos de pagamento aceites</Label>
++          <MetodosPagamentoCheckboxes kind="matricula" selected={form.metodos_pagamento} onToggle={(m) => setForm((prev) => ({ ...prev, metodos_pagamento: prev.metodos_pagamento.includes(m) ? prev.metodos_pagamento.filter((x) => x !== m) : [...prev.metodos_pagamento, m] }))} />
++          <div className="flex flex-wrap items-center gap-3">
++            <Button onClick={submit} disabled={ctx.bloquear || !form.modo_vigencia || salvar.loading || atualizar.loading} startIcon={<Icon icon="mdi:content-save-outline" width={16} />}>
++              Salvar nova versão
++            </Button>
++            <Link href="/financas/configuracoes/taxa-matricula" className="text-sm font-medium text-gray-600 underline dark:text-gray-300">
++              Voltar para a lista de taxas
++            </Link>
++          </div>
++        </div>
++      </SubtelaPanel>
++    </FinanceiroAcessoGuard>
++  );
++}
+diff --git a/src/components/paineis/TaxaMatriculaListaPainel.tsx b/src/components/paineis/TaxaMatriculaListaPainel.tsx
+new file mode 100644
+index 0000000..3ea7a08
+--- /dev/null
++++ b/src/components/paineis/TaxaMatriculaListaPainel.tsx
+@@ -0,0 +1,53 @@
++"use client";
++
++import { useState } from "react";
++import Alert from "@/components/ui/alert/Alert";
++import { SubtelasMenu } from "@/components/paineis/financeiroShared";
++import { FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, ConfiguracoesSalvasTable, useFinanceiroNivelContext } from "@/components/paineis/financeiroNivelShared";
++
++/**
++ * /financas/configuracoes/taxa-matricula (Tarefa 11). Antes era a subtela
++ * "matricula" — que misturava, numa única tela, o formulário de criação e a
++ * lista de configurações já feitas. Agora o formulário vive numa página
++ * própria (/taxa-matricula/criar) e esta página passa a ser só a lista + o
++ * card "Definir Nova Taxa" (só 1 card — taxa de matrícula não tem
++ * "início de cobrança", que é um conceito exclusivo de mensalidade).
++ */
++export default function TaxaMatriculaListaPainel() {
++  const ctx = useFinanceiroNivelContext();
++  const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
++
++  return (
++    <FinanceiroAcessoGuard ctx={ctx}>
++      <div className="space-y-6">
++        <ManualDeFuncionamento>
++          <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
++            <li>Cada configuração enviada cria uma <b>nova versão vigente a partir de agora</b> — não edita nem apaga versões passadas.</li>
++            <li>A configuração é específica por <b>nível de ensino</b> e, dentro dele, por <b>ano/classe</b> (Ensino Primário) ou por <b>curso e ano</b> (Iº Ciclo, Médio ou Superior).</li>
++            <li>Se <b>nenhuma</b> configuração existir para a combinação nível/ano/curso de uma solicitação, a matrícula daquele candidato é <b>gratuita</b> e a academia aprova direto, sem cobrança.</li>
++            <li>Pagamentos só podem ser feitos pelos métodos habilitados na criação de cada taxa.</li>
++          </ul>
++        </ManualDeFuncionamento>
++        {alert && <Alert variant={alert.variant} title="Finanças" message={alert.message} />}
++        <SubtelasMenu
++          opcoes={[
++            { id: "criar", icon: "mdi:school-outline", label: "Definir Nova Taxa", descricao: "Definir o valor e os métodos aceites por ano/curso.", href: "/financas/configuracoes/taxa-matricula/criar", disabled: ctx.bloquear },
++          ]}
++        />
++        {ctx.bloquear && <AvisoCredenciais />}
++        <div className="border-t border-gray-100 pt-5 dark:border-white/[0.05]">
++          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Configurações já feitas</h3>
++          <ConfiguracoesSalvasTable
++            linhas={ctx.matriculasApi.data?.configuracoes ?? []}
++            comMesFim={false}
++            kind="matricula"
++            cursos={ctx.cursos}
++            codigoAcademia={ctx.codigoAcademia}
++            reload={ctx.reload}
++            onAlert={setAlert}
++          />
++        </div>
++      </div>
++    </FinanceiroAcessoGuard>
++  );
++}
+diff --git a/src/components/paineis/financeiroNivelShared.tsx b/src/components/paineis/financeiroNivelShared.tsx
+new file mode 100644
+index 0000000..c9b78c3
+--- /dev/null
++++ b/src/components/paineis/financeiroNivelShared.tsx
+@@ -0,0 +1,439 @@
++"use client";
++
++/**
++ * Peças reutilizáveis pelas páginas de /financas/configuracoes, /mensalidade
++ * e /taxa-matricula (Tarefa 11 — cada uma dessas telas passou a ser uma
++ * página própria em vez de uma subtela dentro de um único componente
++ * gigante). Este arquivo concentra o estado e os componentes que mais de
++ * uma dessas páginas precisa, para evitar duplicar a mesma lógica em cada
++ * page.tsx.
++ */
++
++import { useEffect, useMemo, useState, type ReactNode } from "react";
++import Link from "next/link";
++import { academiaService, financeiroService, useApi } from "@/lib/api";
++import { formatApiError } from "@/lib/api/client";
++import { useUserType } from "@/hooks/useRoutePermission";
++import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
++import Alert from "@/components/ui/alert/Alert";
++import Button from "@/components/ui/button/Button";
++import Icon from "@/components/ui/Icon";
++import Label from "@/components/form/Label";
++import SearchableSelect from "@/components/form/SearchableSelect";
++import Checkbox from "@/components/form/input/Checkbox";
++import Radio from "@/components/form/input/Radio";
++import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
++import { LoadingState, METODO_PAGAMENTO_LABEL, NIVEL_LABEL, niveisDaAcademia, ConfirmDialog, ValorKzInput, money } from "@/components/paineis/financeiroShared";
++import type { Curso, FinanceiroMetodoPagamento, FinanceiroModoVigencia, FinanceiroNivel, MatriculaConfiguracaoView, MensalidadeConfiguracaoView } from "@/types/api";
++
++export const METODOS: FinanceiroMetodoPagamento[] = ["GPO", "REF", "GPO_QR"];
++export const MES_FIM_OPCOES = [
++  { value: "6", label: "Junho" },
++  { value: "7", label: "Julho" },
++];
++/** Nomes reais dos meses (pt-AO) — corrige o bug de exibir "Mês 1", "Mês 2"... */
++export const MES_NOME_OPCOES = Array.from({ length: 12 }, (_, i) => ({
++  value: String(i + 1),
++  label: new Intl.DateTimeFormat("pt-AO", { month: "long" }).format(new Date(2026, i, 1)),
++}));
++
++export function formatarDataHora(value: string) {
++  const d = new Date(value);
++  return Number.isNaN(d.getTime()) ? value : new Intl.DateTimeFormat("pt-AO", { dateStyle: "short", timeStyle: "short" }).format(d);
++}
++
++/** "6_ano_fundamental" → "6ª Classe"; "2_ano_medio" → "2.º Ano (Médio)". Mesmo padrão usado nas telas de matrícula/turmas. */
++export function labelAnoAcademico(codigo: string): string {
++  const m = /^(\d+)_ano_(fundamental|medio|superior)$/.exec(codigo);
++  if (!m) return codigo;
++  const [, numero, nivel] = m;
++  if (nivel === "fundamental") return `${numero}ª Classe`;
++  if (nivel === "medio") return `${numero}.º Ano (Médio)`;
++  return `${numero}.º Ano (Superior)`;
++}
++
++export type NivelFormState = {
++  nivel: FinanceiroNivel;
++  ano_academico: string;
++  curso_id: string;
++  valor: string;
++  metodos_pagamento: FinanceiroMetodoPagamento[];
++  modo_vigencia: "" | FinanceiroModoVigencia;
++};
++
++export type FormFieldErrors = Partial<Record<"ano_academico" | "curso_id" | "valor" | "modo_vigencia", string>>;
++
++/**
++ * Estado e chamadas de API compartilhados por todas as páginas de
++ * configurações financeiras (lista de mensalidade, lista de taxa de
++ * matrícula, e os formulários de criação de cada uma). Cada página chama
++ * este hook de forma independente — como cada uma agora é uma rota própria
++ * (Next.js monta cada page.tsx separadamente), isso significa que navegar
++ * entre elas refaz essas buscas; é a mesma troca que qualquer conversão de
++ * "abas dentro de uma página" para "páginas de verdade" implica, e não é um
++ * comportamento novo introduzido por bug — só a página muda de componente.
++ */
++export function useFinanceiroNivelContext() {
++  const { user, isAdmin, isAcademia, loading } = useUserType();
++  const isFpp = isAdmin && user?.admin?.role === "fpp";
++  const codigoAcademia = user?.academia?.codigo_academia ?? "";
++  const anosAcademicosAcademia = useMemo(() => user?.academia?.anos_academicos ?? [], [user?.academia?.anos_academicos]);
++  /** Níveis que a academia realmente oferece — nunca uma lista fixa fundamental/médio/superior. */
++  const niveisDisponiveis = useMemo(() => niveisDaAcademia(user?.academia), [user?.academia]);
++  const [cursos, setCursos] = useState<Curso[]>([]);
++
++  const mensalidadesApi = useApi(financeiroService.listarConfiguracoesMensalidade);
++  const matriculasApi = useApi(financeiroService.listarConfiguracoesMatricula);
++  const credenciaisApi = useApi(financeiroService.listarCredenciais);
++
++  const reload = async () => {
++    if (!codigoAcademia) return;
++    await Promise.all([
++      mensalidadesApi.execute({ codigo_academia: codigoAcademia }),
++      matriculasApi.execute({ codigo_academia: codigoAcademia }),
++    ]);
++  };
++
++  useEffect(() => {
++    if (!loading && isAcademia && codigoAcademia) void reload().catch(() => {});
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [loading, isAcademia, codigoAcademia]);
++
++  useEffect(() => {
++    if (!isAcademia || !codigoAcademia) { setCursos([]); return; }
++    academiaService.listarCursos({ codigo_academia: codigoAcademia })
++      .then((r) => setCursos((r.cursos ?? []).filter((c) => c.status === "ativo")))
++      .catch(() => setCursos([]));
++  }, [isAcademia, codigoAcademia]);
++
++  useEffect(() => {
++    if (!isAcademia || !codigoAcademia) return;
++    void credenciaisApi.execute({ contexto_tipo: "academia", codigo_academia: codigoAcademia });
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [isAcademia, codigoAcademia]);
++
++  const temCredenciais = (credenciaisApi.data?.length ?? 0) > 0;
++  const bloquear = credenciaisApi.loading || !temCredenciais;
++
++  return { user, isAdmin, isAcademia, isFpp, loading, codigoAcademia, anosAcademicosAcademia, niveisDisponiveis, cursos, mensalidadesApi, matriculasApi, reload, bloquear };
++}
++
++export type FinanceiroNivelContext = ReturnType<typeof useFinanceiroNivelContext>;
++
++/**
++ * Guarda de acesso comum a todas as páginas de configurações financeiras:
++ * carregando → aviso de acesso restrito (nem academia nem admin FPP) →
++ * mensagem de indisponível para admin FPP. Só quando nenhum desses casos se
++ * aplica é que a página real (children) é exibida.
++ */
++export function FinanceiroAcessoGuard({ ctx, children }: { ctx: FinanceiroNivelContext; children: ReactNode }) {
++  if (ctx.loading) return <LoadingState label="Carregando configurações..." />;
++  if (!ctx.isAcademia && !ctx.isFpp) return <UnauthorizedAccess requiredTypes={["Admin FPP", "Academia"]} message="O módulo financeiro é exclusivo de administradores FPP e academias." />;
++  if (ctx.isFpp) {
++    return (
++      <section className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
++        <div className="flex items-start gap-3">
++          <Icon icon="mdi:cog-outline" width={24} className="text-gray-800 dark:text-white/90" />
++          <div>
++            <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Configurações financeiras</h2>
++            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
++              Propina, matrícula e as demais configurações desta página pertencem a cada academia, não ao administrador —
++              indisponível no momento. Ainda não existe nenhuma configuração financeira própria do Spuri.
++            </p>
++          </div>
++        </div>
++      </section>
++    );
++  }
++  return <>{children}</>;
++}
++
++/** Aviso + atalho para aderir ao Gateway de Pagamento Online, exibido sempre que a academia ainda não tem credenciais AppyPay configuradas. */
++export function AvisoCredenciais() {
++  return (
++    <div className="space-y-3">
++      <Alert variant="warning" title="Adesão ao Gateway de Pagamento Online" message="A sua instituição precisa aderir ao Gateway de Pagamento Online." />
++      <Link href="/financas/credenciais" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600">
++        Siga as instruções aqui <Icon icon="mdi:arrow-right" width={16} />
++      </Link>
++    </div>
++  );
++}
++
++/**
++ * Manual de funcionamento — Tarefa 11: cada página passou a ter o seu
++ * próprio (em vez de uma única tela genérica de "Regras de funcionamento"
++ * compartilhada por tudo). Fica como um painel que se abre/fecha à esquerda
++ * — não é mais uma subtela separada, então não precisa de navegação própria.
++ * O conteúdo (children) nunca deve usar termos técnicos nem expor detalhes
++ * de implementação/back end — só explicar, em linguagem simples, o que a
++ * funcionalidade faz do ponto de vista de quem usa.
++ */
++export function ManualDeFuncionamento({ children }: { children: ReactNode }) {
++  const [aberto, setAberto] = useState(false);
++  return (
++    <div className="flex justify-start">
++      <div className="w-full">
++        <Button size="sm" variant="outline" onClick={() => setAberto((v) => !v)} startIcon={<Icon icon="mdi:information-outline" width={16} />}>
++          Manual de funcionamento
++        </Button>
++        {aberto && (
++          <div className="mt-3 max-w-2xl rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
++            {children}
++          </div>
++        )}
++      </div>
++    </div>
++  );
++}
++
++export function MetodosPagamentoCheckboxes({ kind, selected, onToggle }: { kind: "mensalidade" | "matricula"; selected: FinanceiroMetodoPagamento[]; onToggle: (metodo: FinanceiroMetodoPagamento) => void }) {
++  return (
++    <div className="flex flex-wrap gap-4">
++      {METODOS.map((m) => (
++        <Checkbox key={m} id={`${kind}-metodo-${m}`} label={METODO_PAGAMENTO_LABEL[m]} checked={selected.includes(m)} onChange={() => onToggle(m)} />
++      ))}
++    </div>
++  );
++}
++
++export function validarValorEAno(form: NivelFormState): FormFieldErrors {
++  const errors: FormFieldErrors = {};
++  const valorNumero = Number(form.valor);
++  if (!form.valor.trim() || !(valorNumero > 0)) errors.valor = "Informe um valor maior que zero.";
++  if (!form.modo_vigencia) errors.modo_vigencia = "Escolha o que acontece com quem já está pendente.";
++  if (form.nivel === "fundamental") {
++    if (!form.ano_academico) errors.ano_academico = "Selecione o ano/classe.";
++  } else {
++    if (!form.curso_id) errors.curso_id = "Selecione o curso.";
++    if (!form.ano_academico) errors.ano_academico = "Selecione o ano do curso.";
++  }
++  return errors;
++}
++
++/**
++ * Campos de nível/curso/ano/valor/pendente, compartilhados pelos
++ * formulários de criação de mensalidade e de taxa de matrícula — os dois
++ * sempre tiveram exatamente os mesmos campos aqui (só o que vem depois, como
++ * "Mês de encerramento da cobrança", é exclusivo da mensalidade).
++ *
++ * Nível só aparece como escolha quando a academia oferece mais de um (ex.:
++ * nivel_escolar="misto"). Com um único nível, ele é aplicado direto, sem
++ * select. "Ano do curso" só fica habilitável depois que um curso é
++ * selecionado (para médio/superior) — fundamental não tem essa restrição
++ * porque não depende de curso.
++ */
++export function NivelCamposFields({
++  kind, form, errors, setForm, niveisDisponiveis, cursos, anosAcademicosAcademia,
++}: {
++  kind: "mensalidade" | "matricula";
++  form: NivelFormState;
++  errors: FormFieldErrors;
++  setForm: (updater: (prev: NivelFormState) => NivelFormState) => void;
++  niveisDisponiveis: FinanceiroNivel[];
++  cursos: Curso[];
++  anosAcademicosAcademia: string[];
++}) {
++  const cursosDoNivel = (nivel: FinanceiroNivel) => cursos.filter((c) => c.type === nivel);
++  const anosDoFormulario = (f: NivelFormState): string[] => {
++    if (f.nivel === "fundamental") return anosAcademicosAcademia.filter((a) => a.endsWith("_ano_fundamental"));
++    const curso = cursos.find((c) => c.id === f.curso_id);
++    return curso?.anos_academicos ?? [];
++  };
++  const updateNivel = (nivel: FinanceiroNivel) => setForm((prev) => ({ ...prev, nivel, curso_id: "", ano_academico: "" }));
++
++  return (
++    <>
++      {niveisDisponiveis.length > 1 ? (
++        <>
++          <Label>Nível</Label>
++          <SearchableSelect
++            value={form.nivel}
++            options={niveisDisponiveis.map((n) => ({ value: n, label: NIVEL_LABEL[n] }))}
++            onChange={(v) => updateNivel((v || niveisDisponiveis[0]) as FinanceiroNivel)}
++            isSearchable={false}
++            isClearable={false}
++            inputId={`${kind}-nivel`}
++            name={`${kind}-nivel`}
++          />
++        </>
++      ) : (
++        <p className="text-sm text-gray-500 dark:text-gray-400">Nível: <span className="font-medium text-gray-800 dark:text-white/90">{NIVEL_LABEL[form.nivel]}</span></p>
++      )}
++      {form.nivel !== "fundamental" && (
++        <>
++          <Label>Curso</Label>
++          <SearchableSelect
++            value={form.curso_id}
++            options={cursosDoNivel(form.nivel).map((c) => ({ value: c.id, label: c.nome }))}
++            onChange={(v) => setForm((prev) => ({ ...prev, curso_id: v, ano_academico: "" }))}
++            placeholder={cursosDoNivel(form.nivel).length ? "Selecione um curso" : "Nenhum curso cadastrado para este nível"}
++            isClearable
++            inputId={`${kind}-curso`}
++            name={`${kind}-curso`}
++            error={errors.curso_id}
++          />
++        </>
++      )}
++      <Label>{form.nivel === "fundamental" ? "Ano / classe" : "Ano do curso"}</Label>
++      <SearchableSelect
++        value={form.ano_academico}
++        options={anosDoFormulario(form).map((a) => ({ value: a, label: labelAnoAcademico(a) }))}
++        onChange={(v) => setForm((prev) => ({ ...prev, ano_academico: v }))}
++        placeholder={anosDoFormulario(form).length ? "Selecione o ano" : "Selecione um curso primeiro"}
++        isDisabled={form.nivel !== "fundamental" && !form.curso_id}
++        isClearable
++        inputId={`${kind}-ano-academico`}
++        name={`${kind}-ano-academico`}
++        error={errors.ano_academico}
++      />
++      <Label>Valor (Kz)</Label>
++      <ValorKzInput
++        id={`${kind}-valor`}
++        name={`${kind}-valor`}
++        value={form.valor}
++        onChange={(v) => setForm((prev) => ({ ...prev, valor: v }))}
++        error={!!errors.valor}
++        hint={errors.valor}
++      />
++      <Label>O que acontece com quem já está pendente?</Label>
++      <div className="flex flex-col gap-3">
++        <Radio
++          id={`${kind}-modo-vigencia-pendentes`}
++          name={`${kind}-modo-vigencia`}
++          value="cobrancas_pendentes"
++          checked={form.modo_vigencia === "cobrancas_pendentes"}
++          label={
++            <span>
++              <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar retroativamente</span>
++              <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
++                {kind === "mensalidade"
++                  ? "O novo valor passa a valer também para mensalidades de meses anteriores que já venceram e ainda não foram pagas."
++                  : "O novo valor passa a valer também para matrículas já aprovadas que ainda não foram pagas."}
++              </span>
++            </span>
++          }
++          onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "cobrancas_pendentes" }))}
++        />
++        <Radio
++          id={`${kind}-modo-vigencia-futuro`}
++          name={`${kind}-modo-vigencia`}
++          value="a_partir_da_atualizacao"
++          checked={form.modo_vigencia === "a_partir_da_atualizacao"}
++          label={
++            <span>
++              <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar só daqui para frente</span>
++              <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
++                {kind === "mensalidade"
++                  ? "Quem já está com uma mensalidade pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para cobranças futuras."
++                  : "Quem já está com uma matrícula pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para matrículas aprovadas a partir de agora."}
++              </span>
++            </span>
++          }
++          onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "a_partir_da_atualizacao" }))}
++        />
++      </div>
++      {errors.modo_vigencia && <p className="text-sm text-error-500 dark:text-error-400">{errors.modo_vigencia}</p>}
++    </>
++  );
++}
++
++/** Chave estável para identificar qual linha está com remoção em andamento (desabilita só o botão daquela linha). */
++function configKey(kind: "mensalidade" | "matricula", c: { nivel: string; ano_academico?: string; curso_id?: string }) {
++  return `${kind}|${c.nivel}|${c.ano_academico ?? ""}|${c.curso_id ?? ""}`;
++}
++
++/**
++ * Tabela de "Configurações já feitas", exibida na página de listagem de
++ * mensalidade/taxa de matrícula — substitui a antiga tela separada de
++ * "Histórico de versões", que não existe mais.
++ */
++export function ConfiguracoesSalvasTable({
++  linhas, comMesFim, kind, cursos, codigoAcademia, reload, onAlert,
++}: {
++  linhas: (MensalidadeConfiguracaoView | MatriculaConfiguracaoView)[];
++  comMesFim: boolean;
++  kind: "mensalidade" | "matricula";
++  cursos: Curso[];
++  codigoAcademia: string;
++  reload: () => Promise<void>;
++  onAlert: (a: { variant: "success" | "error"; message: string } | null) => void;
++}) {
++  const removerMensalidade = useApi(financeiroService.removerConfiguracaoMensalidade);
++  const removerMatricula = useApi(financeiroService.removerConfiguracaoMatricula);
++  const [removendoConfig, setRemovendoConfig] = useState<string | null>(null);
++  const [configParaRemover, setConfigParaRemover] = useState<{ nivel: FinanceiroNivel; ano_academico?: string; curso_id?: string } | null>(null);
++
++  const labelEscopo = (c: { ano_academico?: string; curso_id?: string }) =>
++    c.ano_academico ? labelAnoAcademico(c.ano_academico) : (cursos.find((cu) => cu.id === c.curso_id)?.nome ?? "este escopo");
++
++  const onRemover = async (c: { nivel: FinanceiroNivel; ano_academico?: string; curso_id?: string }) => {
++    onAlert(null);
++    setRemovendoConfig(configKey(kind, c));
++    try {
++      const executar = kind === "mensalidade" ? removerMensalidade.execute : removerMatricula.execute;
++      await executar({ codigo_academia: codigoAcademia, nivel: c.nivel, ano_academico: c.ano_academico, curso_id: c.curso_id });
++      onAlert({ variant: "success", message: kind === "mensalidade" ? "Configuração de mensalidade removida com sucesso." : "Configuração de matrícula removida com sucesso." });
++      await reload();
++    } catch (err) {
++      onAlert({ variant: "error", message: formatApiError(err, `Não foi possível remover a configuração de ${kind === "mensalidade" ? "mensalidade" : "matrícula"}.`) });
++    } finally {
++      setRemovendoConfig(null);
++    }
++  };
++
++  if (linhas.length === 0) {
++    return <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma configuração salva ainda.</p>;
++  }
++
++  return (
++    <div className="overflow-x-auto">
++      {configParaRemover && (
++        <ConfirmDialog
++          title={kind === "mensalidade" ? "Remover configuração de propina" : "Remover taxa de matrícula"}
++          message={
++            kind === "mensalidade"
++              ? `Tem certeza que deseja remover a configuração de propina de ${NIVEL_LABEL[configParaRemover.nivel]} — ${labelEscopo(configParaRemover)}? Meses já cobrados não são afetados; a partir de agora, novas mensalidades desse escopo ficam sem valor definido até configurar de novo.`
++              : `Tem certeza que deseja remover a configuração de taxa de matrícula de ${NIVEL_LABEL[configParaRemover.nivel]} — ${labelEscopo(configParaRemover)}? A matrícula volta a ser gratuita para este escopo até configurar de novo.`
++          }
++          confirmLabel="Remover"
++          onConfirm={() => onRemover(configParaRemover)}
++          onClose={() => setConfigParaRemover(null)}
++        />
++      )}
++      <Table>
++        <TableHeader>
++          <TableRow>
++            {["Nível", "Ano/Curso", "Valor", ...(comMesFim ? ["Fim"] : []), "Métodos", "Vigente em", ""].map((h) => (
++              <TableCell key={h || "acoes"} isHeader className="px-3 py-2 text-xs uppercase text-gray-500 dark:text-gray-400">{h}</TableCell>
++            ))}
++          </TableRow>
++        </TableHeader>
++        <TableBody>
++          {linhas.map((c, i) => {
++            const key = configKey(kind, c);
++            return (
++              <TableRow key={i}>
++                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{NIVEL_LABEL[c.nivel]}</TableCell>
++                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{c.ano_academico ? labelAnoAcademico(c.ano_academico) : (cursos.find((cu) => cu.id === c.curso_id)?.nome ?? c.curso_id ?? "—")}</TableCell>
++                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{money(c.valor)}</TableCell>
++                {comMesFim && (
++                  <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">
++                    {"mes_fim_cobranca" in c ? (c.mes_fim_cobranca === 6 ? "Junho" : c.mes_fim_cobranca === 7 ? "Julho" : c.mes_fim_cobranca) : "—"}
++                  </TableCell>
++                )}
++                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{c.metodos_pagamento.map((m) => METODO_PAGAMENTO_LABEL[m]).join(", ")}</TableCell>
++                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{formatarDataHora(c.vigente_em)}</TableCell>
++                <TableCell className="px-3 py-2">
++                  <Button size="sm" variant="danger" disabled={removendoConfig === key} onClick={() => setConfigParaRemover(c)} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
++                    {removendoConfig === key ? "Removendo..." : "Remover"}
++                  </Button>
++                </TableCell>
++              </TableRow>
++            );
++          })}
++        </TableBody>
++      </Table>
++    </div>
++  );
++}
+diff --git a/src/components/paineis/financeiroShared.tsx b/src/components/paineis/financeiroShared.tsx
+index b706375..c770a70 100644
+--- a/src/components/paineis/financeiroShared.tsx
++++ b/src/components/paineis/financeiroShared.tsx
+@@ -1,5 +1,7 @@
+ "use client";
+-import { useEffect, useState } from "react";
++import { useEffect, useState, type ChangeEvent } from "react";
++import Link from "next/link";
++import { useRouter } from "next/navigation";
+ import { consultasService } from "@/lib/api";
+ import { formatApiError } from "@/lib/api/client";
+ import Button from "@/components/ui/button/Button";
+@@ -29,6 +31,66 @@ export const dt = (v?: string) => {
+     : new Intl.DateTimeFormat("pt-AO", { dateStyle: "short", timeStyle: "short" }).format(d);
+ };
+ 
++/**
++ * ValorKzInput — Tarefa 11. Campo de valor em Kwanzas com máscara de
++ * milhares/decimais (formato angolano: "." separa milhares, "," separa
++ * centavos — ex.: "45.000,00"). O usuário digita só dígitos, sempre
++ * interpretados como centavos (os últimos 2 dígitos), o que elimina de vez a
++ * ambiguidade que existia com o `<input type="number">` nativo (que não
++ * respeita "." como separador de milhares e tem comportamento inconsistente
++ * de "," entre navegadores/locales).
++ *
++ * `value`/`onChange` continuam a expor o valor "puro" como string numérica
++ * (ex.: "45000.00"), exatamente como o restante do formulário (e o payload
++ * enviado à API) já esperava antes desta tarefa — só a apresentação do campo
++ * muda, não o tipo de dado manipulado pelo estado do formulário.
++ */
++export function formatarValorKzExibicao(valor: string): string {
++  const centavos = valor ? Math.round(Number(valor) * 100) : 0;
++  if (!centavos) return "";
++  const negativo = centavos < 0;
++  const abs = Math.abs(centavos);
++  const inteiro = Math.floor(abs / 100).toString();
++  const dec = String(abs % 100).padStart(2, "0");
++  const inteiroAgrupado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
++  return `${negativo ? "-" : ""}${inteiroAgrupado},${dec}`;
++}
++
++interface ValorKzInputProps {
++  value: string; // valor "puro", ex.: "45000.00" (mesmo formato já usado no resto do formulário)
++  onChange: (value: string) => void;
++  id?: string;
++  name?: string;
++  error?: boolean;
++  hint?: string;
++}
++
++export function ValorKzInput({ value, onChange, id, name, error, hint }: ValorKzInputProps) {
++  function handleChange(e: ChangeEvent<HTMLInputElement>) {
++    const digitos = e.target.value.replace(/\D/g, "");
++    if (!digitos) {
++      onChange("");
++      return;
++    }
++    const centavos = parseInt(digitos, 10);
++    onChange((centavos / 100).toFixed(2));
++  }
++
++  return (
++    <Input
++      id={id}
++      name={name}
++      type="text"
++      inputMode="numeric"
++      placeholder="0,00"
++      value={formatarValorKzExibicao(value)}
++      onChange={handleChange}
++      error={error}
++      hint={hint}
++    />
++  );
++}
++
+ /** "2026_2027" (formato de armazenamento no backend) → "2026/2027" (exibição). Nunca mostrar o valor cru. */
+ export function formatAnoLetivo(v?: string) {
+   if (!v) return "—";
+@@ -458,10 +520,17 @@ export function PaginacaoSetas({ paginaAtual, totalPaginas, total, porPagina, on
+  * um menu de opções — o mesmo padrão já usado em
+  * FinanceiroCredenciaisPainel para criar/editar credencial.
+  */
+-export function SubtelaPanel({ title, icon, onVoltar, children }: { title: string; icon?: string; onVoltar: () => void; children: React.ReactNode }) {
++/**
++ * `onVoltar` aceita uma função (padrão antigo, ainda usado por quem
++ * continua com subtelas por estado local) ou uma string com uma rota
++ * (Tarefa 11 — páginas novas que navegam de verdade via next/navigation).
++ */
++export function SubtelaPanel({ title, icon, onVoltar, children }: { title: string; icon?: string; onVoltar: string | (() => void); children: React.ReactNode }) {
++  const router = useRouter();
++  const handleVoltar = typeof onVoltar === "string" ? () => router.push(onVoltar) : onVoltar;
+   return (
+     <div className="space-y-5 rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03] lg:p-8">
+-      <Button variant="outline" size="sm" onClick={onVoltar} startIcon={<Icon icon="mdi:arrow-left" width={16} />}>Voltar</Button>
++      <Button variant="outline" size="sm" onClick={handleVoltar} startIcon={<Icon icon="mdi:arrow-left" width={16} />}>Voltar</Button>
+       <div className="flex items-center gap-2">
+         {icon && <Icon icon={icon} width={22} className="text-gray-800 dark:text-white/90" />}
+         <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">{title}</h2>
+@@ -472,28 +541,45 @@ export function SubtelaPanel({ title, icon, onVoltar, children }: { title: strin
+ }
+ 
+ /** Cartão clicável de uma opção do menu de subtelas (ex.: menu de configurações financeiras). */
+-export function SubtelaCard({ icon, label, descricao, onClick, disabled = false }: { icon: string; label: string; descricao: string; onClick: () => void; disabled?: boolean }) {
+-  return (
+-    <button
+-      type="button"
+-      onClick={onClick}
+-      disabled={disabled}
+-      className="flex items-start gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-left transition hover:border-brand-300 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:shadow-none dark:border-white/[0.05] dark:bg-white/[0.03] dark:hover:border-brand-500/40"
+-    >
++const SUBTELA_CARD_CLASSNAME = "flex items-start gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-left transition hover:border-brand-300 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:shadow-none dark:border-white/[0.05] dark:bg-white/[0.03] dark:hover:border-brand-500/40";
++
++/**
++ * `href` (Tarefa 11) faz o card navegar como uma página de verdade (via
++ * next/link) em vez de só trocar um estado local — usado pelas novas
++ * páginas de /financas/configuracoes, que passaram de subtelas para rotas
++ * próprias. `onClick` continua funcionando como antes para quem ainda usa o
++ * padrão de subtela (ex.: FinanceiroPagamentosPainel). Um card nunca recebe
++ * os dois ao mesmo tempo.
++ */
++export function SubtelaCard({ icon, label, descricao, onClick, href, disabled = false }: { icon: string; label: string; descricao: string; onClick?: () => void; href?: string; disabled?: boolean }) {
++  const conteudo = (
++    <>
+       <Icon icon={icon} width={22} className="mt-0.5 shrink-0 text-brand-500" />
+       <div>
+         <p className="font-medium text-gray-800 dark:text-white/90">{label}</p>
+         <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{descricao}</p>
+       </div>
++    </>
++  );
++  if (href && !disabled) {
++    return (
++      <Link href={href} className={SUBTELA_CARD_CLASSNAME}>
++        {conteudo}
++      </Link>
++    );
++  }
++  return (
++    <button type="button" onClick={onClick} disabled={disabled} className={SUBTELA_CARD_CLASSNAME}>
++      {conteudo}
+     </button>
+   );
+ }
+ 
+-/** Grade de SubtelaCard — menu inicial de uma página dividida em subtelas. Máximo 2 colunas (nunca 3+); 1 coluna em telas pequenas. */
+-export function SubtelasMenu({ opcoes }: { opcoes: { id: string; icon: string; label: string; descricao: string; onClick: () => void; disabled?: boolean }[] }) {
++/** Grade de SubtelaCard — menu inicial de uma página dividida em subtelas/cards. Máximo 2 colunas (nunca 3+); 1 coluna em telas pequenas. */
++export function SubtelasMenu({ opcoes }: { opcoes: { id: string; icon: string; label: string; descricao: string; onClick?: () => void; href?: string; disabled?: boolean }[] }) {
+   return (
+     <div className="grid gap-3 sm:grid-cols-2">
+-      {opcoes.map((o) => <SubtelaCard key={o.id} icon={o.icon} label={o.label} descricao={o.descricao} onClick={o.onClick} disabled={o.disabled} />)}
++      {opcoes.map((o) => <SubtelaCard key={o.id} icon={o.icon} label={o.label} descricao={o.descricao} onClick={o.onClick} href={o.href} disabled={o.disabled} />)}
+     </div>
+   );
+ }
+@@ -526,7 +612,7 @@ export function CobrancasTable({ rows, onOpen, onCancelar }: {
+ 
+   return (
+     <div className="space-y-2">
+-      {erro && <p className="text-sm text-error-500">{erro}</p>}
++      {erro && <p className="text-sm text-error-500 dark:text-error-400">{erro}</p>}
+       <div className="overflow-x-auto">
+         <Table className="w-full text-left">
+           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+diff --git a/src/layout/AppSidebar.tsx b/src/layout/AppSidebar.tsx
+index 4254321..ee82c54 100644
+--- a/src/layout/AppSidebar.tsx
++++ b/src/layout/AppSidebar.tsx
+@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
+     subItems: [
+       { name: "Credenciais", path: "/financas/credenciais" },
+       { name: "Configurações", path: "/financas/configuracoes" },
++      { name: "Gestão de Cobranças", path: "/financas/gestao-cobrancas" },
+       { name: "Pagamentos", path: "/financas/pagamentos" },
+     ],
+   },
+diff --git a/src/lib/api/services.ts b/src/lib/api/services.ts
+index 8596ae8..eb9bdfc 100644
+--- a/src/lib/api/services.ts
++++ b/src/lib/api/services.ts
+@@ -1615,6 +1615,10 @@ export const academiaService = {
+   atualizarCategoriaServico: (id: string, data: CategoriaServicoPayload, token?: string) => api.put<{ data: CategoriaServico }, CategoriaServicoPayload>(`/academia/categorias-servico/${id}`, data, { token: token || tokenStorage.get() || undefined }),
+   desativarCategoriaServico: (id: string, token?: string) => api.put<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
+   reativarCategoriaServico: (id: string, token?: string) => api.put<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}/reativar`, undefined, { token: token || tokenStorage.get() || undefined }),
++  // Tarefa 107/10: exige que a categoria já esteja desativada e sem
++  // nenhum serviço vinculado — o backend rejeita com 422 e uma mensagem
++  // explicando o motivo quando essas condições não são atendidas.
++  deletarCategoriaServico: (id: string, motivo?: string, token?: string) => api.delete<{ message: string }>(`/academia/categorias-servico/${id}`, { motivo }, { token: token || tokenStorage.get() || undefined }),
+   listarCategoriasServico: (token?: string) => api.get<{ categorias_servico: CategoriaServico[]; total: number }>('/academia/categorias-servico', { token: token || tokenStorage.get() || undefined }),
+   criarDocumentoExtra: (data: DocumentoExtraPayload, token?: string) => api.post<{ data: DocumentoExtra }, DocumentoExtraPayload>('/academia/documentos-extra', data, { token: token || tokenStorage.get() || undefined }),
+   atualizarDocumentoExtra: (id: string, data: DocumentoExtraPayload, token?: string) => api.put<{ data: DocumentoExtra }, DocumentoExtraPayload>(`/academia/documentos-extra/${encodeURIComponent(id)}`, data, { token: token || tokenStorage.get() || undefined }),
+@@ -1636,6 +1640,11 @@ export const academiaService = {
+   atualizarServicoExtra: (id: string, data: ServicoExtraPayload, token?: string) => api.put<{ message: string; data: ServicoExtra }, ServicoExtraPayload>(`/academia/servicos-extras/${id}`, data, { token: token || tokenStorage.get() || undefined }),
+   desativarServicoExtra: (id: string, token?: string) => api.put<{ data: ServicoExtra }>(`/academia/servicos-extras/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
+   reativarServicoExtra: (id: string, token?: string) => api.put<{ data: ServicoExtra }>(`/academia/servicos-extras/${id}/reativar`, undefined, { token: token || tokenStorage.get() || undefined }),
++  // Tarefa 107/10: exige que o serviço já esteja desativado e sem nenhuma
++  // solicitação pendente/aprovada-pendente-de-pagamento/vinculada — o
++  // backend rejeita com 422 e uma mensagem explicando o motivo quando
++  // essas condições não são atendidas.
++  deletarServicoExtra: (id: string, motivo?: string, token?: string) => api.delete<{ message: string }>(`/academia/servicos-extras/${id}`, { motivo }, { token: token || tokenStorage.get() || undefined }),
+   listarServicosExtras: (token?: string) => api.get<{ servicos_extras: ServicoExtra[]; total: number }>('/academia/servicos-extras', { token: token || tokenStorage.get() || undefined }),
+   getServicoExtra: (id: string, token?: string) => api.get<{ data: ServicoExtra }>(`/academia/servicos-extras/${id}`, { token: token || tokenStorage.get() || undefined }),
+   listarSolicitacoesServicoExtra: (status?: string, token?: string) => api.get<{ solicitacoes: Array<{ id: string; servico_extra_id: string; codigo_estudante: string; status: StatusSolicitacaoServicoExtra; motivo_reprovacao?: string; motivo_cancelamento?: string; created_at: string; updated_at: string }>; total: number }>(`/academia/servicos-extras/solicitacoes${status ? `?status=${encodeURIComponent(status)}` : ''}`, { token: token || tokenStorage.get() || undefined }),
+diff --git a/src/lib/route-guards.ts b/src/lib/route-guards.ts
+index 955659f..e8ca3aa 100644
+--- a/src/lib/route-guards.ts
++++ b/src/lib/route-guards.ts
+@@ -139,6 +139,36 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
+     allowedTypes: ['admin', 'academia'],
+     redirectIfUnauthorized: '/',
+   },
++  {
++    path: '/financas/configuracoes/mensalidade',
++    allowedTypes: ['admin', 'academia'],
++    redirectIfUnauthorized: '/',
++  },
++  {
++    path: '/financas/configuracoes/mensalidade/criar',
++    allowedTypes: ['admin', 'academia'],
++    redirectIfUnauthorized: '/',
++  },
++  {
++    path: '/financas/configuracoes/mensalidade/inicio-cobranca',
++    allowedTypes: ['admin', 'academia'],
++    redirectIfUnauthorized: '/',
++  },
++  {
++    path: '/financas/configuracoes/taxa-matricula',
++    allowedTypes: ['admin', 'academia'],
++    redirectIfUnauthorized: '/',
++  },
++  {
++    path: '/financas/configuracoes/taxa-matricula/criar',
++    allowedTypes: ['admin', 'academia'],
++    redirectIfUnauthorized: '/',
++  },
++  {
++    path: '/financas/gestao-cobrancas',
++    allowedTypes: ['admin', 'academia'],
++    redirectIfUnauthorized: '/',
++  },
+   {
+     path: '/financas/pagamentos',
+     allowedTypes: ['admin', 'academia'],
