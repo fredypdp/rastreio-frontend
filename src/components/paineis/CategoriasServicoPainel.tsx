@@ -7,6 +7,7 @@ import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Alert from "@/components/ui/alert/Alert";
 import { PageHeading, PageDescription } from "@/components/ui/typography/Typography";
+import { ConfirmDialog } from "@/components/paineis/financeiroShared";
 
 export default function CategoriasServicoPainel() {
   const lista = useApi(academiaService.listarCategoriasServico);
@@ -14,22 +15,24 @@ export default function CategoriasServicoPainel() {
   const atualizar = useApi(academiaService.atualizarCategoriaServico);
   const desativar = useApi(academiaService.desativarCategoriaServico);
   const reativar = useApi(academiaService.reativarCategoriaServico);
+  const deletar = useApi(academiaService.deletarCategoriaServico);
 
   const [nome, setNome] = useState("");
   const [edicao, setEdicao] = useState<CategoriaServico | null>(null);
   const [texto, setTexto] = useState("");
   const [erro, setErro] = useState<string | null>(null);
+  const [categoriaParaExcluir, setCategoriaParaExcluir] = useState<CategoriaServico | null>(null);
 
   const recarregar = () => lista.execute();
   useEffect(() => { recarregar() }, []);
 
-  const tratar = async (fn: () => Promise<unknown>) => {
+  const tratar = async (fn: () => Promise<unknown>, fallback = "Não foi possível salvar a categoria.") => {
     try {
       setErro(null);
       await fn();
       recarregar();
     } catch (e) {
-      setErro(formatApiError(e, "Não foi possível salvar a categoria."));
+      setErro(formatApiError(e, fallback));
     }
   };
 
@@ -41,6 +44,19 @@ export default function CategoriasServicoPainel() {
       </div>
 
       {erro && <Alert variant="error" title="Categorias" message={erro} />}
+
+      {categoriaParaExcluir && (
+        <ConfirmDialog
+          title="Excluir categoria de serviço"
+          message={`Tem certeza que deseja excluir "${categoriaParaExcluir.nome}"? Isto não pode ser desfeito. Só é possível excluir se não houver nenhum serviço vinculado a esta categoria.`}
+          confirmLabel="Excluir"
+          onConfirm={async () => {
+            await tratar(() => deletar.execute(categoriaParaExcluir.id), "Não foi possível excluir a categoria.");
+            setCategoriaParaExcluir(null);
+          }}
+          onClose={() => setCategoriaParaExcluir(null)}
+        />
+      )}
 
       <form
         className="flex max-w-xl gap-2"
@@ -90,11 +106,16 @@ export default function CategoriasServicoPainel() {
                     Editar
                   </button>
                   <button
-                    className="text-brand-600 dark:text-brand-400"
+                    className="mr-3 text-brand-600 dark:text-brand-400"
                     onClick={() => tratar(() => (c.ativo ? desativar : reativar).execute(c.id))}
                   >
                     {c.ativo ? "Desativar" : "Reativar"}
                   </button>
+                  {!c.ativo && (
+                    <button className="text-error-500 dark:text-error-400" onClick={() => setCategoriaParaExcluir(c)}>
+                      Excluir
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

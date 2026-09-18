@@ -78,11 +78,11 @@ Depois que o Passo 2 passar sem problema:
 
 ## Resumo das mudanças (checklist final)
 
-- [ ] Tarefa 107 do backend já aplicada (pré-requisito)
-- [ ] Patch aplicado sem conflitos
-- [ ] `npx tsc --noEmit` limpo
-- [ ] `npx eslint` sem novos erros
-- [ ] Criar um serviço marcado como "pago" sem escolher método de pagamento mostra aviso no cliente, não erro cru da API
-- [ ] Lista de Serviços Extras mostra Status + Desativar/Reativar + Excluir (Excluir só quando inativo)
-- [ ] Lista de Categorias de Serviço mostra Excluir (só quando inativa)
-- [ ] Arquivos desta tarefa movidos para `src/docs/Tarefas feitas/`
+- [x] Tarefa 107 do backend já aplicada (pré-requisito)
+- [x] Patch aplicado sem conflitos
+- [x] `npx tsc --noEmit` limpo
+- [x] `npx eslint` sem novos erros
+- [x] Criar um serviço marcado como "pago" sem escolher método de pagamento mostra aviso no cliente, não erro cru da API
+- [x] Lista de Serviços Extras mostra Status + Desativar/Reativar + Excluir (Excluir só quando inativo)
+- [x] Lista de Categorias de Serviço mostra Excluir (só quando inativa)
+- [x] Arquivos desta tarefa movidos para `src/docs/Tarefas feitas/`
