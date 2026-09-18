@@ -1615,6 +1615,10 @@ export const academiaService = {
   atualizarCategoriaServico: (id: string, data: CategoriaServicoPayload, token?: string) => api.put<{ data: CategoriaServico }, CategoriaServicoPayload>(`/academia/categorias-servico/${id}`, data, { token: token || tokenStorage.get() || undefined }),
   desativarCategoriaServico: (id: string, token?: string) => api.put<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
   reativarCategoriaServico: (id: string, token?: string) => api.put<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}/reativar`, undefined, { token: token || tokenStorage.get() || undefined }),
+  // Tarefa 107/10: exige que a categoria já esteja desativada e sem
+  // nenhum serviço vinculado — o backend rejeita com 422 e uma mensagem
+  // explicando o motivo quando essas condições não são atendidas.
+  deletarCategoriaServico: (id: string, motivo?: string, token?: string) => api.delete<{ message: string }>(`/academia/categorias-servico/${id}`, { motivo }, { token: token || tokenStorage.get() || undefined }),
   listarCategoriasServico: (token?: string) => api.get<{ categorias_servico: CategoriaServico[]; total: number }>('/academia/categorias-servico', { token: token || tokenStorage.get() || undefined }),
   criarDocumentoExtra: (data: DocumentoExtraPayload, token?: string) => api.post<{ data: DocumentoExtra }, DocumentoExtraPayload>('/academia/documentos-extra', data, { token: token || tokenStorage.get() || undefined }),
   atualizarDocumentoExtra: (id: string, data: DocumentoExtraPayload, token?: string) => api.put<{ data: DocumentoExtra }, DocumentoExtraPayload>(`/academia/documentos-extra/${encodeURIComponent(id)}`, data, { token: token || tokenStorage.get() || undefined }),
@@ -1636,6 +1640,11 @@ export const academiaService = {
   atualizarServicoExtra: (id: string, data: ServicoExtraPayload, token?: string) => api.put<{ message: string; data: ServicoExtra }, ServicoExtraPayload>(`/academia/servicos-extras/${id}`, data, { token: token || tokenStorage.get() || undefined }),
   desativarServicoExtra: (id: string, token?: string) => api.put<{ data: ServicoExtra }>(`/academia/servicos-extras/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
   reativarServicoExtra: (id: string, token?: string) => api.put<{ data: ServicoExtra }>(`/academia/servicos-extras/${id}/reativar`, undefined, { token: token || tokenStorage.get() || undefined }),
+  // Tarefa 107/10: exige que o serviço já esteja desativado e sem nenhuma
+  // solicitação pendente/aprovada-pendente-de-pagamento/vinculada — o
+  // backend rejeita com 422 e uma mensagem explicando o motivo quando
+  // essas condições não são atendidas.
+  deletarServicoExtra: (id: string, motivo?: string, token?: string) => api.delete<{ message: string }>(`/academia/servicos-extras/${id}`, { motivo }, { token: token || tokenStorage.get() || undefined }),
   listarServicosExtras: (token?: string) => api.get<{ servicos_extras: ServicoExtra[]; total: number }>('/academia/servicos-extras', { token: token || tokenStorage.get() || undefined }),
   getServicoExtra: (id: string, token?: string) => api.get<{ data: ServicoExtra }>(`/academia/servicos-extras/${id}`, { token: token || tokenStorage.get() || undefined }),
   listarSolicitacoesServicoExtra: (status?: string, token?: string) => api.get<{ solicitacoes: Array<{ id: string; servico_extra_id: string; codigo_estudante: string; status: StatusSolicitacaoServicoExtra; motivo_reprovacao?: string; motivo_cancelamento?: string; created_at: string; updated_at: string }>; total: number }>(`/academia/servicos-extras/solicitacoes${status ? `?status=${encodeURIComponent(status)}` : ''}`, { token: token || tokenStorage.get() || undefined }),

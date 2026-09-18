@@ -379,7 +379,7 @@ export default function FinanceiroCredenciaisPainel() {
           <Button variant="outline" size="sm" onClick={closeForm} disabled={saving} startIcon={<Icon icon="mdi:arrow-left" width={16} />}>Voltar</Button>
           <div>
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{editing ? "Atualizar credencial" : "Configurar credenciais"}</h3>
-            {formErrors.contexto && <p className="mt-1 text-xs text-error-500">{formErrors.contexto}</p>}
+            {formErrors.contexto && <p className="mt-1 text-xs text-error-500 dark:text-error-400">{formErrors.contexto}</p>}
           </div>
           {/* Erro/sucesso do envio deste formulário — visível aqui dentro, não no topo da página. */}
           {formAlert && <Alert variant={formAlert.variant} title={formAlert.variant === "success" ? "Sucesso" : "Não foi possível salvar"} message={formAlert.message} />}
@@ -500,7 +500,7 @@ function WebhookSecretPanel({ credencialId, podeRotacionar }: { credencialId: st
           <Button size="sm" variant="outline" disabled={rotacionar.loading} onClick={() => setConfirmandoRotacao(true)}>Rotacionar</Button>
         )}
       </div>
-      {erro && <p className="text-xs text-error-500">{erro}</p>}
+      {erro && <p className="text-xs text-error-500 dark:text-error-400">{erro}</p>}
     </div>
   );
 }

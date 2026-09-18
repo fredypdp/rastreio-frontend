@@ -1,5 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { consultasService } from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
 import Button from "@/components/ui/button/Button";
@@ -28,6 +30,66 @@ export const dt = (v?: string) => {
     ? v
     : new Intl.DateTimeFormat("pt-AO", { dateStyle: "short", timeStyle: "short" }).format(d);
 };
+
+/**
+ * ValorKzInput — Tarefa 11. Campo de valor em Kwanzas com máscara de
+ * milhares/decimais (formato angolano: "." separa milhares, "," separa
+ * centavos — ex.: "45.000,00"). O usuário digita só dígitos, sempre
+ * interpretados como centavos (os últimos 2 dígitos), o que elimina de vez a
+ * ambiguidade que existia com o `<input type="number">` nativo (que não
+ * respeita "." como separador de milhares e tem comportamento inconsistente
+ * de "," entre navegadores/locales).
+ *
+ * `value`/`onChange` continuam a expor o valor "puro" como string numérica
+ * (ex.: "45000.00"), exatamente como o restante do formulário (e o payload
+ * enviado à API) já esperava antes desta tarefa — só a apresentação do campo
+ * muda, não o tipo de dado manipulado pelo estado do formulário.
+ */
+export function formatarValorKzExibicao(valor: string): string {
+  const centavos = valor ? Math.round(Number(valor) * 100) : 0;
+  if (!centavos) return "";
+  const negativo = centavos < 0;
+  const abs = Math.abs(centavos);
+  const inteiro = Math.floor(abs / 100).toString();
+  const dec = String(abs % 100).padStart(2, "0");
+  const inteiroAgrupado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${negativo ? "-" : ""}${inteiroAgrupado},${dec}`;
+}
+
+interface ValorKzInputProps {
+  value: string; // valor "puro", ex.: "45000.00" (mesmo formato já usado no resto do formulário)
+  onChange: (value: string) => void;
+  id?: string;
+  name?: string;
+  error?: boolean;
+  hint?: string;
+}
+
+export function ValorKzInput({ value, onChange, id, name, error, hint }: ValorKzInputProps) {
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const digitos = e.target.value.replace(/\D/g, "");
+    if (!digitos) {
+      onChange("");
+      return;
+    }
+    const centavos = parseInt(digitos, 10);
+    onChange((centavos / 100).toFixed(2));
+  }
+
+  return (
+    <Input
+      id={id}
+      name={name}
+      type="text"
+      inputMode="numeric"
+      placeholder="0,00"
+      value={formatarValorKzExibicao(value)}
+      onChange={handleChange}
+      error={error}
+      hint={hint}
+    />
+  );
+}
 
 /** "2026_2027" (formato de armazenamento no backend) → "2026/2027" (exibição). Nunca mostrar o valor cru. */
 export function formatAnoLetivo(v?: string) {
@@ -458,10 +520,17 @@ export function PaginacaoSetas({ paginaAtual, totalPaginas, total, porPagina, on
  * um menu de opções — o mesmo padrão já usado em
  * FinanceiroCredenciaisPainel para criar/editar credencial.
  */
-export function SubtelaPanel({ title, icon, onVoltar, children }: { title: string; icon?: string; onVoltar: () => void; children: React.ReactNode }) {
+/**
+ * `onVoltar` aceita uma função (padrão antigo, ainda usado por quem
+ * continua com subtelas por estado local) ou uma string com uma rota
+ * (Tarefa 11 — páginas novas que navegam de verdade via next/navigation).
+ */
+export function SubtelaPanel({ title, icon, onVoltar, children }: { title: string; icon?: string; onVoltar: string | (() => void); children: React.ReactNode }) {
+  const router = useRouter();
+  const handleVoltar = typeof onVoltar === "string" ? () => router.push(onVoltar) : onVoltar;
   return (
     <div className="space-y-5 rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03] lg:p-8">
-      <Button variant="outline" size="sm" onClick={onVoltar} startIcon={<Icon icon="mdi:arrow-left" width={16} />}>Voltar</Button>
+      <Button variant="outline" size="sm" onClick={handleVoltar} startIcon={<Icon icon="mdi:arrow-left" width={16} />}>Voltar</Button>
       <div className="flex items-center gap-2">
         {icon && <Icon icon={icon} width={22} className="text-gray-800 dark:text-white/90" />}
         <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">{title}</h2>
@@ -472,28 +541,45 @@ export function SubtelaPanel({ title, icon, onVoltar, children }: { title: strin
 }
 
 /** Cartão clicável de uma opção do menu de subtelas (ex.: menu de configurações financeiras). */
-export function SubtelaCard({ icon, label, descricao, onClick, disabled = false }: { icon: string; label: string; descricao: string; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="flex items-start gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-left transition hover:border-brand-300 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:shadow-none dark:border-white/[0.05] dark:bg-white/[0.03] dark:hover:border-brand-500/40"
-    >
+const SUBTELA_CARD_CLASSNAME = "flex items-start gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-left transition hover:border-brand-300 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:shadow-none dark:border-white/[0.05] dark:bg-white/[0.03] dark:hover:border-brand-500/40";
+
+/**
+ * `href` (Tarefa 11) faz o card navegar como uma página de verdade (via
+ * next/link) em vez de só trocar um estado local — usado pelas novas
+ * páginas de /financas/configuracoes, que passaram de subtelas para rotas
+ * próprias. `onClick` continua funcionando como antes para quem ainda usa o
+ * padrão de subtela (ex.: FinanceiroPagamentosPainel). Um card nunca recebe
+ * os dois ao mesmo tempo.
+ */
+export function SubtelaCard({ icon, label, descricao, onClick, href, disabled = false }: { icon: string; label: string; descricao: string; onClick?: () => void; href?: string; disabled?: boolean }) {
+  const conteudo = (
+    <>
       <Icon icon={icon} width={22} className="mt-0.5 shrink-0 text-brand-500" />
       <div>
         <p className="font-medium text-gray-800 dark:text-white/90">{label}</p>
         <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{descricao}</p>
       </div>
+    </>
+  );
+  if (href && !disabled) {
+    return (
+      <Link href={href} className={SUBTELA_CARD_CLASSNAME}>
+        {conteudo}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} className={SUBTELA_CARD_CLASSNAME}>
+      {conteudo}
     </button>
   );
 }
 
-/** Grade de SubtelaCard — menu inicial de uma página dividida em subtelas. Máximo 2 colunas (nunca 3+); 1 coluna em telas pequenas. */
-export function SubtelasMenu({ opcoes }: { opcoes: { id: string; icon: string; label: string; descricao: string; onClick: () => void; disabled?: boolean }[] }) {
+/** Grade de SubtelaCard — menu inicial de uma página dividida em subtelas/cards. Máximo 2 colunas (nunca 3+); 1 coluna em telas pequenas. */
+export function SubtelasMenu({ opcoes }: { opcoes: { id: string; icon: string; label: string; descricao: string; onClick?: () => void; href?: string; disabled?: boolean }[] }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      {opcoes.map((o) => <SubtelaCard key={o.id} icon={o.icon} label={o.label} descricao={o.descricao} onClick={o.onClick} disabled={o.disabled} />)}
+      {opcoes.map((o) => <SubtelaCard key={o.id} icon={o.icon} label={o.label} descricao={o.descricao} onClick={o.onClick} href={o.href} disabled={o.disabled} />)}
     </div>
   );
 }
@@ -526,7 +612,7 @@ export function CobrancasTable({ rows, onOpen, onCancelar }: {
 
   return (
     <div className="space-y-2">
-      {erro && <p className="text-sm text-error-500">{erro}</p>}
+      {erro && <p className="text-sm text-error-500 dark:text-error-400">{erro}</p>}
       <div className="overflow-x-auto">
         <Table className="w-full text-left">
           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">

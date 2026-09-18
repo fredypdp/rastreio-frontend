@@ -74,10 +74,10 @@ const Input: FC<InputProps> = ({
         <p
           className={`mt-1.5 text-xs ${
             error
-              ? "text-error-500"
+              ? "text-error-500 dark:text-error-400"
               : success
-              ? "text-success-500"
-              : "text-gray-500"
+              ? "text-success-500 dark:text-success-400"
+              : "text-gray-500 dark:text-gray-400"
           }`}
         >
           {hint}
