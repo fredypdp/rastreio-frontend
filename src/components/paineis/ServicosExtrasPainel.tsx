@@ -19,6 +19,7 @@ import TextArea from "@/components/form/input/TextArea";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import { Modal } from "@/components/ui/modal";
 import { PageHeading, PageDescription, Section, SectionTitle, SectionDescription } from "@/components/ui/typography/Typography";
+import { METODO_PAGAMENTO_LABEL, ConfirmDialog } from "@/components/paineis/financeiroShared";
 
 const tipos: [TipoDetalhePersonalizado, string][] = [
   ["texto", "Texto"],
@@ -158,6 +159,9 @@ export default function ServicosExtrasPainel() {
   const cursosApi = useApi(academiaService.listarCursos);
   const criar = useApi(academiaService.criarServicoExtra);
   const atualizar = useApi(academiaService.atualizarServicoExtra);
+  const desativarServico = useApi(academiaService.desativarServicoExtra);
+  const reativarServico = useApi(academiaService.reativarServicoExtra);
+  const deletarServico = useApi(academiaService.deletarServicoExtra);
   const nova = useApi(academiaService.criarCategoriaServico);
   const { user } = useUserCookie();
 
@@ -168,15 +172,33 @@ export default function ServicosExtrasPainel() {
   const [modal, setModal] = useState(false);
   const [nomeCat, setNomeCat] = useState("");
   const [cursoSelecionado, setCursoSelecionado] = useState("");
+  const [servicoParaExcluir, setServicoParaExcluir] = useState<ServicoExtra | null>(null);
 
   useEffect(() => { lista.execute(); cats.execute(); cursosApi.execute(); }, []);
 
   const set = (x: Partial<Form>) => setForm(p => ({ ...p, ...x }));
 
+  /** Ativar/desativar/excluir na lista — mesmo padrão de tratamento de erro do formulário (alert compartilhado), só que sem sair da tela de listagem. */
+  const tratarAcaoServico = async (fn: () => Promise<unknown>, fallback: string) => {
+    try {
+      setAlert(null);
+      await fn();
+      await lista.execute();
+    } catch (e) {
+      setAlert(formatApiError(e, fallback));
+    }
+  };
+
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.nome.trim() || !Object.values(form.detalhesPersonalizados).every(d => d.rotulo.trim())) {
       return setAlert("Informe o nome e o rótulo de todas as personalizações.");
+    }
+    if (form.pago && form.metodos.length === 0) {
+      return setAlert("Selecione ao menos um método de pagamento aceite para o serviço.");
+    }
+    if (form.taxa && form.metodosTaxa.length === 0) {
+      return setAlert("Selecione ao menos um método de pagamento aceite para a taxa de inscrição.");
     }
     try {
       edit ? await atualizar.execute(edit.id, valor(form)) : await criar.execute(valor(form));
@@ -240,13 +262,39 @@ export default function ServicosExtrasPainel() {
                   isClearable={false}
                   isSearchable={false}
                 />
+                <SectionDescription>Métodos de pagamento aceites para este serviço</SectionDescription>
+                <div className="flex flex-wrap gap-4">
+                  {pay.map(m => (
+                    <Checkbox
+                      key={m}
+                      label={METODO_PAGAMENTO_LABEL[m]}
+                      checked={form.metodos.includes(m)}
+                      onChange={() => set({ metodos: form.metodos.includes(m) ? form.metodos.filter(x => x !== m) : [...form.metodos, m] })}
+                    />
+                  ))}
+                </div>
               </>
             )}
           </Section>
 
           <Section>
             <Checkbox label="Tem taxa de inscrição" checked={form.taxa} onChange={taxa => set({ taxa })} />
-            {form.taxa && <Input type="number" value={form.valorTaxa} onChange={e => set({ valorTaxa: e.target.value })} placeholder="Valor da taxa" />}
+            {form.taxa && (
+              <>
+                <Input type="number" value={form.valorTaxa} onChange={e => set({ valorTaxa: e.target.value })} placeholder="Valor da taxa" />
+                <SectionDescription>Métodos de pagamento aceites para a taxa de inscrição</SectionDescription>
+                <div className="flex flex-wrap gap-4">
+                  {pay.map(m => (
+                    <Checkbox
+                      key={m}
+                      label={METODO_PAGAMENTO_LABEL[m]}
+                      checked={form.metodosTaxa.includes(m)}
+                      onChange={() => set({ metodosTaxa: form.metodosTaxa.includes(m) ? form.metodosTaxa.filter(x => x !== m) : [...form.metodosTaxa, m] })}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </Section>
 
           <Section>
@@ -358,11 +406,24 @@ export default function ServicosExtrasPainel() {
         </div>
         <Button onClick={() => { setEdit(null); setForm(vazio); setCursoSelecionado(""); setView("form"); }}>Novo Serviço</Button>
       </div>
+      {alert && <Alert variant="error" title="Serviços extras" message={alert} />}
+      {servicoParaExcluir && (
+        <ConfirmDialog
+          title="Excluir serviço extra"
+          message={`Tem certeza que deseja excluir "${servicoParaExcluir.nome}"? Isto não pode ser desfeito. Só é possível excluir se não houver nenhuma inscrição pendente, aprovada-pendente-de-pagamento ou vinculada neste serviço.`}
+          confirmLabel="Excluir"
+          onConfirm={async () => {
+            await tratarAcaoServico(() => deletarServico.execute(servicoParaExcluir.id), "Não foi possível excluir o serviço.");
+            setServicoParaExcluir(null);
+          }}
+          onClose={() => setServicoParaExcluir(null)}
+        />
+      )}
       <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800/70">
             <tr>
-              {["Nome", "Categoria", "Personalizações", "Ações"].map(x => (
+              {["Nome", "Categoria", "Personalizações", "Status", "Ações"].map(x => (
                 <th key={x} className="p-3 text-left font-medium text-gray-600 dark:text-gray-400">{x}</th>
               ))}
             </tr>
@@ -378,13 +439,25 @@ export default function ServicosExtrasPainel() {
                 >
                   {Object.keys(s.detalhes_personalizados ?? {}).length} personalizações
                 </td>
+                <td className="p-3 text-gray-500 dark:text-gray-400">{s.ativo ? "Ativo" : "Inativo"}</td>
                 <td className="p-3">
                   <button
-                    className="text-brand-600 dark:text-brand-400"
+                    className="mr-3 text-brand-600 dark:text-brand-400"
                     onClick={() => { setEdit(s); setForm(paraForm(s)); setCursoSelecionado(""); setView("form"); }}
                   >
                     Editar
                   </button>
+                  <button
+                    className="mr-3 text-brand-600 dark:text-brand-400"
+                    onClick={() => tratarAcaoServico(() => (s.ativo ? desativarServico : reativarServico).execute(s.id), "Não foi possível atualizar o status do serviço.")}
+                  >
+                    {s.ativo ? "Desativar" : "Reativar"}
+                  </button>
+                  {!s.ativo && (
+                    <button className="text-error-500 dark:text-error-400" onClick={() => setServicoParaExcluir(s)}>
+                      Excluir
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
