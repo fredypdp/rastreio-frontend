@@ -110,9 +110,9 @@ Depois que o Passo 2 passar sem problema:
 
 ## Resumo das mudanças (checklist final)
 
-- [ ] Patch aplicado sem conflitos
-- [ ] `npx tsc --noEmit` limpo
-- [ ] `npx eslint` sem novos erros
-- [ ] `npx next build` conclui a checagem de tipos/rotas (falha de `fonts.googleapis.com`, se ocorrer, é ambiental)
-- [ ] `/financas/configuracoes`, `/financas/configuracoes/mensalidade`, `/mensalidade/criar`, `/mensalidade/inicio-cobranca`, `/taxa-matricula`, `/taxa-matricula/criar` e `/financas/gestao-cobrancas` abrem sem erro
-- [ ] Arquivos desta tarefa movidos para `src/docs/Tarefas feitas/`
+- [x] Patch aplicado sem conflitos
+- [x] `npx tsc --noEmit` limpo
+- [x] `npx eslint` sem novos erros
+- [x] `npx next build` conclui a checagem de tipos/rotas (falha de `fonts.googleapis.com`, se ocorrer, é ambiental)
+- [x] `/financas/configuracoes`, `/financas/configuracoes/mensalidade`, `/mensalidade/criar`, `/mensalidade/inicio-cobranca`, `/taxa-matricula`, `/taxa-matricula/criar` e `/financas/gestao-cobrancas` abrem sem erro
+- [x] Arquivos desta tarefa movidos para `src/docs/Tarefas feitas/`

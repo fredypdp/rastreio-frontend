@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import FinanceiroConfiguracoesPainel from "@/components/paineis/FinanceiroConfiguracoesPainel";
+import FinanceiroConfiguracoesRootPainel from "@/components/paineis/FinanceiroConfiguracoesRootPainel";
 
 export const metadata: Metadata = {
   title: "Finanças - Configurações",
-  description: "Configure propinas, matrículas, regras de cobrança e obrigações financeiras da academia no Spuri.",
+  description: "Configure propina, mensalidade e taxa de matrícula da academia no Spuri.",
 };
 
 export default function FinanceiroConfiguracoesPage() {
-  return <FinanceiroConfiguracoesPainel />;
+  return <FinanceiroConfiguracoesRootPainel />;
 }

@@ -140,6 +140,36 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
     redirectIfUnauthorized: '/',
   },
   {
+    path: '/financas/configuracoes/mensalidade',
+    allowedTypes: ['admin', 'academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
+    path: '/financas/configuracoes/mensalidade/criar',
+    allowedTypes: ['admin', 'academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
+    path: '/financas/configuracoes/mensalidade/inicio-cobranca',
+    allowedTypes: ['admin', 'academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
+    path: '/financas/configuracoes/taxa-matricula',
+    allowedTypes: ['admin', 'academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
+    path: '/financas/configuracoes/taxa-matricula/criar',
+    allowedTypes: ['admin', 'academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
+    path: '/financas/gestao-cobrancas',
+    allowedTypes: ['admin', 'academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
     path: '/financas/pagamentos',
     allowedTypes: ['admin', 'academia'],
     redirectIfUnauthorized: '/',
