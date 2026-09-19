@@ -1,25 +1,36 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Alert from "@/components/ui/alert/Alert";
+import Icon from "@/components/ui/Icon";
 import { SubtelasMenu } from "@/components/paineis/financeiroShared";
-import { FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, ConfiguracoesSalvasTable, useFinanceiroNivelContext } from "@/components/paineis/financeiroNivelShared";
+import { FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, ConfiguracoesDefinidasCards, useFinanceiroNivelContext } from "@/components/paineis/financeiroNivelShared";
 
 /**
- * /financas/configuracoes/taxa-matricula (Tarefa 11). Antes era a subtela
+ * /financas/configuracoes/taxa-matricula (Tarefa 12). Antes era a subtela
  * "matricula" — que misturava, numa única tela, o formulário de criação e a
  * lista de configurações já feitas. Agora o formulário vive numa página
  * própria (/taxa-matricula/criar) e esta página passa a ser só a lista + o
  * card "Definir Nova Taxa" (só 1 card — taxa de matrícula não tem
  * "início de cobrança", que é um conceito exclusivo de mensalidade).
+ *
+ * A antiga tabela "Configurações já feitas" virou cartões "Taxas definidas"
+ * (ConfiguracoesDefinidasCards) — só aparece quando existe pelo menos uma
+ * configuração; com zero, o próprio componente já mostra "Nenhuma
+ * configuração salva ainda." sem cabeçalho nenhum.
  */
 export default function TaxaMatriculaListaPainel() {
   const ctx = useFinanceiroNivelContext();
   const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
+  const configuracoes = ctx.matriculasApi.data?.configuracoes ?? [];
 
   return (
     <FinanceiroAcessoGuard ctx={ctx}>
       <div className="space-y-6">
+        <Link href="/financas/configuracoes" className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-300">
+          <Icon icon="mdi:arrow-left" width={16} /> Voltar
+        </Link>
         <ManualDeFuncionamento>
           <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
             <li>Cada configuração enviada cria uma <b>nova versão vigente a partir de agora</b> — não edita nem apaga versões passadas.</li>
@@ -35,18 +46,20 @@ export default function TaxaMatriculaListaPainel() {
           ]}
         />
         {ctx.bloquear && <AvisoCredenciais />}
-        <div className="border-t border-gray-100 pt-5 dark:border-white/[0.05]">
-          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Configurações já feitas</h3>
-          <ConfiguracoesSalvasTable
-            linhas={ctx.matriculasApi.data?.configuracoes ?? []}
-            comMesFim={false}
-            kind="matricula"
-            cursos={ctx.cursos}
-            codigoAcademia={ctx.codigoAcademia}
-            reload={ctx.reload}
-            onAlert={setAlert}
-          />
-        </div>
+        {configuracoes.length > 0 && (
+          <div className="border-t border-gray-100 pt-5 dark:border-white/[0.05]">
+            <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Taxas definidas</h3>
+            <ConfiguracoesDefinidasCards
+              linhas={configuracoes}
+              comMesFim={false}
+              kind="matricula"
+              cursos={ctx.cursos}
+              codigoAcademia={ctx.codigoAcademia}
+              reload={ctx.reload}
+              onAlert={setAlert}
+            />
+          </div>
+        )}
       </div>
     </FinanceiroAcessoGuard>
   );

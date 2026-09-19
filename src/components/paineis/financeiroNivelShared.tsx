@@ -197,11 +197,29 @@ export function MetodosPagamentoCheckboxes({ kind, selected, onToggle }: { kind:
   );
 }
 
-export function validarValorEAno(form: NivelFormState): FormFieldErrors {
+/** "6_ano_fundamental" → "6ª Classe"; "2_ano_medio" → "2.º Ano" — sem o sufixo "(Médio)"/"(Superior)" de labelAnoAcademico, usado nos cartões de configurações definidas (Tarefa 12) porque lá o nível/curso já aparece no título da secção, tornando o sufixo redundante. */
+export function labelAnoAcademicoCurto(codigo: string): string {
+  const m = /^(\d+)_ano_(fundamental|medio|superior)$/.exec(codigo);
+  if (!m) return codigo;
+  const [, numero, nivel] = m;
+  return nivel === "fundamental" ? `${numero}ª Classe` : `${numero}.º Ano`;
+}
+
+/** Extrai o número inicial de "6_ano_fundamental" para ordenar cartões/linhas por ano — "10_ano_medio" deve vir depois de "9_ano_medio", não antes (ordenação alfabética erraria isso). */
+function numeroDoAno(anoAcademico?: string): number {
+  const m = /^(\d+)_/.exec(anoAcademico ?? "");
+  return m ? Number(m[1]) : 0;
+}
+
+export function validarValorEAno(form: NivelFormState, existeConfiguracaoParaEscopo: boolean): FormFieldErrors {
   const errors: FormFieldErrors = {};
   const valorNumero = Number(form.valor);
   if (!form.valor.trim() || !(valorNumero > 0)) errors.valor = "Informe um valor maior que zero.";
-  if (!form.modo_vigencia) errors.modo_vigencia = "Escolha o que acontece com quem já está pendente.";
+  // modo_vigencia só é perguntado (e exigido) quando já existe uma
+  // configuração vigente para este escopo — isto é, isto é uma edição. Na
+  // primeira configuração de um escopo o campo não muda nada (ver
+  // Tarefa 108 do rastreio-backend), então nem perguntamos.
+  if (existeConfiguracaoParaEscopo && !form.modo_vigencia) errors.modo_vigencia = "Escolha o que acontece com quem já está pendente.";
   if (form.nivel === "fundamental") {
     if (!form.ano_academico) errors.ano_academico = "Selecione o ano/classe.";
   } else {
@@ -209,6 +227,29 @@ export function validarValorEAno(form: NivelFormState): FormFieldErrors {
     if (!form.ano_academico) errors.ano_academico = "Selecione o ano do curso.";
   }
   return errors;
+}
+
+/**
+ * true quando já existe, entre `linhas` (as configurações já carregadas —
+ * `ctx.mensalidadesApi.data.configuracoes` ou `ctx.matriculasApi.data.configuracoes`),
+ * uma configuração vigente para o escopo atualmente selecionado no
+ * formulário (mesmo nível + ano_academico, e para médio/superior também o
+ * mesmo curso_id). Usado tanto para decidir se a pergunta "o que acontece
+ * com quem já está pendente?" aparece, quanto para decidir se a
+ * requisição deve ir por POST (criar) ou PUT (atualizar) — a mesma
+ * condição decide as duas coisas, por isso ficou centralizada aqui em vez
+ * de duplicada nos dois formulários (Tarefa 12).
+ */
+export function existeConfiguracaoParaEscopo(
+  linhas: (MensalidadeConfiguracaoView | MatriculaConfiguracaoView)[],
+  form: Pick<NivelFormState, "nivel" | "ano_academico" | "curso_id">
+): boolean {
+  if (!form.ano_academico) return false;
+  if (form.nivel === "fundamental") {
+    return linhas.some((l) => l.nivel === "fundamental" && l.ano_academico === form.ano_academico);
+  }
+  if (!form.curso_id) return false;
+  return linhas.some((l) => l.nivel === form.nivel && l.curso_id === form.curso_id && l.ano_academico === form.ano_academico);
 }
 
 /**
@@ -222,9 +263,20 @@ export function validarValorEAno(form: NivelFormState): FormFieldErrors {
  * select. "Ano do curso" só fica habilitável depois que um curso é
  * selecionado (para médio/superior) — fundamental não tem essa restrição
  * porque não depende de curso.
+ *
+ * `escopoFixo` (Tarefa 12): true quando o formulário foi aberto a partir de
+ * "Editar" num cartão de configuração já existente (ver
+ * ConfiguracoesDefinidasCards) — nesse caso nível/curso/ano vêm fixos pela
+ * URL e são mostrados como texto, não como campos editáveis, porque editar
+ * aqui significa mudar o VALOR daquele escopo, não migrar a configuração
+ * para outro escopo (isso já é feito criando uma configuração nova).
+ *
+ * `existeConfiguracaoParaEscopo` decide se a pergunta "o que acontece com
+ * quem já está pendente?" aparece — só na edição (ver a função de mesmo
+ * nome acima).
  */
 export function NivelCamposFields({
-  kind, form, errors, setForm, niveisDisponiveis, cursos, anosAcademicosAcademia,
+  kind, form, errors, setForm, niveisDisponiveis, cursos, anosAcademicosAcademia, escopoFixo = false, existeConfiguracaoParaEscopo: existeConfig,
 }: {
   kind: "mensalidade" | "matricula";
   form: NivelFormState;
@@ -233,6 +285,8 @@ export function NivelCamposFields({
   niveisDisponiveis: FinanceiroNivel[];
   cursos: Curso[];
   anosAcademicosAcademia: string[];
+  escopoFixo?: boolean;
+  existeConfiguracaoParaEscopo: boolean;
 }) {
   const cursosDoNivel = (nivel: FinanceiroNivel) => cursos.filter((c) => c.type === nivel);
   const anosDoFormulario = (f: NivelFormState): string[] => {
@@ -241,6 +295,71 @@ export function NivelCamposFields({
     return curso?.anos_academicos ?? [];
   };
   const updateNivel = (nivel: FinanceiroNivel) => setForm((prev) => ({ ...prev, nivel, curso_id: "", ano_academico: "" }));
+
+  if (escopoFixo) {
+    const cursoNome = form.curso_id ? (cursos.find((c) => c.id === form.curso_id)?.nome ?? form.curso_id) : null;
+    return (
+      <>
+        <div className="space-y-1 rounded-lg bg-gray-50 p-3 text-sm dark:bg-white/[0.03]">
+          <p className="text-gray-500 dark:text-gray-400">
+            Nível: <span className="font-medium text-gray-800 dark:text-white/90">{NIVEL_LABEL[form.nivel]}</span>
+          </p>
+          {cursoNome && (
+            <p className="text-gray-500 dark:text-gray-400">
+              Curso: <span className="font-medium text-gray-800 dark:text-white/90">{cursoNome}</span>
+            </p>
+          )}
+          <p className="text-gray-500 dark:text-gray-400">
+            {form.nivel === "fundamental" ? "Ano / classe" : "Ano do curso"}: <span className="font-medium text-gray-800 dark:text-white/90">{labelAnoAcademico(form.ano_academico)}</span>
+          </p>
+        </div>
+        <Label>Valor (Kz)</Label>
+        <ValorKzInput id={`${kind}-valor`} name={`${kind}-valor`} value={form.valor} onChange={(v) => setForm((prev) => ({ ...prev, valor: v }))} error={!!errors.valor} hint={errors.valor} />
+        {existeConfig && (
+          <>
+            <Label>O que acontece com quem já está pendente?</Label>
+            <div className="flex flex-col gap-3">
+              <Radio
+                id={`${kind}-modo-vigencia-pendentes`}
+                name={`${kind}-modo-vigencia`}
+                value="cobrancas_pendentes"
+                checked={form.modo_vigencia === "cobrancas_pendentes"}
+                label={
+                  <span>
+                    <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar retroativamente</span>
+                    <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
+                      {kind === "mensalidade"
+                        ? "O novo valor passa a valer também para mensalidades de meses anteriores que já venceram e ainda não foram pagas."
+                        : "O novo valor passa a valer também para matrículas já aprovadas que ainda não foram pagas."}
+                    </span>
+                  </span>
+                }
+                onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "cobrancas_pendentes" }))}
+              />
+              <Radio
+                id={`${kind}-modo-vigencia-futuro`}
+                name={`${kind}-modo-vigencia`}
+                value="a_partir_da_atualizacao"
+                checked={form.modo_vigencia === "a_partir_da_atualizacao"}
+                label={
+                  <span>
+                    <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar só daqui para frente</span>
+                    <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
+                      {kind === "mensalidade"
+                        ? "Quem já está com uma mensalidade pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para cobranças futuras."
+                        : "Quem já está com uma matrícula pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para matrículas aprovadas a partir de agora."}
+                    </span>
+                  </span>
+                }
+                onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "a_partir_da_atualizacao" }))}
+              />
+            </div>
+            {errors.modo_vigencia && <p className="text-sm text-error-500 dark:text-error-400">{errors.modo_vigencia}</p>}
+          </>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -296,44 +415,48 @@ export function NivelCamposFields({
         error={!!errors.valor}
         hint={errors.valor}
       />
-      <Label>O que acontece com quem já está pendente?</Label>
-      <div className="flex flex-col gap-3">
-        <Radio
-          id={`${kind}-modo-vigencia-pendentes`}
-          name={`${kind}-modo-vigencia`}
-          value="cobrancas_pendentes"
-          checked={form.modo_vigencia === "cobrancas_pendentes"}
-          label={
-            <span>
-              <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar retroativamente</span>
-              <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
-                {kind === "mensalidade"
-                  ? "O novo valor passa a valer também para mensalidades de meses anteriores que já venceram e ainda não foram pagas."
-                  : "O novo valor passa a valer também para matrículas já aprovadas que ainda não foram pagas."}
-              </span>
-            </span>
-          }
-          onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "cobrancas_pendentes" }))}
-        />
-        <Radio
-          id={`${kind}-modo-vigencia-futuro`}
-          name={`${kind}-modo-vigencia`}
-          value="a_partir_da_atualizacao"
-          checked={form.modo_vigencia === "a_partir_da_atualizacao"}
-          label={
-            <span>
-              <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar só daqui para frente</span>
-              <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
-                {kind === "mensalidade"
-                  ? "Quem já está com uma mensalidade pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para cobranças futuras."
-                  : "Quem já está com uma matrícula pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para matrículas aprovadas a partir de agora."}
-              </span>
-            </span>
-          }
-          onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "a_partir_da_atualizacao" }))}
-        />
-      </div>
-      {errors.modo_vigencia && <p className="text-sm text-error-500 dark:text-error-400">{errors.modo_vigencia}</p>}
+      {existeConfig && (
+        <>
+          <Label>O que acontece com quem já está pendente?</Label>
+          <div className="flex flex-col gap-3">
+            <Radio
+              id={`${kind}-modo-vigencia-pendentes`}
+              name={`${kind}-modo-vigencia`}
+              value="cobrancas_pendentes"
+              checked={form.modo_vigencia === "cobrancas_pendentes"}
+              label={
+                <span>
+                  <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar retroativamente</span>
+                  <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
+                    {kind === "mensalidade"
+                      ? "O novo valor passa a valer também para mensalidades de meses anteriores que já venceram e ainda não foram pagas."
+                      : "O novo valor passa a valer também para matrículas já aprovadas que ainda não foram pagas."}
+                  </span>
+                </span>
+              }
+              onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "cobrancas_pendentes" }))}
+            />
+            <Radio
+              id={`${kind}-modo-vigencia-futuro`}
+              name={`${kind}-modo-vigencia`}
+              value="a_partir_da_atualizacao"
+              checked={form.modo_vigencia === "a_partir_da_atualizacao"}
+              label={
+                <span>
+                  <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar só daqui para frente</span>
+                  <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
+                    {kind === "mensalidade"
+                      ? "Quem já está com uma mensalidade pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para cobranças futuras."
+                      : "Quem já está com uma matrícula pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para matrículas aprovadas a partir de agora."}
+                  </span>
+                </span>
+              }
+              onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "a_partir_da_atualizacao" }))}
+            />
+          </div>
+          {errors.modo_vigencia && <p className="text-sm text-error-500 dark:text-error-400">{errors.modo_vigencia}</p>}
+        </>
+      )}
     </>
   );
 }
@@ -343,15 +466,39 @@ function configKey(kind: "mensalidade" | "matricula", c: { nivel: string; ano_ac
   return `${kind}|${c.nivel}|${c.ano_academico ?? ""}|${c.curso_id ?? ""}`;
 }
 
+type ConfigRow = MensalidadeConfiguracaoView | MatriculaConfiguracaoView;
+
+/** Agrupa as configurações em secções para exibição em cartões (Tarefa 12): uma secção "Ensino Primário e Iº Ciclo" (todo o fundamental junto) e uma secção por curso para médio/superior. */
+function agruparEmSecoes(linhas: ConfigRow[], cursos: Curso[]): { titulo: string; linhas: ConfigRow[] }[] {
+  const secoes: { titulo: string; linhas: ConfigRow[] }[] = [];
+  const fundamental = linhas.filter((l) => l.nivel === "fundamental").sort((a, b) => numeroDoAno(a.ano_academico) - numeroDoAno(b.ano_academico));
+  if (fundamental.length > 0) secoes.push({ titulo: "Ensino Primário e Iº Ciclo", linhas: fundamental });
+
+  const porCurso = new Map<string, ConfigRow[]>();
+  for (const l of linhas) {
+    if (l.nivel === "fundamental" || !l.curso_id) continue;
+    if (!porCurso.has(l.curso_id)) porCurso.set(l.curso_id, []);
+    porCurso.get(l.curso_id)!.push(l);
+  }
+  for (const [cursoId, rows] of porCurso) {
+    const nome = cursos.find((c) => c.id === cursoId)?.nome ?? "Curso";
+    secoes.push({ titulo: nome, linhas: rows.sort((a, b) => numeroDoAno(a.ano_academico) - numeroDoAno(b.ano_academico)) });
+  }
+  return secoes;
+}
+
 /**
- * Tabela de "Configurações já feitas", exibida na página de listagem de
- * mensalidade/taxa de matrícula — substitui a antiga tela separada de
- * "Histórico de versões", que não existe mais.
+ * Substitui a antiga "Configurações já feitas" (Tarefa 12): em vez de uma
+ * tabela crua, cartões "{ano/classe} - {valor} Kz" agrupados por secção
+ * (fundamental junto; médio/superior um bloco por curso), clicáveis — abrem
+ * uma subtela de detalhe com "Editar" (leva ao formulário de criação com o
+ * escopo pré-preenchido e travado — ver NivelCamposFields escopoFixo) e
+ * "Remover" (mesmo fluxo de confirmação que já existia na tabela).
  */
-export function ConfiguracoesSalvasTable({
+export function ConfiguracoesDefinidasCards({
   linhas, comMesFim, kind, cursos, codigoAcademia, reload, onAlert,
 }: {
-  linhas: (MensalidadeConfiguracaoView | MatriculaConfiguracaoView)[];
+  linhas: ConfigRow[];
   comMesFim: boolean;
   kind: "mensalidade" | "matricula";
   cursos: Curso[];
@@ -361,24 +508,33 @@ export function ConfiguracoesSalvasTable({
 }) {
   const removerMensalidade = useApi(financeiroService.removerConfiguracaoMensalidade);
   const removerMatricula = useApi(financeiroService.removerConfiguracaoMatricula);
-  const [removendoConfig, setRemovendoConfig] = useState<string | null>(null);
-  const [configParaRemover, setConfigParaRemover] = useState<{ nivel: FinanceiroNivel; ano_academico?: string; curso_id?: string } | null>(null);
+  const [removendo, setRemovendo] = useState(false);
+  const [confirmarRemocao, setConfirmarRemocao] = useState(false);
+  const [selecionada, setSelecionada] = useState<ConfigRow | null>(null);
 
   const labelEscopo = (c: { ano_academico?: string; curso_id?: string }) =>
     c.ano_academico ? labelAnoAcademico(c.ano_academico) : (cursos.find((cu) => cu.id === c.curso_id)?.nome ?? "este escopo");
 
-  const onRemover = async (c: { nivel: FinanceiroNivel; ano_academico?: string; curso_id?: string }) => {
+  const criarHref = (c: ConfigRow) => {
+    const qs = new URLSearchParams({ nivel: c.nivel, ...(c.ano_academico ? { ano_academico: c.ano_academico } : {}), ...(c.curso_id ? { curso_id: c.curso_id } : {}) });
+    return `/financas/configuracoes/${kind === "mensalidade" ? "mensalidade" : "taxa-matricula"}/criar?${qs.toString()}`;
+  };
+
+  const onRemover = async () => {
+    if (!selecionada) return;
     onAlert(null);
-    setRemovendoConfig(configKey(kind, c));
+    setRemovendo(true);
     try {
       const executar = kind === "mensalidade" ? removerMensalidade.execute : removerMatricula.execute;
-      await executar({ codigo_academia: codigoAcademia, nivel: c.nivel, ano_academico: c.ano_academico, curso_id: c.curso_id });
+      await executar({ codigo_academia: codigoAcademia, nivel: selecionada.nivel, ano_academico: selecionada.ano_academico, curso_id: selecionada.curso_id });
       onAlert({ variant: "success", message: kind === "mensalidade" ? "Configuração de mensalidade removida com sucesso." : "Configuração de matrícula removida com sucesso." });
+      setSelecionada(null);
       await reload();
     } catch (err) {
       onAlert({ variant: "error", message: formatApiError(err, `Não foi possível remover a configuração de ${kind === "mensalidade" ? "mensalidade" : "matrícula"}.`) });
     } finally {
-      setRemovendoConfig(null);
+      setRemovendo(false);
+      setConfirmarRemocao(false);
     }
   };
 
@@ -386,54 +542,67 @@ export function ConfiguracoesSalvasTable({
     return <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma configuração salva ainda.</p>;
   }
 
+  if (selecionada) {
+    return (
+      <div className="space-y-4">
+        {confirmarRemocao && (
+          <ConfirmDialog
+            title={kind === "mensalidade" ? "Remover configuração de propina" : "Remover taxa de matrícula"}
+            message={
+              kind === "mensalidade"
+                ? `Tem certeza que deseja remover a configuração de propina de ${NIVEL_LABEL[selecionada.nivel]} — ${labelEscopo(selecionada)}? Meses já cobrados não são afetados; a partir de agora, novas mensalidades desse escopo ficam sem valor definido até configurar de novo.`
+                : `Tem certeza que deseja remover a configuração de taxa de matrícula de ${NIVEL_LABEL[selecionada.nivel]} — ${labelEscopo(selecionada)}? A matrícula volta a ser gratuita para este escopo até configurar de novo.`
+            }
+            confirmLabel="Remover"
+            onConfirm={onRemover}
+            onClose={() => setConfirmarRemocao(false)}
+          />
+        )}
+        <button type="button" onClick={() => setSelecionada(null)} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+          <Icon icon="mdi:arrow-left" width={16} /> Voltar
+        </button>
+        <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{NIVEL_LABEL[selecionada.nivel]} — {labelEscopo(selecionada)}</h3>
+          <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+            <div><dt className="text-gray-500 dark:text-gray-400">Valor</dt><dd className="font-medium text-gray-800 dark:text-white/90">{money(selecionada.valor)}</dd></div>
+            {comMesFim && "mes_fim_cobranca" in selecionada && (
+              <div><dt className="text-gray-500 dark:text-gray-400">Mês de encerramento da cobrança</dt><dd className="font-medium text-gray-800 dark:text-white/90">{selecionada.mes_fim_cobranca === 6 ? "Junho" : "Julho"}</dd></div>
+            )}
+            <div><dt className="text-gray-500 dark:text-gray-400">Métodos de pagamento</dt><dd className="font-medium text-gray-800 dark:text-white/90">{selecionada.metodos_pagamento.map((m) => METODO_PAGAMENTO_LABEL[m]).join(", ") || "Nenhum"}</dd></div>
+            <div><dt className="text-gray-500 dark:text-gray-400">Vigente desde</dt><dd className="font-medium text-gray-800 dark:text-white/90">{formatarDataHora(selecionada.vigente_em)}</dd></div>
+          </dl>
+          <div className="flex gap-2 pt-2">
+            <Link href={criarHref(selecionada)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
+              <Icon icon="mdi:pencil-outline" width={16} /> Editar
+            </Link>
+            <Button size="sm" variant="danger" disabled={removendo} onClick={() => setConfirmarRemocao(true)} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
+              {removendo ? "Removendo..." : "Remover"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="overflow-x-auto">
-      {configParaRemover && (
-        <ConfirmDialog
-          title={kind === "mensalidade" ? "Remover configuração de propina" : "Remover taxa de matrícula"}
-          message={
-            kind === "mensalidade"
-              ? `Tem certeza que deseja remover a configuração de propina de ${NIVEL_LABEL[configParaRemover.nivel]} — ${labelEscopo(configParaRemover)}? Meses já cobrados não são afetados; a partir de agora, novas mensalidades desse escopo ficam sem valor definido até configurar de novo.`
-              : `Tem certeza que deseja remover a configuração de taxa de matrícula de ${NIVEL_LABEL[configParaRemover.nivel]} — ${labelEscopo(configParaRemover)}? A matrícula volta a ser gratuita para este escopo até configurar de novo.`
-          }
-          confirmLabel="Remover"
-          onConfirm={() => onRemover(configParaRemover)}
-          onClose={() => setConfigParaRemover(null)}
-        />
-      )}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {["Nível", "Ano/Curso", "Valor", ...(comMesFim ? ["Fim"] : []), "Métodos", "Vigente em", ""].map((h) => (
-              <TableCell key={h || "acoes"} isHeader className="px-3 py-2 text-xs uppercase text-gray-500 dark:text-gray-400">{h}</TableCell>
+    <div className="space-y-6">
+      {agruparEmSecoes(linhas, cursos).map((secao) => (
+        <div key={secao.titulo} className="space-y-2">
+          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300">{secao.titulo}</h4>
+          <div className="flex flex-wrap gap-3">
+            {secao.linhas.map((c) => (
+              <button
+                key={configKey(kind, c)}
+                type="button"
+                onClick={() => setSelecionada(c)}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm shadow-theme-xs transition hover:border-brand-400 hover:shadow-theme-sm dark:border-white/[0.05] dark:bg-white/[0.03] dark:hover:border-brand-400"
+              >
+                <span className="font-medium text-gray-800 dark:text-white/90">{labelAnoAcademicoCurto(c.ano_academico ?? "")} - {money(c.valor)}</span>
+              </button>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {linhas.map((c, i) => {
-            const key = configKey(kind, c);
-            return (
-              <TableRow key={i}>
-                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{NIVEL_LABEL[c.nivel]}</TableCell>
-                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{c.ano_academico ? labelAnoAcademico(c.ano_academico) : (cursos.find((cu) => cu.id === c.curso_id)?.nome ?? c.curso_id ?? "—")}</TableCell>
-                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{money(c.valor)}</TableCell>
-                {comMesFim && (
-                  <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">
-                    {"mes_fim_cobranca" in c ? (c.mes_fim_cobranca === 6 ? "Junho" : c.mes_fim_cobranca === 7 ? "Julho" : c.mes_fim_cobranca) : "—"}
-                  </TableCell>
-                )}
-                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{c.metodos_pagamento.map((m) => METODO_PAGAMENTO_LABEL[m]).join(", ")}</TableCell>
-                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{formatarDataHora(c.vigente_em)}</TableCell>
-                <TableCell className="px-3 py-2">
-                  <Button size="sm" variant="danger" disabled={removendoConfig === key} onClick={() => setConfigParaRemover(c)} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
-                    {removendoConfig === key ? "Removendo..." : "Remover"}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
