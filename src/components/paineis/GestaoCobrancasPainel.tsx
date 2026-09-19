@@ -1,52 +1,40 @@
 "use client";
 
-import { useState } from "react";
-import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
 import { useUserType } from "@/hooks/useRoutePermission";
-import AnularReativarObrigacoesForm from "@/components/paineis/AnularReativarObrigacoesForm";
-import { LoadingState, SubtelaPanel, SubtelasMenu } from "@/components/paineis/financeiroShared";
+import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
+import { LoadingState, SubtelasMenu } from "@/components/paineis/financeiroShared";
 import { ManualDeFuncionamento } from "@/components/paineis/financeiroNivelShared";
 
 /**
- * /financas/gestao-cobrancas (Tarefa 11). Página nova — "Anular ou reativar
- * obrigações" saiu de dentro de /financas/configuracoes e passou a ser uma
- * subtela desta página, separada das configurações de valores (propina e
- * taxa de matrícula são "quanto cobrar"; isto aqui é "o que fazer com uma
- * cobrança pontual já gerada").
+ * /financas/gestao-cobrancas (Tarefa 11). Antes tinha um único card ("Anular
+ * ou reativar obrigações") que abria uma subtela com as duas ações juntas.
+ * Agora são 3 cards, cada um navegando para a sua própria página (mesmo
+ * padrão já usado em /financas/configuracoes desde a Tarefa 9) — nenhuma
+ * dessas páginas aparece na barra lateral, só são alcançáveis por aqui.
  */
 export default function GestaoCobrancasPainel() {
   const { user, isAdmin, isAcademia, loading } = useUserType();
   const isFpp = isAdmin && user?.admin?.role === "fpp";
-  const codigoAcademia = user?.academia?.codigo_academia ?? "";
-  const [subtela, setSubtela] = useState<"menu" | "anular-reativar">("menu");
 
   if (loading) return <LoadingState label="Carregando gestão de cobranças..." />;
   if (!isAcademia && !isFpp) return <UnauthorizedAccess requiredTypes={["Admin FPP", "Academia"]} message="A gestão de cobranças é exclusiva de administradores FPP e academias." />;
   if (isFpp) return <UnauthorizedAccess requiredTypes={["Academia"]} message="A gestão de cobranças pertence a cada academia — indisponível para o administrador FPP." />;
 
-  if (subtela === "anular-reativar") {
-    return (
-      <SubtelaPanel title="Anular ou reativar obrigações" icon="mdi:receipt-text-remove-outline" onVoltar={() => setSubtela("menu")}>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Anule ou reative mensalidades pontuais de um estudante específico (ex.: bolsa concedida, erro de lançamento).</p>
-        <div className="mt-4">
-          <AnularReativarObrigacoesForm codigoAcademia={codigoAcademia} />
-        </div>
-      </SubtelaPanel>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <ManualDeFuncionamento>
         <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
-          <li>Aqui você atua sobre <b>cobranças pontuais já geradas</b> de um estudante específico — diferente das configurações de valor em Finanças &gt; Configurações, que valem para todos.</li>
-          <li><b>Anular</b> uma obrigação a torna sem efeito (ex.: bolsa concedida, erro de lançamento) — o estudante deixa de precisar pagá-la.</li>
-          <li><b>Reativar</b> volta uma obrigação anulada a valer novamente.</li>
+          <li>Aqui você atua sobre <b>cobranças pontuais</b> de um estudante específico — diferente das configurações de valor em Finanças &gt; Configurações, que valem para todos.</li>
+          <li><b>Anular obrigação</b> torna uma mensalidade sem efeito (ex.: bolsa concedida, erro de lançamento) — o estudante deixa de precisar pagá-la, mesmo que nenhuma cobrança real tenha sido gerada ainda.</li>
+          <li><b>Reativar obrigação</b> volta uma obrigação anulada a valer novamente.</li>
+          <li><b>Cancelar cobrança</b> cancela uma cobrança já gerada/tentada junto à AppyPay (referência, QR code, etc.) — use quando já existe uma tentativa de pagamento em aberto que não deve mais valer.</li>
         </ul>
       </ManualDeFuncionamento>
       <SubtelasMenu
         opcoes={[
-          { id: "anular-reativar", icon: "mdi:receipt-text-remove-outline", label: "Anular ou reativar obrigações", descricao: "Anular ou reativar mensalidades pontuais de um estudante específico.", onClick: () => setSubtela("anular-reativar") },
+          { id: "anular-mensalidade", icon: "mdi:close-circle-outline", label: "Anular obrigação", descricao: "Anular uma mensalidade pontual de um estudante específico.", href: "/financas/gestao-cobrancas/anular-mensalidade" },
+          { id: "reativar-mensalidade", icon: "mdi:reload", label: "Reativar obrigação", descricao: "Reativar uma obrigação de mensalidade anulada anteriormente.", href: "/financas/gestao-cobrancas/reativar-mensalidade" },
+          { id: "cancelar-cobranca", icon: "mdi:receipt-text-remove-outline", label: "Cancelar cobrança", descricao: "Cancelar uma cobrança já gerada de um estudante específico.", href: "/financas/gestao-cobrancas/cancelar-cobranca" },
         ]}
       />
     </div>
