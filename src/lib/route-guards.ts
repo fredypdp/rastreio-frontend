@@ -190,6 +190,16 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
     redirectIfUnauthorized: '/',
   },
   {
+    path: '/financas/pagamentos/mensalidades',
+    allowedTypes: ['admin', 'academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
+    path: '/financas/pagamentos/taxas-matricula',
+    allowedTypes: ['admin', 'academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
     path: '/pagamentos',
     allowedTypes: ['estudante'],
     redirectIfUnauthorized: '/login',
