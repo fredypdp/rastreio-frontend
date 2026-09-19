@@ -3,31 +3,44 @@ import { useEffect, useState } from "react";
 import { academiaService, consultasService, financeiroService, useApi } from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
 import SearchableSelect from "@/components/form/SearchableSelect";
-import MultiSelect from "@/components/form/MultiSelect";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import Alert from "@/components/ui/alert/Alert";
 import Icon from "@/components/ui/Icon";
 import { formatAnoLetivo } from "@/components/paineis/financeiroShared";
+import { MES_NOME_OPCOES } from "@/components/paineis/financeiroNivelShared";
 
-/** Nomes reais dos meses — corrige o bug de exibir "Mês 1", "Mês 2"... */
-const MESES = Array.from({ length: 12 }, (_, i) => ({
-  value: String(i + 1),
-  text: new Intl.DateTimeFormat("pt-AO", { month: "long" }).format(new Date(2026, i, 1)),
-  selected: false,
-}));
-
-export default function AnularReativarObrigacoesForm({ codigoAcademia, onSuccess }: { codigoAcademia: string; onSuccess?: () => void }) {
+/**
+ * Formulário de anular OU reativar obrigações de um estudante — Tarefa 11.
+ * Antes um único formulário fazia as duas ações ao mesmo tempo (dois botões
+ * lado a lado); agora cada ação tem a sua própria página
+ * (/financas/gestao-cobrancas/anular-mensalidade e .../reativar-mensalidade)
+ * e este componente é parametrizado por `acao` para render só a ação
+ * pedida, sem duplicar a busca de estudante/ano letivo nos dois lugares.
+ *
+ * O seletor de mês deixou de ser o `MultiSelect` (placeholder fixo "Select
+ * option" sem cor correta no tema escuro, dropdown sem rolagem por usar uma
+ * classe Tailwind — `max-h-select` — que não existe em lugar nenhum do
+ * projeto, e permitia escolher vários meses de uma vez) e passou a ser um
+ * `SearchableSelect` de um mês só — o mesmo padrão já usado para "Ano
+ * letivo" neste mesmo formulário.
+ */
+export default function AnularReativarObrigacoesForm({ acao, codigoAcademia, onSuccess }: {
+  acao: "anular" | "reativar";
+  codigoAcademia: string;
+  onSuccess?: () => void;
+}) {
   const [estudantes, setEstudantes] = useState<{ value: string; label: string }[]>([]);
   const [codigoEstudante, setCodigoEstudante] = useState("");
   const [anosLetivos, setAnosLetivos] = useState<string[]>([]);
   const [anoLetivo, setAnoLetivo] = useState("");
-  const [meses, setMeses] = useState<string[]>([]);
+  const [mes, setMes] = useState("");
   const [motivo, setMotivo] = useState("");
   const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
   const anular = useApi(financeiroService.anularObrigacoes);
   const reativar = useApi(financeiroService.reativarObrigacoes);
+  const executando = acao === "anular" ? anular : reativar;
 
   useEffect(() => {
     if (!codigoAcademia) return;
@@ -48,13 +61,13 @@ export default function AnularReativarObrigacoesForm({ codigoAcademia, onSuccess
     }).catch(() => setAnosLetivos([]));
   }, [codigoAcademia]);
 
-  const executar = async (acao: "anular" | "reativar") => {
-    if (!codigoEstudante || !anoLetivo || meses.length === 0) { setAlert({ variant: "error", message: "Selecione o estudante, o ano letivo e ao menos um mês." }); return; }
-    if (acao === "anular" && !motivo.trim()) { setAlert({ variant: "error", message: "Informe o motivo para anular obrigações." }); return; }
+  const executar = async () => {
+    if (!codigoEstudante || !anoLetivo || !mes) { setAlert({ variant: "error", message: "Selecione o estudante, o ano letivo e o mês." }); return; }
+    if (acao === "anular" && !motivo.trim()) { setAlert({ variant: "error", message: "Informe o motivo para anular a obrigação." }); return; }
     try {
-      const payload = { codigo_estudante: codigoEstudante, codigo_academia: codigoAcademia, ano_letivo: anoLetivo, meses: meses.map(Number), motivo: motivo.trim() || undefined };
+      const payload = { codigo_estudante: codigoEstudante, codigo_academia: codigoAcademia, ano_letivo: anoLetivo, meses: [Number(mes)], motivo: motivo.trim() || undefined };
       await (acao === "anular" ? anular.execute(payload) : reativar.execute(payload));
-      setAlert({ variant: "success", message: acao === "anular" ? "Obrigações anuladas." : "Obrigações reativadas." });
+      setAlert({ variant: "success", message: acao === "anular" ? "Obrigação anulada." : "Obrigação reativada." });
       onSuccess?.();
     } catch (err) {
       setAlert({ variant: "error", message: formatApiError(err, "Não foi possível concluir a ação.") });
@@ -77,9 +90,32 @@ export default function AnularReativarObrigacoesForm({ codigoAcademia, onSuccess
           name="anular-reativar-ano-letivo"
         />
       </div>
-      <MultiSelect label="Meses" options={MESES} defaultSelected={meses} onChange={setMeses} />
+      <div>
+        <Label>Mês</Label>
+        <SearchableSelect
+          value={mes}
+          options={MES_NOME_OPCOES}
+          onChange={setMes}
+          placeholder="Selecione o mês"
+          isSearchable={false}
+          inputId="anular-reativar-mes"
+          name="anular-reativar-mes"
+        />
+      </div>
     </div>
-    <div><Label>Motivo (obrigatório para anular)</Label><Input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex.: bolsa concedida, erro de lançamento..." /></div>
-    <div className="flex gap-3"><Button size="sm" variant="outline" disabled={anular.loading} onClick={() => executar("anular")} startIcon={<Icon icon="mdi:close-circle-outline" width={16}/>}>Anular selecionados</Button><Button size="sm" disabled={reativar.loading} onClick={() => executar("reativar")} startIcon={<Icon icon="mdi:reload" width={16}/>}>Reativar selecionados</Button></div>
+    {acao === "anular" && (
+      <div><Label>Motivo</Label><Input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex.: bolsa concedida, erro de lançamento..." /></div>
+    )}
+    <div className="flex gap-3">
+      {acao === "anular" ? (
+        <Button size="sm" variant="outline" disabled={executando.loading} onClick={executar} startIcon={<Icon icon="mdi:close-circle-outline" width={16} />}>
+          {executando.loading ? "Anulando..." : "Anular obrigação"}
+        </Button>
+      ) : (
+        <Button size="sm" disabled={executando.loading} onClick={executar} startIcon={<Icon icon="mdi:reload" width={16} />}>
+          {executando.loading ? "Reativando..." : "Reativar obrigação"}
+        </Button>
+      )}
+    </div>
   </div>;
 }

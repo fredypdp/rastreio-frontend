@@ -170,6 +170,21 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
     redirectIfUnauthorized: '/',
   },
   {
+    path: '/financas/gestao-cobrancas/anular-mensalidade',
+    allowedTypes: ['admin', 'academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
+    path: '/financas/gestao-cobrancas/reativar-mensalidade',
+    allowedTypes: ['admin', 'academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
+    path: '/financas/gestao-cobrancas/cancelar-cobranca',
+    allowedTypes: ['admin', 'academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
     path: '/financas/pagamentos',
     allowedTypes: ['admin', 'academia'],
     redirectIfUnauthorized: '/',
