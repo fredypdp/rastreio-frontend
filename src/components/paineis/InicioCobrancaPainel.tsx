@@ -11,6 +11,7 @@ import { formatApiError } from "@/lib/api/client";
 import { useUserType } from "@/hooks/useRoutePermission";
 import { ConfirmDialog, SubtelaPanel, formatAnoLetivo, capitalizar } from "@/components/paineis/financeiroShared";
 import { FinanceiroAcessoGuard, ManualDeFuncionamento, useFinanceiroNivelContext, MES_NOME_OPCOES } from "@/components/paineis/financeiroNivelShared";
+import type { MensalidadeConfiguracaoView } from "@/types/api";
 
 /** /financas/configuracoes/mensalidade/inicio-cobranca (Tarefa 11) — antes era a subtela de topo "Início de cobrança fora do padrão"; agora vive só dentro de Mensalidade, já que não se aplica a taxa de matrícula. */
 export default function InicioCobrancaPainel() {
@@ -20,12 +21,13 @@ export default function InicioCobrancaPainel() {
       <SubtelaPanel title="Início de cobrança" icon="mdi:calendar-start" onVoltar="/financas/configuracoes/mensalidade">
         <ManualDeFuncionamento>
           <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
-            <li>Use isto só se o ano letivo <b>começou fora do mês habitual</b> (ex.: turma que iniciou em março em vez de fevereiro).</li>
-            <li>A mudança vale só para o <b>ano letivo atual</b> — no próximo ano letivo, a cobrança volta ao mês habitual automaticamente, a menos que você defina uma nova exceção para ele também.</li>
-            <li>Se este ano letivo não deveria mais ter uma exceção, use &ldquo;Remover início de cobrança&rdquo; para voltar ao mês habitual.</li>
+            <li>Isto define <b>a partir de que mês</b> a cobrança de mensalidade do ano letivo atual passa a valer. Por padrão, a cobrança começa no mês em que o ano letivo naturalmente começa (setembro para Ensino Primário/Iº Ciclo/Médio, outubro para Superior).</li>
+            <li>Use isto quando a academia é integrada à plataforma com o <b>ano letivo já em andamento</b> — por exemplo, aderindo ao Spuri em novembro, com as aulas tendo começado em setembro: defina novembro aqui para que a cobrança pelo Spuri comece a partir desse mês, sem tentar cobrar meses anteriores que já foram geridos fora da plataforma.</li>
+            <li>A mudança vale só para o <b>ano letivo atual</b> — no próximo ano letivo, a cobrança volta ao mês natural automaticamente, a menos que você defina uma nova exceção para ele também.</li>
+            <li>Se este ano letivo não deveria mais ter uma exceção, use &ldquo;Remover início de cobrança&rdquo; para voltar ao mês natural.</li>
           </ul>
         </ManualDeFuncionamento>
-        <DefinirInicioCobrancaForm codigoAcademia={ctx.codigoAcademia} />
+        <DefinirInicioCobrancaForm codigoAcademia={ctx.codigoAcademia} mensalidades={ctx.mensalidadesApi.data?.configuracoes ?? []} />
       </SubtelaPanel>
     </FinanceiroAcessoGuard>
   );
@@ -48,11 +50,24 @@ export default function InicioCobrancaPainel() {
  * — o valor enviado à API continua sendo só o número do mês (1–12), porque
  * o backend já resolve sozinho a qual ano civil ele pertence a partir do
  * ano_letivo configurado.
+ *
+ * Tarefa 12: o seletor de mês deixou de listar Janeiro→Dezembro (ordem
+ * errada — misturava meses que nem fazem parte do ano letivo, como agosto)
+ * e passou a listar só os meses do período letivo, do mês natural de
+ * início até o `mes_fim_cobranca` mais restritivo já configurado (em
+ * qualquer nível) para a academia — a mesma regra que o backend já aplica
+ * em `validateMesInicioCobranca` (internal/finance/mensalidade.go),
+ * incluindo o teto padrão de julho (mes 7) quando a academia ainda não tem
+ * nenhuma configuração de mensalidade.
  */
-function DefinirInicioCobrancaForm({ codigoAcademia }: { codigoAcademia: string }) {
+function posicaoNoAnoLetivo(mes: number, natural: number): number {
+  return mes >= natural ? mes - natural + 1 : mes + (12 - natural) + 1;
+}
+
+function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAcademia: string; mensalidades: MensalidadeConfiguracaoView[] }) {
   const { user } = useUserType();
   const [anoLetivo, setAnoLetivo] = useState("");
-  const [mesInicio, setMesInicio] = useState("2");
+  const [mesInicioSelecionado, setMesInicioSelecionado] = useState("");
   const [alert, setAlert] = useState<{ variant: "success" | "error" | "info"; message: string } | null>(null);
   const definirInicio = useApi(financeiroService.definirInicioCobranca);
   const removerInicio = useApi(financeiroService.removerInicioCobranca);
@@ -68,15 +83,31 @@ function DefinirInicioCobrancaForm({ codigoAcademia }: { codigoAcademia: string 
   }, [codigoAcademia]);
 
   const mesNatural = user?.academia?.nivel === "superior" ? 10 : 9;
+  // Igual ao "menor" em validateMesInicioCobranca: o mes_fim_cobranca mais
+  // restritivo entre as configurações de mensalidade já feitas (em
+  // qualquer nível); 7 (o maior valor possível) enquanto nenhuma existir.
+  const limiteFimAnoLetivo = mensalidades.length > 0 ? Math.min(...mensalidades.map((c) => c.mes_fim_cobranca)) : 7;
 
   const mesOpcoes = useMemo(() => {
     const [primeiroAno, segundoAno] = anoLetivo.split("_");
-    return MES_NOME_OPCOES.map((opt) => {
-      const mes = Number(opt.value);
-      const anoCivil = mes >= mesNatural ? primeiroAno : segundoAno;
-      return { value: opt.value, label: anoCivil ? `${capitalizar(opt.label)} de ${anoCivil}` : capitalizar(opt.label) };
-    });
-  }, [anoLetivo, mesNatural]);
+    const limitePos = posicaoNoAnoLetivo(limiteFimAnoLetivo, mesNatural);
+    return MES_NOME_OPCOES
+      .map((opt) => ({ ...opt, mes: Number(opt.value), pos: posicaoNoAnoLetivo(Number(opt.value), mesNatural) }))
+      .filter((opt) => opt.pos <= limitePos)
+      .sort((a, b) => a.pos - b.pos)
+      .map(({ value, label, mes }) => {
+        const anoCivil = mes >= mesNatural ? primeiroAno : segundoAno;
+        return { value, label: anoCivil ? `${capitalizar(label)} de ${anoCivil}` : capitalizar(label) };
+      });
+  }, [anoLetivo, mesNatural, limiteFimAnoLetivo]);
+
+  // Mantém mesInicio sempre dentro da lista de opções válida, sem guardar
+  // esse ajuste como estado sincronizado por efeito (o valor "corrigido" é
+  // derivado direto do que já está disponível) — o valor bruto escolhido
+  // pelo usuário só é usado quando ainda é uma opção válida; o padrão é
+  // sempre a primeira opção da lista (mesOpcoes já vem ordenada a partir do
+  // mês natural).
+  const mesInicio = mesOpcoes.some((o) => o.value === mesInicioSelecionado) ? mesInicioSelecionado : (mesOpcoes[0]?.value ?? "");
 
   const submit = async () => {
     setAlert(null);
@@ -143,7 +174,7 @@ function DefinirInicioCobrancaForm({ codigoAcademia }: { codigoAcademia: string 
           <SearchableSelect
             value={mesInicio}
             options={mesOpcoes}
-            onChange={(v) => setMesInicio(v || "2")}
+            onChange={(v) => setMesInicioSelecionado(v || "")}
             isSearchable={false}
             isClearable={false}
             inputId="inicio-cobranca-mes"

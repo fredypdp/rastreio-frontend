@@ -1548,7 +1548,16 @@ export interface MensalidadeConfiguracaoInput {
   valor: number;
   mes_fim_cobranca: 6 | 7;
   metodos_pagamento: FinanceiroMetodoPagamento[];
-  modo_vigencia: FinanceiroModoVigencia;
+  /**
+   * Só é obrigatório quando já existe uma configuração vigente para este
+   * escopo (nivel+ano_academico+curso_id) — ou seja, ao editar. Na
+   * primeira configuração de um escopo o backend aceita omitido (ou "") e
+   * aplica "cobrancas_pendentes" por padrão, porque nesse caso o campo não
+   * tem nenhum efeito (ver Tarefa 108 do rastreio-backend — não pode
+   * existir nada "pendente" sob um preço anterior quando ainda não havia
+   * preço nenhum configurado).
+   */
+  modo_vigencia?: FinanceiroModoVigencia;
 }
 
 export interface MensalidadeConfiguracaoView extends MensalidadeConfiguracaoInput {
@@ -1741,7 +1750,8 @@ export interface MatriculaConfiguracaoInput {
   curso_id?: string;
   valor: number;
   metodos_pagamento: FinanceiroMetodoPagamento[];
-  modo_vigencia: FinanceiroModoVigencia;
+  /** Ver o mesmo campo em MensalidadeConfiguracaoInput — só obrigatório ao editar um escopo que já tem configuração vigente. */
+  modo_vigencia?: FinanceiroModoVigencia;
 }
 
 export interface MatriculaRepricingResumo {
