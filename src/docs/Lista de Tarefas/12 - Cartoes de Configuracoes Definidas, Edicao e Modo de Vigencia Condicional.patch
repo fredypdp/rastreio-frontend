@@ -1,0 +1,1139 @@
+diff --git a/src/app/(painel)/financas/configuracoes/mensalidade/criar/page.tsx b/src/app/(painel)/financas/configuracoes/mensalidade/criar/page.tsx
+index 7da0ccf..421220e 100644
+--- a/src/app/(painel)/financas/configuracoes/mensalidade/criar/page.tsx
++++ b/src/app/(painel)/financas/configuracoes/mensalidade/criar/page.tsx
+@@ -1,11 +1,16 @@
+ import type { Metadata } from "next";
++import { Suspense } from "react";
+ import MensalidadeCriarPainel from "@/components/paineis/MensalidadeCriarPainel";
+ 
+ export const metadata: Metadata = {
+   title: "Finanças - Definir Nova Mensalidade",
+-  description: "Definir uma nova configuração de propina / mensalidade no Spuri.",
++  description: "Definir uma nova configuração de mensalidade no Spuri.",
+ };
+ 
+ export default function MensalidadeCriarPage() {
+-  return <MensalidadeCriarPainel />;
++  return (
++    <Suspense fallback={null}>
++      <MensalidadeCriarPainel />
++    </Suspense>
++  );
+ }
+diff --git a/src/app/(painel)/financas/configuracoes/mensalidade/page.tsx b/src/app/(painel)/financas/configuracoes/mensalidade/page.tsx
+index c3c3232..8f61e0c 100644
+--- a/src/app/(painel)/financas/configuracoes/mensalidade/page.tsx
++++ b/src/app/(painel)/financas/configuracoes/mensalidade/page.tsx
+@@ -2,8 +2,8 @@ import type { Metadata } from "next";
+ import MensalidadeListaPainel from "@/components/paineis/MensalidadeListaPainel";
+ 
+ export const metadata: Metadata = {
+-  title: "Finanças - Propina / Mensalidade",
+-  description: "Configurações de propina e mensalidade da academia no Spuri.",
++  title: "Finanças - Mensalidade",
++  description: "Configurações de mensalidade da academia no Spuri.",
+ };
+ 
+ export default function MensalidadePage() {
+diff --git a/src/app/(painel)/financas/configuracoes/taxa-matricula/criar/page.tsx b/src/app/(painel)/financas/configuracoes/taxa-matricula/criar/page.tsx
+index 81a6aac..5ff786f 100644
+--- a/src/app/(painel)/financas/configuracoes/taxa-matricula/criar/page.tsx
++++ b/src/app/(painel)/financas/configuracoes/taxa-matricula/criar/page.tsx
+@@ -1,11 +1,16 @@
+ import type { Metadata } from "next";
++import { Suspense } from "react";
+ import TaxaMatriculaCriarPainel from "@/components/paineis/TaxaMatriculaCriarPainel";
+ 
+ export const metadata: Metadata = {
+-  title: "Finanças - Definir Nova Taxa",
++  title: "Finanças - Definir Nova Taxa de Matrícula",
+   description: "Definir uma nova configuração de taxa de matrícula no Spuri.",
+ };
+ 
+ export default function TaxaMatriculaCriarPage() {
+-  return <TaxaMatriculaCriarPainel />;
++  return (
++    <Suspense fallback={null}>
++      <TaxaMatriculaCriarPainel />
++    </Suspense>
++  );
+ }
+diff --git a/src/components/paineis/FinanceiroConfiguracoesRootPainel.tsx b/src/components/paineis/FinanceiroConfiguracoesRootPainel.tsx
+index 6bd8e8f..3e9ed30 100644
+--- a/src/components/paineis/FinanceiroConfiguracoesRootPainel.tsx
++++ b/src/components/paineis/FinanceiroConfiguracoesRootPainel.tsx
+@@ -6,10 +6,10 @@ import { FinanceiroAcessoGuard, ManualDeFuncionamento, useFinanceiroNivelContext
+ 
+ /**
+  * Página raiz de /financas/configuracoes (Tarefa 11). Só existem 2 áreas de
+- * configuração — Propina / Mensalidade e Taxa de Matrícula, cada uma agora
++ * configuração — Mensalidade e Taxa de Matrícula, cada uma agora
+  * é a sua própria página (não mais uma subtela) — e o "Início de cobrança"
+- * (que antes era um card aqui) passou a viver só dentro de Propina /
+- * Mensalidade, já que só faz sentido para mensalidade.
++ * (que antes era um card aqui) passou a viver só dentro de Mensalidade,
++ * já que só faz sentido para mensalidade.
+  *
+  * "Anular ou reativar obrigações" saiu daqui de vez — mudou-se para a nova
+  * página /financas/gestao-cobrancas.
+@@ -22,7 +22,7 @@ export default function FinanceiroConfiguracoesRootPainel() {
+       <div className="space-y-6">
+         <ManualDeFuncionamento>
+           <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+-            <li>Aqui você define quanto cobrar de <b>Propina / Mensalidade</b> e de <b>Taxa de Matrícula</b>, por nível de ensino e, quando aplicável, por curso e ano.</li>
++            <li>Aqui você define quanto cobrar de <b>Mensalidade</b> e de <b>Taxa de Matrícula</b>, por nível de ensino e, quando aplicável, por curso e ano.</li>
+             <li>Cada configuração vale <b>a partir do momento em que é salva</b> — o que já foi cobrado antes não muda.</li>
+             <li>Sem nenhuma configuração de matrícula, a matrícula é <b>gratuita</b> por padrão.</li>
+             <li>É preciso <b>aderir ao Gateway de Pagamento Online</b> antes de conseguir configurar qualquer valor — veja <Link href="/financas/credenciais" className="font-medium underline">Credenciais</Link>.</li>
+@@ -30,7 +30,7 @@ export default function FinanceiroConfiguracoesRootPainel() {
+         </ManualDeFuncionamento>
+         <SubtelasMenu
+           opcoes={[
+-            { id: "mensalidade", icon: "mdi:calendar-month-outline", label: "Propina / Mensalidade", descricao: "Definir o valor e os métodos aceites por ano/curso.", href: "/financas/configuracoes/mensalidade" },
++            { id: "mensalidade", icon: "mdi:calendar-month-outline", label: "Mensalidade", descricao: "Definir o valor e os métodos aceites por ano/curso.", href: "/financas/configuracoes/mensalidade" },
+             { id: "taxa-matricula", icon: "mdi:school-outline", label: "Taxa de Matrícula", descricao: "Definir o valor e os métodos aceites por ano/curso.", href: "/financas/configuracoes/taxa-matricula" },
+           ]}
+         />
+diff --git a/src/components/paineis/InicioCobrancaPainel.tsx b/src/components/paineis/InicioCobrancaPainel.tsx
+index 6d1d3ff..3de7d62 100644
+--- a/src/components/paineis/InicioCobrancaPainel.tsx
++++ b/src/components/paineis/InicioCobrancaPainel.tsx
+@@ -11,6 +11,7 @@ import { formatApiError } from "@/lib/api/client";
+ import { useUserType } from "@/hooks/useRoutePermission";
+ import { ConfirmDialog, SubtelaPanel, formatAnoLetivo, capitalizar } from "@/components/paineis/financeiroShared";
+ import { FinanceiroAcessoGuard, ManualDeFuncionamento, useFinanceiroNivelContext, MES_NOME_OPCOES } from "@/components/paineis/financeiroNivelShared";
++import type { MensalidadeConfiguracaoView } from "@/types/api";
+ 
+ /** /financas/configuracoes/mensalidade/inicio-cobranca (Tarefa 11) — antes era a subtela de topo "Início de cobrança fora do padrão"; agora vive só dentro de Mensalidade, já que não se aplica a taxa de matrícula. */
+ export default function InicioCobrancaPainel() {
+@@ -20,12 +21,13 @@ export default function InicioCobrancaPainel() {
+       <SubtelaPanel title="Início de cobrança" icon="mdi:calendar-start" onVoltar="/financas/configuracoes/mensalidade">
+         <ManualDeFuncionamento>
+           <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+-            <li>Use isto só se o ano letivo <b>começou fora do mês habitual</b> (ex.: turma que iniciou em março em vez de fevereiro).</li>
+-            <li>A mudança vale só para o <b>ano letivo atual</b> — no próximo ano letivo, a cobrança volta ao mês habitual automaticamente, a menos que você defina uma nova exceção para ele também.</li>
+-            <li>Se este ano letivo não deveria mais ter uma exceção, use &ldquo;Remover início de cobrança&rdquo; para voltar ao mês habitual.</li>
++            <li>Isto define <b>a partir de que mês</b> a cobrança de mensalidade do ano letivo atual passa a valer. Por padrão, a cobrança começa no mês em que o ano letivo naturalmente começa (setembro para Ensino Primário/Iº Ciclo/Médio, outubro para Superior).</li>
++            <li>Use isto quando a academia é integrada à plataforma com o <b>ano letivo já em andamento</b> — por exemplo, aderindo ao Spuri em novembro, com as aulas tendo começado em setembro: defina novembro aqui para que a cobrança pelo Spuri comece a partir desse mês, sem tentar cobrar meses anteriores que já foram geridos fora da plataforma.</li>
++            <li>A mudança vale só para o <b>ano letivo atual</b> — no próximo ano letivo, a cobrança volta ao mês natural automaticamente, a menos que você defina uma nova exceção para ele também.</li>
++            <li>Se este ano letivo não deveria mais ter uma exceção, use &ldquo;Remover início de cobrança&rdquo; para voltar ao mês natural.</li>
+           </ul>
+         </ManualDeFuncionamento>
+-        <DefinirInicioCobrancaForm codigoAcademia={ctx.codigoAcademia} />
++        <DefinirInicioCobrancaForm codigoAcademia={ctx.codigoAcademia} mensalidades={ctx.mensalidadesApi.data?.configuracoes ?? []} />
+       </SubtelaPanel>
+     </FinanceiroAcessoGuard>
+   );
+@@ -48,11 +50,24 @@ export default function InicioCobrancaPainel() {
+  * — o valor enviado à API continua sendo só o número do mês (1–12), porque
+  * o backend já resolve sozinho a qual ano civil ele pertence a partir do
+  * ano_letivo configurado.
++ *
++ * Tarefa 12: o seletor de mês deixou de listar Janeiro→Dezembro (ordem
++ * errada — misturava meses que nem fazem parte do ano letivo, como agosto)
++ * e passou a listar só os meses do período letivo, do mês natural de
++ * início até o `mes_fim_cobranca` mais restritivo já configurado (em
++ * qualquer nível) para a academia — a mesma regra que o backend já aplica
++ * em `validateMesInicioCobranca` (internal/finance/mensalidade.go),
++ * incluindo o teto padrão de julho (mes 7) quando a academia ainda não tem
++ * nenhuma configuração de mensalidade.
+  */
+-function DefinirInicioCobrancaForm({ codigoAcademia }: { codigoAcademia: string }) {
++function posicaoNoAnoLetivo(mes: number, natural: number): number {
++  return mes >= natural ? mes - natural + 1 : mes + (12 - natural) + 1;
++}
++
++function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAcademia: string; mensalidades: MensalidadeConfiguracaoView[] }) {
+   const { user } = useUserType();
+   const [anoLetivo, setAnoLetivo] = useState("");
+-  const [mesInicio, setMesInicio] = useState("2");
++  const [mesInicioSelecionado, setMesInicioSelecionado] = useState("");
+   const [alert, setAlert] = useState<{ variant: "success" | "error" | "info"; message: string } | null>(null);
+   const definirInicio = useApi(financeiroService.definirInicioCobranca);
+   const removerInicio = useApi(financeiroService.removerInicioCobranca);
+@@ -68,15 +83,31 @@ function DefinirInicioCobrancaForm({ codigoAcademia }: { codigoAcademia: string
+   }, [codigoAcademia]);
+ 
+   const mesNatural = user?.academia?.nivel === "superior" ? 10 : 9;
++  // Igual ao "menor" em validateMesInicioCobranca: o mes_fim_cobranca mais
++  // restritivo entre as configurações de mensalidade já feitas (em
++  // qualquer nível); 7 (o maior valor possível) enquanto nenhuma existir.
++  const limiteFimAnoLetivo = mensalidades.length > 0 ? Math.min(...mensalidades.map((c) => c.mes_fim_cobranca)) : 7;
+ 
+   const mesOpcoes = useMemo(() => {
+     const [primeiroAno, segundoAno] = anoLetivo.split("_");
+-    return MES_NOME_OPCOES.map((opt) => {
+-      const mes = Number(opt.value);
+-      const anoCivil = mes >= mesNatural ? primeiroAno : segundoAno;
+-      return { value: opt.value, label: anoCivil ? `${capitalizar(opt.label)} de ${anoCivil}` : capitalizar(opt.label) };
+-    });
+-  }, [anoLetivo, mesNatural]);
++    const limitePos = posicaoNoAnoLetivo(limiteFimAnoLetivo, mesNatural);
++    return MES_NOME_OPCOES
++      .map((opt) => ({ ...opt, mes: Number(opt.value), pos: posicaoNoAnoLetivo(Number(opt.value), mesNatural) }))
++      .filter((opt) => opt.pos <= limitePos)
++      .sort((a, b) => a.pos - b.pos)
++      .map(({ value, label, mes }) => {
++        const anoCivil = mes >= mesNatural ? primeiroAno : segundoAno;
++        return { value, label: anoCivil ? `${capitalizar(label)} de ${anoCivil}` : capitalizar(label) };
++      });
++  }, [anoLetivo, mesNatural, limiteFimAnoLetivo]);
++
++  // Mantém mesInicio sempre dentro da lista de opções válida, sem guardar
++  // esse ajuste como estado sincronizado por efeito (o valor "corrigido" é
++  // derivado direto do que já está disponível) — o valor bruto escolhido
++  // pelo usuário só é usado quando ainda é uma opção válida; o padrão é
++  // sempre a primeira opção da lista (mesOpcoes já vem ordenada a partir do
++  // mês natural).
++  const mesInicio = mesOpcoes.some((o) => o.value === mesInicioSelecionado) ? mesInicioSelecionado : (mesOpcoes[0]?.value ?? "");
+ 
+   const submit = async () => {
+     setAlert(null);
+@@ -143,7 +174,7 @@ function DefinirInicioCobrancaForm({ codigoAcademia }: { codigoAcademia: string
+           <SearchableSelect
+             value={mesInicio}
+             options={mesOpcoes}
+-            onChange={(v) => setMesInicio(v || "2")}
++            onChange={(v) => setMesInicioSelecionado(v || "")}
+             isSearchable={false}
+             isClearable={false}
+             inputId="inicio-cobranca-mes"
+diff --git a/src/components/paineis/MensalidadeCriarPainel.tsx b/src/components/paineis/MensalidadeCriarPainel.tsx
+index 01a9a1c..2412c43 100644
+--- a/src/components/paineis/MensalidadeCriarPainel.tsx
++++ b/src/components/paineis/MensalidadeCriarPainel.tsx
+@@ -1,7 +1,8 @@
+ "use client";
+ 
+-import { useEffect, useState } from "react";
++import { useEffect, useMemo, useState } from "react";
+ import Link from "next/link";
++import { useSearchParams } from "next/navigation";
+ import Alert from "@/components/ui/alert/Alert";
+ import Button from "@/components/ui/button/Button";
+ import Icon from "@/components/ui/Icon";
+@@ -12,27 +13,76 @@ import { formatApiError } from "@/lib/api/client";
+ import { SubtelaPanel } from "@/components/paineis/financeiroShared";
+ import {
+   FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, NivelCamposFields, MetodosPagamentoCheckboxes,
+-  validarValorEAno, useFinanceiroNivelContext, MES_FIM_OPCOES, type NivelFormState, type FormFieldErrors,
++  validarValorEAno, existeConfiguracaoParaEscopo, useFinanceiroNivelContext, MES_FIM_OPCOES, type NivelFormState, type FormFieldErrors,
+ } from "@/components/paineis/financeiroNivelShared";
+-import type { FinanceiroModoVigencia, MensalidadeConfiguracaoInput } from "@/types/api";
++import type { FinanceiroModoVigencia, FinanceiroNivel, MensalidadeConfiguracaoInput } from "@/types/api";
+ 
+-/** /financas/configuracoes/mensalidade/criar (Tarefa 11) — antes era o formulário embutido na subtela "mensalidade"; agora é a página "Definir Nova Mensalidade". */
++/**
++ * /financas/configuracoes/mensalidade/criar (Tarefa 12) — página "Definir
++ * Nova Mensalidade". Serve dois casos:
++ *
++ * 1. Sem parâmetros na URL: criação normal, nível/curso/ano em branco. Como
++ *    é a primeira configuração de qualquer escopo escolhido aqui, "o que
++ *    acontece com quem já está pendente?" não é perguntado (ver
++ *    NivelCamposFields/existeConfiguracaoParaEscopo) — o backend (Tarefa
++ *    108) já aceita modo_vigencia omitido nesse caso e aplica o padrão
++ *    "vale para todos" sozinho.
++ * 2. Com `?nivel=&ano_academico=&curso_id=` na URL — chegou por "Editar" a
++ *    partir de um cartão em ConfiguracoesDefinidasCards (lista de
++ *    "Mensalidades definidas"): nível/curso/ano vêm travados
++ *    (NivelCamposFields escopoFixo), valor/mês de encerramento/métodos já
++ *    vêm pré-preenchidos com a configuração atual, e a pergunta sobre
++ *    pendentes aparece (porque aqui já existe uma configuração vigente).
++ */
+ export default function MensalidadeCriarPainel() {
+   const ctx = useFinanceiroNivelContext();
++  const searchParams = useSearchParams();
++  const escopoFixo = searchParams.has("nivel");
+   const [form, setForm] = useState<NivelFormState>({ nivel: "fundamental", ano_academico: "", curso_id: "", valor: "", metodos_pagamento: ["GPO"], modo_vigencia: "" });
+   const [mesFim, setMesFim] = useState("6");
+   const [errors, setErrors] = useState<FormFieldErrors>({});
+   const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
++  const [preenchidoDaUrl, setPreenchidoDaUrl] = useState(false);
+   const salvar = useApi(financeiroService.configurarMensalidade);
+   const atualizar = useApi(financeiroService.atualizarConfiguracaoMensalidade);
++  const configuracoes = useMemo(() => ctx.mensalidadesApi.data?.configuracoes ?? [], [ctx.mensalidadesApi.data]);
+ 
+   useEffect(() => {
+-    if (ctx.niveisDisponiveis.length === 0) return;
++    if (escopoFixo || ctx.niveisDisponiveis.length === 0) return;
+     setForm((prev) => (ctx.niveisDisponiveis.includes(prev.nivel) ? prev : { ...prev, nivel: ctx.niveisDisponiveis[0], curso_id: "", ano_academico: "" }));
+-  }, [ctx.niveisDisponiveis]);
++  }, [ctx.niveisDisponiveis, escopoFixo]);
++
++  // Pré-preenche nível/ano/curso (e valor/mês/métodos, se já houver uma
++  // configuração salva para esse escopo) a partir da URL — só uma vez,
++  // quando a lista de configurações termina de carregar.
++  useEffect(() => {
++    if (!escopoFixo || preenchidoDaUrl || ctx.mensalidadesApi.loading) return;
++    const nivel = (searchParams.get("nivel") ?? "fundamental") as FinanceiroNivel;
++    const ano_academico = searchParams.get("ano_academico") ?? "";
++    const curso_id = searchParams.get("curso_id") ?? "";
++    const atual = configuracoes.find((c) => c.nivel === nivel && c.ano_academico === ano_academico && (c.curso_id ?? "") === curso_id);
++    setForm((prev) => ({
++      ...prev,
++      nivel,
++      ano_academico,
++      curso_id,
++      valor: atual ? String(atual.valor) : prev.valor,
++      metodos_pagamento: atual?.metodos_pagamento ?? prev.metodos_pagamento,
++    }));
++    if (atual) setMesFim(String(atual.mes_fim_cobranca));
++    setPreenchidoDaUrl(true);
++  }, [escopoFixo, preenchidoDaUrl, ctx.mensalidadesApi.loading, configuracoes, searchParams]);
++
++  // form completo não entra nas deps de propósito — a existência da
++  // configuração só depende de nivel/ano_academico/curso_id, não de
++  // valor/metodos_pagamento/modo_vigencia (que mudam a cada tecla digitada
++  // e não devem re-executar esta checagem).
++  const existe = useMemo(() => existeConfiguracaoParaEscopo(configuracoes, form),
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++    [configuracoes, form.nivel, form.ano_academico, form.curso_id]);
+ 
+   const submit = async () => {
+-    const errs = validarValorEAno(form);
++    const errs = validarValorEAno(form, existe);
+     setErrors(errs);
+     if (Object.keys(errs).length > 0) return;
+     try {
+@@ -45,10 +95,8 @@ export default function MensalidadeCriarPainel() {
+         valor: Number(form.valor),
+         mes_fim_cobranca: Number(mesFim) as 6 | 7,
+         metodos_pagamento: form.metodos_pagamento,
+-        modo_vigencia: form.modo_vigencia as FinanceiroModoVigencia,
++        modo_vigencia: form.modo_vigencia ? (form.modo_vigencia as FinanceiroModoVigencia) : undefined,
+       };
+-      const existe = (ctx.mensalidadesApi.data?.configuracoes ?? []).some((c) =>
+-        c.nivel === form.nivel && (form.nivel === "fundamental" ? c.ano_academico === form.ano_academico : c.curso_id === form.curso_id && c.ano_academico === form.ano_academico));
+       await (existe ? atualizar.execute(p) : salvar.execute(p));
+       setAlert({ variant: "success", message: "Configuração de mensalidade versionada com sucesso. Você pode configurar outro nível/curso agora, ou voltar para a lista." });
+       await ctx.reload();
+@@ -59,11 +107,11 @@ export default function MensalidadeCriarPainel() {
+ 
+   return (
+     <FinanceiroAcessoGuard ctx={ctx}>
+-      <SubtelaPanel title="Definir Nova Mensalidade" icon="mdi:calendar-month-outline" onVoltar="/financas/configuracoes/mensalidade">
++      <SubtelaPanel title={escopoFixo ? "Editar Mensalidade" : "Definir Nova Mensalidade"} icon="mdi:calendar-month-outline" onVoltar="/financas/configuracoes/mensalidade">
+         <ManualDeFuncionamento>
+           <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+             <li>O <b>valor</b> definido aqui passa a valer a partir de agora, para todos os estudantes do nível/ano/curso escolhido.</li>
+-            <li>Escolha com atenção <b>o que acontece com quem já está pendente</b>: isso decide se cobranças de meses anteriores (ainda não pagas) também mudam para o novo valor, ou se continuam no valor antigo.</li>
++            <li>Ao editar uma mensalidade já existente, escolha com atenção <b>o que acontece com quem já está pendente</b>: isso decide se cobranças de meses anteriores (ainda não pagas) também mudam para o novo valor, ou se continuam no valor antigo. Na primeira configuração de um nível/ano/curso isso não é perguntado — o valor novo já vale para tudo, já que ainda não havia nenhum valor definido antes.</li>
+             <li>O <b>mês de encerramento da cobrança</b> define até quando a mensalidade é cobrada dentro do ano letivo — depois desse mês, a cobrança para automaticamente até o próximo ano letivo.</li>
+             <li>Só é possível salvar depois de aderir ao Gateway de Pagamento Online e escolher pelo menos um método de pagamento aceite.</li>
+           </ul>
+@@ -71,7 +119,17 @@ export default function MensalidadeCriarPainel() {
+         {alert && <Alert variant={alert.variant} title="Finanças" message={alert.message} />}
+         {ctx.bloquear && <AvisoCredenciais />}
+         <div className="grid gap-4">
+-          <NivelCamposFields kind="mensalidade" form={form} errors={errors} setForm={setForm} niveisDisponiveis={ctx.niveisDisponiveis} cursos={ctx.cursos} anosAcademicosAcademia={ctx.anosAcademicosAcademia} />
++          <NivelCamposFields
++            kind="mensalidade"
++            form={form}
++            errors={errors}
++            setForm={setForm}
++            niveisDisponiveis={ctx.niveisDisponiveis}
++            cursos={ctx.cursos}
++            anosAcademicosAcademia={ctx.anosAcademicosAcademia}
++            escopoFixo={escopoFixo}
++            existeConfiguracaoParaEscopo={existe}
++          />
+           <Label>Mês de encerramento da cobrança</Label>
+           <SearchableSelect
+             value={mesFim}
+@@ -88,10 +146,10 @@ export default function MensalidadeCriarPainel() {
+           <Label>Métodos de pagamento aceites</Label>
+           <MetodosPagamentoCheckboxes kind="mensalidade" selected={form.metodos_pagamento} onToggle={(m) => setForm((prev) => ({ ...prev, metodos_pagamento: prev.metodos_pagamento.includes(m) ? prev.metodos_pagamento.filter((x) => x !== m) : [...prev.metodos_pagamento, m] }))} />
+           <div className="flex flex-wrap items-center gap-3">
+-            <Button onClick={submit} disabled={ctx.bloquear || !form.modo_vigencia || salvar.loading || atualizar.loading} startIcon={<Icon icon="mdi:content-save-outline" width={16} />}>
+-              Salvar nova versão
++            <Button onClick={submit} disabled={ctx.bloquear || (existe && !form.modo_vigencia) || salvar.loading || atualizar.loading} startIcon={<Icon icon="mdi:content-save-outline" width={16} />}>
++              {existe ? "Salvar alterações" : "Salvar nova versão"}
+             </Button>
+-            <Link href="/financas/configuracoes/mensalidade" className="text-sm font-medium text-gray-600 underline dark:text-gray-300">
++            <Link href="/financas/configuracoes/mensalidade" className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-300">
+               Voltar para a lista de mensalidades
+             </Link>
+           </div>
+diff --git a/src/components/paineis/MensalidadeListaPainel.tsx b/src/components/paineis/MensalidadeListaPainel.tsx
+index 859e6e5..09e4df9 100644
+--- a/src/components/paineis/MensalidadeListaPainel.tsx
++++ b/src/components/paineis/MensalidadeListaPainel.tsx
+@@ -1,30 +1,41 @@
+ "use client";
+ 
+ import { useState } from "react";
++import Link from "next/link";
+ import Alert from "@/components/ui/alert/Alert";
++import Icon from "@/components/ui/Icon";
+ import { SubtelasMenu } from "@/components/paineis/financeiroShared";
+-import { FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, ConfiguracoesSalvasTable, useFinanceiroNivelContext } from "@/components/paineis/financeiroNivelShared";
++import { FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, ConfiguracoesDefinidasCards, useFinanceiroNivelContext } from "@/components/paineis/financeiroNivelShared";
+ 
+ /**
+- * /financas/configuracoes/mensalidade (Tarefa 11). Antes era a subtela
++ * /financas/configuracoes/mensalidade (Tarefa 12). Antes era a subtela
+  * "mensalidade" — que misturava, numa única tela, o formulário de criação e
+  * a lista de configurações já feitas. Agora o formulário de criação vive
+  * numa página própria (/mensalidade/criar) e esta página passa a ser só a
+  * lista + os cards de navegação (Início de cobrança e Definir Nova
+  * Mensalidade).
++ *
++ * A antiga tabela "Configurações já feitas" virou cartões "Mensalidades
++ * definidas" (ConfiguracoesDefinidasCards) — só aparece quando existe pelo
++ * menos uma configuração; com zero, o próprio componente já mostra "Nenhuma
++ * configuração salva ainda." sem cabeçalho nenhum.
+  */
+ export default function MensalidadeListaPainel() {
+   const ctx = useFinanceiroNivelContext();
+   const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
++  const configuracoes = ctx.mensalidadesApi.data?.configuracoes ?? [];
+ 
+   return (
+     <FinanceiroAcessoGuard ctx={ctx}>
+       <div className="space-y-6">
++        <Link href="/financas/configuracoes" className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-300">
++          <Icon icon="mdi:arrow-left" width={16} /> Voltar
++        </Link>
+         <ManualDeFuncionamento>
+           <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+             <li>Cada configuração enviada cria uma <b>nova versão vigente a partir de agora</b> — não edita nem apaga versões passadas. Meses já vencidos continuam usando o valor que estava vigente na época em que venceram.</li>
+             <li>A configuração é específica por <b>nível de ensino</b> e, dentro dele, por <b>ano/classe</b> (Ensino Primário) ou por <b>curso e ano</b> (Iº Ciclo, Médio ou Superior) — por isso pode (e normalmente deve) haver várias configurações vigentes ao mesmo tempo, uma por combinação.</li>
+-            <li>Use <b>Início de cobrança</b> só quando o ano letivo começou fora do mês habitual (ex.: turma que iniciou em março em vez de fevereiro).</li>
++            <li>Use <b>Início de cobrança</b> quando o ano letivo já estiver em andamento na hora de configurar a mensalidade pela primeira vez (ex.: a academia aderiu ao Spuri em novembro, já em pleno ano letivo).</li>
+             <li>Pagamentos só podem ser feitos pelos métodos habilitados na criação de cada mensalidade.</li>
+           </ul>
+         </ManualDeFuncionamento>
+@@ -36,18 +47,20 @@ export default function MensalidadeListaPainel() {
+           ]}
+         />
+         {ctx.bloquear && <AvisoCredenciais />}
+-        <div className="border-t border-gray-100 pt-5 dark:border-white/[0.05]">
+-          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Configurações já feitas</h3>
+-          <ConfiguracoesSalvasTable
+-            linhas={ctx.mensalidadesApi.data?.configuracoes ?? []}
+-            comMesFim
+-            kind="mensalidade"
+-            cursos={ctx.cursos}
+-            codigoAcademia={ctx.codigoAcademia}
+-            reload={ctx.reload}
+-            onAlert={setAlert}
+-          />
+-        </div>
++        {configuracoes.length > 0 && (
++          <div className="border-t border-gray-100 pt-5 dark:border-white/[0.05]">
++            <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Mensalidades definidas</h3>
++            <ConfiguracoesDefinidasCards
++              linhas={configuracoes}
++              comMesFim
++              kind="mensalidade"
++              cursos={ctx.cursos}
++              codigoAcademia={ctx.codigoAcademia}
++              reload={ctx.reload}
++              onAlert={setAlert}
++            />
++          </div>
++        )}
+       </div>
+     </FinanceiroAcessoGuard>
+   );
+diff --git a/src/components/paineis/TaxaMatriculaCriarPainel.tsx b/src/components/paineis/TaxaMatriculaCriarPainel.tsx
+index 2732bf2..85ceeea 100644
+--- a/src/components/paineis/TaxaMatriculaCriarPainel.tsx
++++ b/src/components/paineis/TaxaMatriculaCriarPainel.tsx
+@@ -1,7 +1,8 @@
+ "use client";
+ 
+-import { useEffect, useState } from "react";
++import { useEffect, useMemo, useState } from "react";
+ import Link from "next/link";
++import { useSearchParams } from "next/navigation";
+ import Alert from "@/components/ui/alert/Alert";
+ import Button from "@/components/ui/button/Button";
+ import Icon from "@/components/ui/Icon";
+@@ -11,26 +12,62 @@ import { formatApiError } from "@/lib/api/client";
+ import { SubtelaPanel } from "@/components/paineis/financeiroShared";
+ import {
+   FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, NivelCamposFields, MetodosPagamentoCheckboxes,
+-  validarValorEAno, useFinanceiroNivelContext, type NivelFormState, type FormFieldErrors,
++  validarValorEAno, existeConfiguracaoParaEscopo, useFinanceiroNivelContext, type NivelFormState, type FormFieldErrors,
+ } from "@/components/paineis/financeiroNivelShared";
+-import type { FinanceiroModoVigencia, MatriculaConfiguracaoInput } from "@/types/api";
++import type { FinanceiroModoVigencia, FinanceiroNivel, MatriculaConfiguracaoInput } from "@/types/api";
+ 
+-/** /financas/configuracoes/taxa-matricula/criar (Tarefa 11) — antes era o formulário embutido na subtela "matricula"; agora é a página "Definir Nova Taxa". */
++/**
++ * /financas/configuracoes/taxa-matricula/criar (Tarefa 12) — página
++ * "Definir Nova Taxa". Mesmo raciocínio de MensalidadeCriarPainel.tsx:
++ * sem `?nivel=...` na URL é uma criação normal (modo_vigencia não é
++ * perguntado); com esses parâmetros, chegou por "Editar" a partir de um
++ * cartão em ConfiguracoesDefinidasCards, escopo travado e pré-preenchido, e
++ * a pergunta sobre pendentes aparece.
++ */
+ export default function TaxaMatriculaCriarPainel() {
+   const ctx = useFinanceiroNivelContext();
++  const searchParams = useSearchParams();
++  const escopoFixo = searchParams.has("nivel");
+   const [form, setForm] = useState<NivelFormState>({ nivel: "fundamental", ano_academico: "", curso_id: "", valor: "", metodos_pagamento: ["GPO"], modo_vigencia: "" });
+   const [errors, setErrors] = useState<FormFieldErrors>({});
+   const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
++  const [preenchidoDaUrl, setPreenchidoDaUrl] = useState(false);
+   const salvar = useApi(financeiroService.configurarMatricula);
+   const atualizar = useApi(financeiroService.atualizarConfiguracaoMatricula);
++  const configuracoes = useMemo(() => ctx.matriculasApi.data?.configuracoes ?? [], [ctx.matriculasApi.data]);
+ 
+   useEffect(() => {
+-    if (ctx.niveisDisponiveis.length === 0) return;
++    if (escopoFixo || ctx.niveisDisponiveis.length === 0) return;
+     setForm((prev) => (ctx.niveisDisponiveis.includes(prev.nivel) ? prev : { ...prev, nivel: ctx.niveisDisponiveis[0], curso_id: "", ano_academico: "" }));
+-  }, [ctx.niveisDisponiveis]);
++  }, [ctx.niveisDisponiveis, escopoFixo]);
++
++  useEffect(() => {
++    if (!escopoFixo || preenchidoDaUrl || ctx.matriculasApi.loading) return;
++    const nivel = (searchParams.get("nivel") ?? "fundamental") as FinanceiroNivel;
++    const ano_academico = searchParams.get("ano_academico") ?? "";
++    const curso_id = searchParams.get("curso_id") ?? "";
++    const atual = configuracoes.find((c) => c.nivel === nivel && c.ano_academico === ano_academico && (c.curso_id ?? "") === curso_id);
++    setForm((prev) => ({
++      ...prev,
++      nivel,
++      ano_academico,
++      curso_id,
++      valor: atual ? String(atual.valor) : prev.valor,
++      metodos_pagamento: atual?.metodos_pagamento ?? prev.metodos_pagamento,
++    }));
++    setPreenchidoDaUrl(true);
++  }, [escopoFixo, preenchidoDaUrl, ctx.matriculasApi.loading, configuracoes, searchParams]);
++
++  // form completo não entra nas deps de propósito — a existência da
++  // configuração só depende de nivel/ano_academico/curso_id, não de
++  // valor/metodos_pagamento/modo_vigencia (que mudam a cada tecla digitada
++  // e não devem re-executar esta checagem).
++  const existe = useMemo(() => existeConfiguracaoParaEscopo(configuracoes, form),
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++    [configuracoes, form.nivel, form.ano_academico, form.curso_id]);
+ 
+   const submit = async () => {
+-    const errs = validarValorEAno(form);
++    const errs = validarValorEAno(form, existe);
+     setErrors(errs);
+     if (Object.keys(errs).length > 0) return;
+     try {
+@@ -42,10 +79,8 @@ export default function TaxaMatriculaCriarPainel() {
+         curso_id: form.nivel === "fundamental" ? undefined : form.curso_id,
+         valor: Number(form.valor),
+         metodos_pagamento: form.metodos_pagamento,
+-        modo_vigencia: form.modo_vigencia as FinanceiroModoVigencia,
++        modo_vigencia: form.modo_vigencia ? (form.modo_vigencia as FinanceiroModoVigencia) : undefined,
+       };
+-      const existe = (ctx.matriculasApi.data?.configuracoes ?? []).some((c) =>
+-        c.nivel === form.nivel && (form.nivel === "fundamental" ? c.ano_academico === form.ano_academico : c.curso_id === form.curso_id && c.ano_academico === form.ano_academico));
+       const resultado = await (existe ? atualizar.execute(p) : salvar.execute(p));
+       const resumo = resultado?.repricing_pendentes;
+       setAlert({
+@@ -62,25 +97,35 @@ export default function TaxaMatriculaCriarPainel() {
+ 
+   return (
+     <FinanceiroAcessoGuard ctx={ctx}>
+-      <SubtelaPanel title="Definir Nova Taxa" icon="mdi:school-outline" onVoltar="/financas/configuracoes/taxa-matricula">
++      <SubtelaPanel title={escopoFixo ? "Editar Taxa de Matrícula" : "Definir Nova Taxa"} icon="mdi:school-outline" onVoltar="/financas/configuracoes/taxa-matricula">
+         <ManualDeFuncionamento>
+           <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+             <li>O <b>valor</b> definido aqui passa a valer a partir de agora, para novas solicitações de matrícula do nível/ano/curso escolhido.</li>
+-            <li>Escolha com atenção <b>o que acontece com quem já está pendente</b>: isso decide se matrículas já aprovadas (ainda não pagas) também mudam para o novo valor, ou se continuam no valor antigo.</li>
++            <li>Ao editar uma taxa já existente, escolha com atenção <b>o que acontece com quem já está pendente</b>: isso decide se matrículas já aprovadas (ainda não pagas) também mudam para o novo valor, ou se continuam no valor antigo. Na primeira configuração de um nível/ano/curso isso não é perguntado — o valor novo já vale para tudo, já que ainda não havia nenhum valor definido antes.</li>
+             <li>Só é possível salvar depois de aderir ao Gateway de Pagamento Online e escolher pelo menos um método de pagamento aceite.</li>
+           </ul>
+         </ManualDeFuncionamento>
+         {alert && <Alert variant={alert.variant} title="Finanças" message={alert.message} />}
+         {ctx.bloquear && <AvisoCredenciais />}
+         <div className="grid gap-4">
+-          <NivelCamposFields kind="matricula" form={form} errors={errors} setForm={setForm} niveisDisponiveis={ctx.niveisDisponiveis} cursos={ctx.cursos} anosAcademicosAcademia={ctx.anosAcademicosAcademia} />
++          <NivelCamposFields
++            kind="matricula"
++            form={form}
++            errors={errors}
++            setForm={setForm}
++            niveisDisponiveis={ctx.niveisDisponiveis}
++            cursos={ctx.cursos}
++            anosAcademicosAcademia={ctx.anosAcademicosAcademia}
++            escopoFixo={escopoFixo}
++            existeConfiguracaoParaEscopo={existe}
++          />
+           <Label>Métodos de pagamento aceites</Label>
+           <MetodosPagamentoCheckboxes kind="matricula" selected={form.metodos_pagamento} onToggle={(m) => setForm((prev) => ({ ...prev, metodos_pagamento: prev.metodos_pagamento.includes(m) ? prev.metodos_pagamento.filter((x) => x !== m) : [...prev.metodos_pagamento, m] }))} />
+           <div className="flex flex-wrap items-center gap-3">
+-            <Button onClick={submit} disabled={ctx.bloquear || !form.modo_vigencia || salvar.loading || atualizar.loading} startIcon={<Icon icon="mdi:content-save-outline" width={16} />}>
+-              Salvar nova versão
++            <Button onClick={submit} disabled={ctx.bloquear || (existe && !form.modo_vigencia) || salvar.loading || atualizar.loading} startIcon={<Icon icon="mdi:content-save-outline" width={16} />}>
++              {existe ? "Salvar alterações" : "Salvar nova versão"}
+             </Button>
+-            <Link href="/financas/configuracoes/taxa-matricula" className="text-sm font-medium text-gray-600 underline dark:text-gray-300">
++            <Link href="/financas/configuracoes/taxa-matricula" className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-300">
+               Voltar para a lista de taxas
+             </Link>
+           </div>
+diff --git a/src/components/paineis/TaxaMatriculaListaPainel.tsx b/src/components/paineis/TaxaMatriculaListaPainel.tsx
+index 3ea7a08..5cbdd85 100644
+--- a/src/components/paineis/TaxaMatriculaListaPainel.tsx
++++ b/src/components/paineis/TaxaMatriculaListaPainel.tsx
+@@ -1,25 +1,36 @@
+ "use client";
+ 
+ import { useState } from "react";
++import Link from "next/link";
+ import Alert from "@/components/ui/alert/Alert";
++import Icon from "@/components/ui/Icon";
+ import { SubtelasMenu } from "@/components/paineis/financeiroShared";
+-import { FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, ConfiguracoesSalvasTable, useFinanceiroNivelContext } from "@/components/paineis/financeiroNivelShared";
++import { FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, ConfiguracoesDefinidasCards, useFinanceiroNivelContext } from "@/components/paineis/financeiroNivelShared";
+ 
+ /**
+- * /financas/configuracoes/taxa-matricula (Tarefa 11). Antes era a subtela
++ * /financas/configuracoes/taxa-matricula (Tarefa 12). Antes era a subtela
+  * "matricula" — que misturava, numa única tela, o formulário de criação e a
+  * lista de configurações já feitas. Agora o formulário vive numa página
+  * própria (/taxa-matricula/criar) e esta página passa a ser só a lista + o
+  * card "Definir Nova Taxa" (só 1 card — taxa de matrícula não tem
+  * "início de cobrança", que é um conceito exclusivo de mensalidade).
++ *
++ * A antiga tabela "Configurações já feitas" virou cartões "Taxas definidas"
++ * (ConfiguracoesDefinidasCards) — só aparece quando existe pelo menos uma
++ * configuração; com zero, o próprio componente já mostra "Nenhuma
++ * configuração salva ainda." sem cabeçalho nenhum.
+  */
+ export default function TaxaMatriculaListaPainel() {
+   const ctx = useFinanceiroNivelContext();
+   const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
++  const configuracoes = ctx.matriculasApi.data?.configuracoes ?? [];
+ 
+   return (
+     <FinanceiroAcessoGuard ctx={ctx}>
+       <div className="space-y-6">
++        <Link href="/financas/configuracoes" className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-300">
++          <Icon icon="mdi:arrow-left" width={16} /> Voltar
++        </Link>
+         <ManualDeFuncionamento>
+           <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+             <li>Cada configuração enviada cria uma <b>nova versão vigente a partir de agora</b> — não edita nem apaga versões passadas.</li>
+@@ -35,18 +46,20 @@ export default function TaxaMatriculaListaPainel() {
+           ]}
+         />
+         {ctx.bloquear && <AvisoCredenciais />}
+-        <div className="border-t border-gray-100 pt-5 dark:border-white/[0.05]">
+-          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Configurações já feitas</h3>
+-          <ConfiguracoesSalvasTable
+-            linhas={ctx.matriculasApi.data?.configuracoes ?? []}
+-            comMesFim={false}
+-            kind="matricula"
+-            cursos={ctx.cursos}
+-            codigoAcademia={ctx.codigoAcademia}
+-            reload={ctx.reload}
+-            onAlert={setAlert}
+-          />
+-        </div>
++        {configuracoes.length > 0 && (
++          <div className="border-t border-gray-100 pt-5 dark:border-white/[0.05]">
++            <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Taxas definidas</h3>
++            <ConfiguracoesDefinidasCards
++              linhas={configuracoes}
++              comMesFim={false}
++              kind="matricula"
++              cursos={ctx.cursos}
++              codigoAcademia={ctx.codigoAcademia}
++              reload={ctx.reload}
++              onAlert={setAlert}
++            />
++          </div>
++        )}
+       </div>
+     </FinanceiroAcessoGuard>
+   );
+diff --git a/src/components/paineis/financeiroNivelShared.tsx b/src/components/paineis/financeiroNivelShared.tsx
+index c9b78c3..3a40ddd 100644
+--- a/src/components/paineis/financeiroNivelShared.tsx
++++ b/src/components/paineis/financeiroNivelShared.tsx
+@@ -197,11 +197,29 @@ export function MetodosPagamentoCheckboxes({ kind, selected, onToggle }: { kind:
+   );
+ }
+ 
+-export function validarValorEAno(form: NivelFormState): FormFieldErrors {
++/** "6_ano_fundamental" → "6ª Classe"; "2_ano_medio" → "2.º Ano" — sem o sufixo "(Médio)"/"(Superior)" de labelAnoAcademico, usado nos cartões de configurações definidas (Tarefa 12) porque lá o nível/curso já aparece no título da secção, tornando o sufixo redundante. */
++export function labelAnoAcademicoCurto(codigo: string): string {
++  const m = /^(\d+)_ano_(fundamental|medio|superior)$/.exec(codigo);
++  if (!m) return codigo;
++  const [, numero, nivel] = m;
++  return nivel === "fundamental" ? `${numero}ª Classe` : `${numero}.º Ano`;
++}
++
++/** Extrai o número inicial de "6_ano_fundamental" para ordenar cartões/linhas por ano — "10_ano_medio" deve vir depois de "9_ano_medio", não antes (ordenação alfabética erraria isso). */
++function numeroDoAno(anoAcademico?: string): number {
++  const m = /^(\d+)_/.exec(anoAcademico ?? "");
++  return m ? Number(m[1]) : 0;
++}
++
++export function validarValorEAno(form: NivelFormState, existeConfiguracaoParaEscopo: boolean): FormFieldErrors {
+   const errors: FormFieldErrors = {};
+   const valorNumero = Number(form.valor);
+   if (!form.valor.trim() || !(valorNumero > 0)) errors.valor = "Informe um valor maior que zero.";
+-  if (!form.modo_vigencia) errors.modo_vigencia = "Escolha o que acontece com quem já está pendente.";
++  // modo_vigencia só é perguntado (e exigido) quando já existe uma
++  // configuração vigente para este escopo — isto é, isto é uma edição. Na
++  // primeira configuração de um escopo o campo não muda nada (ver
++  // Tarefa 108 do rastreio-backend), então nem perguntamos.
++  if (existeConfiguracaoParaEscopo && !form.modo_vigencia) errors.modo_vigencia = "Escolha o que acontece com quem já está pendente.";
+   if (form.nivel === "fundamental") {
+     if (!form.ano_academico) errors.ano_academico = "Selecione o ano/classe.";
+   } else {
+@@ -211,6 +229,29 @@ export function validarValorEAno(form: NivelFormState): FormFieldErrors {
+   return errors;
+ }
+ 
++/**
++ * true quando já existe, entre `linhas` (as configurações já carregadas —
++ * `ctx.mensalidadesApi.data.configuracoes` ou `ctx.matriculasApi.data.configuracoes`),
++ * uma configuração vigente para o escopo atualmente selecionado no
++ * formulário (mesmo nível + ano_academico, e para médio/superior também o
++ * mesmo curso_id). Usado tanto para decidir se a pergunta "o que acontece
++ * com quem já está pendente?" aparece, quanto para decidir se a
++ * requisição deve ir por POST (criar) ou PUT (atualizar) — a mesma
++ * condição decide as duas coisas, por isso ficou centralizada aqui em vez
++ * de duplicada nos dois formulários (Tarefa 12).
++ */
++export function existeConfiguracaoParaEscopo(
++  linhas: (MensalidadeConfiguracaoView | MatriculaConfiguracaoView)[],
++  form: Pick<NivelFormState, "nivel" | "ano_academico" | "curso_id">
++): boolean {
++  if (!form.ano_academico) return false;
++  if (form.nivel === "fundamental") {
++    return linhas.some((l) => l.nivel === "fundamental" && l.ano_academico === form.ano_academico);
++  }
++  if (!form.curso_id) return false;
++  return linhas.some((l) => l.nivel === form.nivel && l.curso_id === form.curso_id && l.ano_academico === form.ano_academico);
++}
++
+ /**
+  * Campos de nível/curso/ano/valor/pendente, compartilhados pelos
+  * formulários de criação de mensalidade e de taxa de matrícula — os dois
+@@ -222,9 +263,20 @@ export function validarValorEAno(form: NivelFormState): FormFieldErrors {
+  * select. "Ano do curso" só fica habilitável depois que um curso é
+  * selecionado (para médio/superior) — fundamental não tem essa restrição
+  * porque não depende de curso.
++ *
++ * `escopoFixo` (Tarefa 12): true quando o formulário foi aberto a partir de
++ * "Editar" num cartão de configuração já existente (ver
++ * ConfiguracoesDefinidasCards) — nesse caso nível/curso/ano vêm fixos pela
++ * URL e são mostrados como texto, não como campos editáveis, porque editar
++ * aqui significa mudar o VALOR daquele escopo, não migrar a configuração
++ * para outro escopo (isso já é feito criando uma configuração nova).
++ *
++ * `existeConfiguracaoParaEscopo` decide se a pergunta "o que acontece com
++ * quem já está pendente?" aparece — só na edição (ver a função de mesmo
++ * nome acima).
+  */
+ export function NivelCamposFields({
+-  kind, form, errors, setForm, niveisDisponiveis, cursos, anosAcademicosAcademia,
++  kind, form, errors, setForm, niveisDisponiveis, cursos, anosAcademicosAcademia, escopoFixo = false, existeConfiguracaoParaEscopo: existeConfig,
+ }: {
+   kind: "mensalidade" | "matricula";
+   form: NivelFormState;
+@@ -233,6 +285,8 @@ export function NivelCamposFields({
+   niveisDisponiveis: FinanceiroNivel[];
+   cursos: Curso[];
+   anosAcademicosAcademia: string[];
++  escopoFixo?: boolean;
++  existeConfiguracaoParaEscopo: boolean;
+ }) {
+   const cursosDoNivel = (nivel: FinanceiroNivel) => cursos.filter((c) => c.type === nivel);
+   const anosDoFormulario = (f: NivelFormState): string[] => {
+@@ -242,6 +296,71 @@ export function NivelCamposFields({
+   };
+   const updateNivel = (nivel: FinanceiroNivel) => setForm((prev) => ({ ...prev, nivel, curso_id: "", ano_academico: "" }));
+ 
++  if (escopoFixo) {
++    const cursoNome = form.curso_id ? (cursos.find((c) => c.id === form.curso_id)?.nome ?? form.curso_id) : null;
++    return (
++      <>
++        <div className="space-y-1 rounded-lg bg-gray-50 p-3 text-sm dark:bg-white/[0.03]">
++          <p className="text-gray-500 dark:text-gray-400">
++            Nível: <span className="font-medium text-gray-800 dark:text-white/90">{NIVEL_LABEL[form.nivel]}</span>
++          </p>
++          {cursoNome && (
++            <p className="text-gray-500 dark:text-gray-400">
++              Curso: <span className="font-medium text-gray-800 dark:text-white/90">{cursoNome}</span>
++            </p>
++          )}
++          <p className="text-gray-500 dark:text-gray-400">
++            {form.nivel === "fundamental" ? "Ano / classe" : "Ano do curso"}: <span className="font-medium text-gray-800 dark:text-white/90">{labelAnoAcademico(form.ano_academico)}</span>
++          </p>
++        </div>
++        <Label>Valor (Kz)</Label>
++        <ValorKzInput id={`${kind}-valor`} name={`${kind}-valor`} value={form.valor} onChange={(v) => setForm((prev) => ({ ...prev, valor: v }))} error={!!errors.valor} hint={errors.valor} />
++        {existeConfig && (
++          <>
++            <Label>O que acontece com quem já está pendente?</Label>
++            <div className="flex flex-col gap-3">
++              <Radio
++                id={`${kind}-modo-vigencia-pendentes`}
++                name={`${kind}-modo-vigencia`}
++                value="cobrancas_pendentes"
++                checked={form.modo_vigencia === "cobrancas_pendentes"}
++                label={
++                  <span>
++                    <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar retroativamente</span>
++                    <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
++                      {kind === "mensalidade"
++                        ? "O novo valor passa a valer também para mensalidades de meses anteriores que já venceram e ainda não foram pagas."
++                        : "O novo valor passa a valer também para matrículas já aprovadas que ainda não foram pagas."}
++                    </span>
++                  </span>
++                }
++                onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "cobrancas_pendentes" }))}
++              />
++              <Radio
++                id={`${kind}-modo-vigencia-futuro`}
++                name={`${kind}-modo-vigencia`}
++                value="a_partir_da_atualizacao"
++                checked={form.modo_vigencia === "a_partir_da_atualizacao"}
++                label={
++                  <span>
++                    <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar só daqui para frente</span>
++                    <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
++                      {kind === "mensalidade"
++                        ? "Quem já está com uma mensalidade pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para cobranças futuras."
++                        : "Quem já está com uma matrícula pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para matrículas aprovadas a partir de agora."}
++                    </span>
++                  </span>
++                }
++                onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "a_partir_da_atualizacao" }))}
++              />
++            </div>
++            {errors.modo_vigencia && <p className="text-sm text-error-500 dark:text-error-400">{errors.modo_vigencia}</p>}
++          </>
++        )}
++      </>
++    );
++  }
++
+   return (
+     <>
+       {niveisDisponiveis.length > 1 ? (
+@@ -296,44 +415,48 @@ export function NivelCamposFields({
+         error={!!errors.valor}
+         hint={errors.valor}
+       />
+-      <Label>O que acontece com quem já está pendente?</Label>
+-      <div className="flex flex-col gap-3">
+-        <Radio
+-          id={`${kind}-modo-vigencia-pendentes`}
+-          name={`${kind}-modo-vigencia`}
+-          value="cobrancas_pendentes"
+-          checked={form.modo_vigencia === "cobrancas_pendentes"}
+-          label={
+-            <span>
+-              <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar retroativamente</span>
+-              <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
+-                {kind === "mensalidade"
+-                  ? "O novo valor passa a valer também para mensalidades de meses anteriores que já venceram e ainda não foram pagas."
+-                  : "O novo valor passa a valer também para matrículas já aprovadas que ainda não foram pagas."}
+-              </span>
+-            </span>
+-          }
+-          onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "cobrancas_pendentes" }))}
+-        />
+-        <Radio
+-          id={`${kind}-modo-vigencia-futuro`}
+-          name={`${kind}-modo-vigencia`}
+-          value="a_partir_da_atualizacao"
+-          checked={form.modo_vigencia === "a_partir_da_atualizacao"}
+-          label={
+-            <span>
+-              <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar só daqui para frente</span>
+-              <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
+-                {kind === "mensalidade"
+-                  ? "Quem já está com uma mensalidade pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para cobranças futuras."
+-                  : "Quem já está com uma matrícula pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para matrículas aprovadas a partir de agora."}
+-              </span>
+-            </span>
+-          }
+-          onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "a_partir_da_atualizacao" }))}
+-        />
+-      </div>
+-      {errors.modo_vigencia && <p className="text-sm text-error-500 dark:text-error-400">{errors.modo_vigencia}</p>}
++      {existeConfig && (
++        <>
++          <Label>O que acontece com quem já está pendente?</Label>
++          <div className="flex flex-col gap-3">
++            <Radio
++              id={`${kind}-modo-vigencia-pendentes`}
++              name={`${kind}-modo-vigencia`}
++              value="cobrancas_pendentes"
++              checked={form.modo_vigencia === "cobrancas_pendentes"}
++              label={
++                <span>
++                  <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar retroativamente</span>
++                  <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
++                    {kind === "mensalidade"
++                      ? "O novo valor passa a valer também para mensalidades de meses anteriores que já venceram e ainda não foram pagas."
++                      : "O novo valor passa a valer também para matrículas já aprovadas que ainda não foram pagas."}
++                  </span>
++                </span>
++              }
++              onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "cobrancas_pendentes" }))}
++            />
++            <Radio
++              id={`${kind}-modo-vigencia-futuro`}
++              name={`${kind}-modo-vigencia`}
++              value="a_partir_da_atualizacao"
++              checked={form.modo_vigencia === "a_partir_da_atualizacao"}
++              label={
++                <span>
++                  <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar só daqui para frente</span>
++                  <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
++                    {kind === "mensalidade"
++                      ? "Quem já está com uma mensalidade pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para cobranças futuras."
++                      : "Quem já está com uma matrícula pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para matrículas aprovadas a partir de agora."}
++                  </span>
++                </span>
++              }
++              onChange={() => setForm((prev) => ({ ...prev, modo_vigencia: "a_partir_da_atualizacao" }))}
++            />
++          </div>
++          {errors.modo_vigencia && <p className="text-sm text-error-500 dark:text-error-400">{errors.modo_vigencia}</p>}
++        </>
++      )}
+     </>
+   );
+ }
+@@ -343,15 +466,39 @@ function configKey(kind: "mensalidade" | "matricula", c: { nivel: string; ano_ac
+   return `${kind}|${c.nivel}|${c.ano_academico ?? ""}|${c.curso_id ?? ""}`;
+ }
+ 
++type ConfigRow = MensalidadeConfiguracaoView | MatriculaConfiguracaoView;
++
++/** Agrupa as configurações em secções para exibição em cartões (Tarefa 12): uma secção "Ensino Primário e Iº Ciclo" (todo o fundamental junto) e uma secção por curso para médio/superior. */
++function agruparEmSecoes(linhas: ConfigRow[], cursos: Curso[]): { titulo: string; linhas: ConfigRow[] }[] {
++  const secoes: { titulo: string; linhas: ConfigRow[] }[] = [];
++  const fundamental = linhas.filter((l) => l.nivel === "fundamental").sort((a, b) => numeroDoAno(a.ano_academico) - numeroDoAno(b.ano_academico));
++  if (fundamental.length > 0) secoes.push({ titulo: "Ensino Primário e Iº Ciclo", linhas: fundamental });
++
++  const porCurso = new Map<string, ConfigRow[]>();
++  for (const l of linhas) {
++    if (l.nivel === "fundamental" || !l.curso_id) continue;
++    if (!porCurso.has(l.curso_id)) porCurso.set(l.curso_id, []);
++    porCurso.get(l.curso_id)!.push(l);
++  }
++  for (const [cursoId, rows] of porCurso) {
++    const nome = cursos.find((c) => c.id === cursoId)?.nome ?? "Curso";
++    secoes.push({ titulo: nome, linhas: rows.sort((a, b) => numeroDoAno(a.ano_academico) - numeroDoAno(b.ano_academico)) });
++  }
++  return secoes;
++}
++
+ /**
+- * Tabela de "Configurações já feitas", exibida na página de listagem de
+- * mensalidade/taxa de matrícula — substitui a antiga tela separada de
+- * "Histórico de versões", que não existe mais.
++ * Substitui a antiga "Configurações já feitas" (Tarefa 12): em vez de uma
++ * tabela crua, cartões "{ano/classe} - {valor} Kz" agrupados por secção
++ * (fundamental junto; médio/superior um bloco por curso), clicáveis — abrem
++ * uma subtela de detalhe com "Editar" (leva ao formulário de criação com o
++ * escopo pré-preenchido e travado — ver NivelCamposFields escopoFixo) e
++ * "Remover" (mesmo fluxo de confirmação que já existia na tabela).
+  */
+-export function ConfiguracoesSalvasTable({
++export function ConfiguracoesDefinidasCards({
+   linhas, comMesFim, kind, cursos, codigoAcademia, reload, onAlert,
+ }: {
+-  linhas: (MensalidadeConfiguracaoView | MatriculaConfiguracaoView)[];
++  linhas: ConfigRow[];
+   comMesFim: boolean;
+   kind: "mensalidade" | "matricula";
+   cursos: Curso[];
+@@ -361,24 +508,33 @@ export function ConfiguracoesSalvasTable({
+ }) {
+   const removerMensalidade = useApi(financeiroService.removerConfiguracaoMensalidade);
+   const removerMatricula = useApi(financeiroService.removerConfiguracaoMatricula);
+-  const [removendoConfig, setRemovendoConfig] = useState<string | null>(null);
+-  const [configParaRemover, setConfigParaRemover] = useState<{ nivel: FinanceiroNivel; ano_academico?: string; curso_id?: string } | null>(null);
++  const [removendo, setRemovendo] = useState(false);
++  const [confirmarRemocao, setConfirmarRemocao] = useState(false);
++  const [selecionada, setSelecionada] = useState<ConfigRow | null>(null);
+ 
+   const labelEscopo = (c: { ano_academico?: string; curso_id?: string }) =>
+     c.ano_academico ? labelAnoAcademico(c.ano_academico) : (cursos.find((cu) => cu.id === c.curso_id)?.nome ?? "este escopo");
+ 
+-  const onRemover = async (c: { nivel: FinanceiroNivel; ano_academico?: string; curso_id?: string }) => {
++  const criarHref = (c: ConfigRow) => {
++    const qs = new URLSearchParams({ nivel: c.nivel, ...(c.ano_academico ? { ano_academico: c.ano_academico } : {}), ...(c.curso_id ? { curso_id: c.curso_id } : {}) });
++    return `/financas/configuracoes/${kind === "mensalidade" ? "mensalidade" : "taxa-matricula"}/criar?${qs.toString()}`;
++  };
++
++  const onRemover = async () => {
++    if (!selecionada) return;
+     onAlert(null);
+-    setRemovendoConfig(configKey(kind, c));
++    setRemovendo(true);
+     try {
+       const executar = kind === "mensalidade" ? removerMensalidade.execute : removerMatricula.execute;
+-      await executar({ codigo_academia: codigoAcademia, nivel: c.nivel, ano_academico: c.ano_academico, curso_id: c.curso_id });
++      await executar({ codigo_academia: codigoAcademia, nivel: selecionada.nivel, ano_academico: selecionada.ano_academico, curso_id: selecionada.curso_id });
+       onAlert({ variant: "success", message: kind === "mensalidade" ? "Configuração de mensalidade removida com sucesso." : "Configuração de matrícula removida com sucesso." });
++      setSelecionada(null);
+       await reload();
+     } catch (err) {
+       onAlert({ variant: "error", message: formatApiError(err, `Não foi possível remover a configuração de ${kind === "mensalidade" ? "mensalidade" : "matrícula"}.`) });
+     } finally {
+-      setRemovendoConfig(null);
++      setRemovendo(false);
++      setConfirmarRemocao(false);
+     }
+   };
+ 
+@@ -386,54 +542,67 @@ export function ConfiguracoesSalvasTable({
+     return <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma configuração salva ainda.</p>;
+   }
+ 
++  if (selecionada) {
++    return (
++      <div className="space-y-4">
++        {confirmarRemocao && (
++          <ConfirmDialog
++            title={kind === "mensalidade" ? "Remover configuração de propina" : "Remover taxa de matrícula"}
++            message={
++              kind === "mensalidade"
++                ? `Tem certeza que deseja remover a configuração de propina de ${NIVEL_LABEL[selecionada.nivel]} — ${labelEscopo(selecionada)}? Meses já cobrados não são afetados; a partir de agora, novas mensalidades desse escopo ficam sem valor definido até configurar de novo.`
++                : `Tem certeza que deseja remover a configuração de taxa de matrícula de ${NIVEL_LABEL[selecionada.nivel]} — ${labelEscopo(selecionada)}? A matrícula volta a ser gratuita para este escopo até configurar de novo.`
++            }
++            confirmLabel="Remover"
++            onConfirm={onRemover}
++            onClose={() => setConfirmarRemocao(false)}
++          />
++        )}
++        <button type="button" onClick={() => setSelecionada(null)} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
++          <Icon icon="mdi:arrow-left" width={16} /> Voltar
++        </button>
++        <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
++          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{NIVEL_LABEL[selecionada.nivel]} — {labelEscopo(selecionada)}</h3>
++          <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
++            <div><dt className="text-gray-500 dark:text-gray-400">Valor</dt><dd className="font-medium text-gray-800 dark:text-white/90">{money(selecionada.valor)}</dd></div>
++            {comMesFim && "mes_fim_cobranca" in selecionada && (
++              <div><dt className="text-gray-500 dark:text-gray-400">Mês de encerramento da cobrança</dt><dd className="font-medium text-gray-800 dark:text-white/90">{selecionada.mes_fim_cobranca === 6 ? "Junho" : "Julho"}</dd></div>
++            )}
++            <div><dt className="text-gray-500 dark:text-gray-400">Métodos de pagamento</dt><dd className="font-medium text-gray-800 dark:text-white/90">{selecionada.metodos_pagamento.map((m) => METODO_PAGAMENTO_LABEL[m]).join(", ") || "Nenhum"}</dd></div>
++            <div><dt className="text-gray-500 dark:text-gray-400">Vigente desde</dt><dd className="font-medium text-gray-800 dark:text-white/90">{formatarDataHora(selecionada.vigente_em)}</dd></div>
++          </dl>
++          <div className="flex gap-2 pt-2">
++            <Link href={criarHref(selecionada)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
++              <Icon icon="mdi:pencil-outline" width={16} /> Editar
++            </Link>
++            <Button size="sm" variant="danger" disabled={removendo} onClick={() => setConfirmarRemocao(true)} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
++              {removendo ? "Removendo..." : "Remover"}
++            </Button>
++          </div>
++        </div>
++      </div>
++    );
++  }
++
+   return (
+-    <div className="overflow-x-auto">
+-      {configParaRemover && (
+-        <ConfirmDialog
+-          title={kind === "mensalidade" ? "Remover configuração de propina" : "Remover taxa de matrícula"}
+-          message={
+-            kind === "mensalidade"
+-              ? `Tem certeza que deseja remover a configuração de propina de ${NIVEL_LABEL[configParaRemover.nivel]} — ${labelEscopo(configParaRemover)}? Meses já cobrados não são afetados; a partir de agora, novas mensalidades desse escopo ficam sem valor definido até configurar de novo.`
+-              : `Tem certeza que deseja remover a configuração de taxa de matrícula de ${NIVEL_LABEL[configParaRemover.nivel]} — ${labelEscopo(configParaRemover)}? A matrícula volta a ser gratuita para este escopo até configurar de novo.`
+-          }
+-          confirmLabel="Remover"
+-          onConfirm={() => onRemover(configParaRemover)}
+-          onClose={() => setConfigParaRemover(null)}
+-        />
+-      )}
+-      <Table>
+-        <TableHeader>
+-          <TableRow>
+-            {["Nível", "Ano/Curso", "Valor", ...(comMesFim ? ["Fim"] : []), "Métodos", "Vigente em", ""].map((h) => (
+-              <TableCell key={h || "acoes"} isHeader className="px-3 py-2 text-xs uppercase text-gray-500 dark:text-gray-400">{h}</TableCell>
++    <div className="space-y-6">
++      {agruparEmSecoes(linhas, cursos).map((secao) => (
++        <div key={secao.titulo} className="space-y-2">
++          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300">{secao.titulo}</h4>
++          <div className="flex flex-wrap gap-3">
++            {secao.linhas.map((c) => (
++              <button
++                key={configKey(kind, c)}
++                type="button"
++                onClick={() => setSelecionada(c)}
++                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm shadow-theme-xs transition hover:border-brand-400 hover:shadow-theme-sm dark:border-white/[0.05] dark:bg-white/[0.03] dark:hover:border-brand-400"
++              >
++                <span className="font-medium text-gray-800 dark:text-white/90">{labelAnoAcademicoCurto(c.ano_academico ?? "")} - {money(c.valor)}</span>
++              </button>
+             ))}
+-          </TableRow>
+-        </TableHeader>
+-        <TableBody>
+-          {linhas.map((c, i) => {
+-            const key = configKey(kind, c);
+-            return (
+-              <TableRow key={i}>
+-                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{NIVEL_LABEL[c.nivel]}</TableCell>
+-                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{c.ano_academico ? labelAnoAcademico(c.ano_academico) : (cursos.find((cu) => cu.id === c.curso_id)?.nome ?? c.curso_id ?? "—")}</TableCell>
+-                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{money(c.valor)}</TableCell>
+-                {comMesFim && (
+-                  <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">
+-                    {"mes_fim_cobranca" in c ? (c.mes_fim_cobranca === 6 ? "Junho" : c.mes_fim_cobranca === 7 ? "Julho" : c.mes_fim_cobranca) : "—"}
+-                  </TableCell>
+-                )}
+-                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{c.metodos_pagamento.map((m) => METODO_PAGAMENTO_LABEL[m]).join(", ")}</TableCell>
+-                <TableCell className="px-3 py-2 text-gray-700 dark:text-gray-300">{formatarDataHora(c.vigente_em)}</TableCell>
+-                <TableCell className="px-3 py-2">
+-                  <Button size="sm" variant="danger" disabled={removendoConfig === key} onClick={() => setConfigParaRemover(c)} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
+-                    {removendoConfig === key ? "Removendo..." : "Remover"}
+-                  </Button>
+-                </TableCell>
+-              </TableRow>
+-            );
+-          })}
+-        </TableBody>
+-      </Table>
++          </div>
++        </div>
++      ))}
+     </div>
+   );
+ }
+diff --git a/src/types/api.ts b/src/types/api.ts
+index da73757..3841882 100644
+--- a/src/types/api.ts
++++ b/src/types/api.ts
+@@ -1548,7 +1548,16 @@ export interface MensalidadeConfiguracaoInput {
+   valor: number;
+   mes_fim_cobranca: 6 | 7;
+   metodos_pagamento: FinanceiroMetodoPagamento[];
+-  modo_vigencia: FinanceiroModoVigencia;
++  /**
++   * Só é obrigatório quando já existe uma configuração vigente para este
++   * escopo (nivel+ano_academico+curso_id) — ou seja, ao editar. Na
++   * primeira configuração de um escopo o backend aceita omitido (ou "") e
++   * aplica "cobrancas_pendentes" por padrão, porque nesse caso o campo não
++   * tem nenhum efeito (ver Tarefa 108 do rastreio-backend — não pode
++   * existir nada "pendente" sob um preço anterior quando ainda não havia
++   * preço nenhum configurado).
++   */
++  modo_vigencia?: FinanceiroModoVigencia;
+ }
+ 
+ export interface MensalidadeConfiguracaoView extends MensalidadeConfiguracaoInput {
+@@ -1741,7 +1750,8 @@ export interface MatriculaConfiguracaoInput {
+   curso_id?: string;
+   valor: number;
+   metodos_pagamento: FinanceiroMetodoPagamento[];
+-  modo_vigencia: FinanceiroModoVigencia;
++  /** Ver o mesmo campo em MensalidadeConfiguracaoInput — só obrigatório ao editar um escopo que já tem configuração vigente. */
++  modo_vigencia?: FinanceiroModoVigencia;
+ }
+ 
+ export interface MatriculaRepricingResumo {

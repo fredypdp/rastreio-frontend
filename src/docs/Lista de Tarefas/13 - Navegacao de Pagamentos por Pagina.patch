@@ -1,0 +1,832 @@
+diff --git a/src/app/(painel)/financas/pagamentos/mensalidades/page.tsx b/src/app/(painel)/financas/pagamentos/mensalidades/page.tsx
+new file mode 100644
+index 0000000..a20e5d6
+--- /dev/null
++++ b/src/app/(painel)/financas/pagamentos/mensalidades/page.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next";
++import PagamentosMensalidadesPainel from "@/components/paineis/PagamentosMensalidadesPainel";
++
++export const metadata: Metadata = {
++  title: "Finanças - Pagamentos de Mensalidades",
++  description: "Consulte cobranças e pendências de mensalidade por ano letivo e mês no Spuri.",
++};
++
++export default function PagamentosMensalidadesPage() {
++  return <PagamentosMensalidadesPainel />;
++}
+diff --git a/src/app/(painel)/financas/pagamentos/taxas-matricula/page.tsx b/src/app/(painel)/financas/pagamentos/taxas-matricula/page.tsx
+new file mode 100644
+index 0000000..c3eb933
+--- /dev/null
++++ b/src/app/(painel)/financas/pagamentos/taxas-matricula/page.tsx
+@@ -0,0 +1,11 @@
++import type { Metadata } from "next";
++import PagamentosTaxasMatriculaPainel from "@/components/paineis/PagamentosTaxasMatriculaPainel";
++
++export const metadata: Metadata = {
++  title: "Finanças - Pagamentos de Taxas de Matrícula",
++  description: "Consulte cobranças de taxa de matrícula no Spuri.",
++};
++
++export default function PagamentosTaxasMatriculaPage() {
++  return <PagamentosTaxasMatriculaPainel />;
++}
+diff --git a/src/components/paineis/FinanceiroPagamentosPainel.tsx b/src/components/paineis/FinanceiroPagamentosPainel.tsx
+index 4069391..e391590 100644
+--- a/src/components/paineis/FinanceiroPagamentosPainel.tsx
++++ b/src/components/paineis/FinanceiroPagamentosPainel.tsx
+@@ -1,251 +1,28 @@
+ "use client";
+-import { useCallback, useEffect, useMemo, useState } from "react";
+-import Link from "next/link";
+-import { academiaService, financeiroService, useApi } from "@/lib/api";
+-import { formatApiError } from "@/lib/api/client";
+-import { useUserType } from "@/hooks/useRoutePermission";
+-import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
+-import Alert from "@/components/ui/alert/Alert";
+-import Icon from "@/components/ui/Icon";
+-import SearchableSelect from "@/components/form/SearchableSelect";
+-import {
+-  CobrancasTable,
+-  EmptyState,
+-  ESTADO_PAGAMENTO_OPCOES,
+-  LoadingState,
+-  NOME_MES,
+-  PaginacaoSetas,
+-  SubtelaDetalheCobranca,
+-  SubtelaPanel,
+-  SubtelasMenu,
+-  capitalizar,
+-  formatAnoLetivo,
+-} from "@/components/paineis/financeiroShared";
+-import type { FinanceiroOrigemCobranca, PagamentoResumo } from "@/types/api";
+-
+-const PAGE_SIZE = 30;
+-
+-const ESTADO_OPCOES = [{ value: "", label: "Todos os estados" }, ...ESTADO_PAGAMENTO_OPCOES];
+-
+-type MesDoAnoLetivo = { mes: number; ano: number; label: string };
+-
+-/**
+- * Meses fixos do sistema de um ano letivo, dado o tipo da academia
+- * (escolar ou superior) — mesma regra de mesesAnoLetivo() no backend
+- * (internal/finance/mensalidade.go) e de periodoLetivoEscolar/
+- * periodoLetivoSuperior (internal/handlers/ano_letivo_helpers.go):
+- * escolar começa em setembro, superior em outubro; os dois terminam em
+- * julho — sempre do ano civil ANTERIOR (setembro/outubro) ao ano civil
+- * SEGUINTE (janeiro-julho) dentro do mesmo ano letivo. Não é configurável
+- * por academia: é a mesma regra para todas, por isso não depende de
+- * nenhuma chamada extra à API além de saber o tipo do ano letivo
+- * selecionado.
+- */
+-function mesesDoAnoLetivo(anoLetivo: string, tipo: "escolar" | "superior"): MesDoAnoLetivo[] {
+-  const anoInicio = Number(anoLetivo.slice(0, 4));
+-  const anoFim = anoInicio + 1;
+-  const mesInicio = tipo === "superior" ? 10 : 9;
+-  const meses: MesDoAnoLetivo[] = [];
+-  for (let m = mesInicio; m <= 12; m++) meses.push({ mes: m, ano: anoInicio, label: `${capitalizar(NOME_MES[m - 1])} de ${anoInicio}` });
+-  for (let m = 1; m <= 7; m++) meses.push({ mes: m, ano: anoFim, label: `${capitalizar(NOME_MES[m - 1])} de ${anoFim}` });
+-  return meses;
+-}
+ 
+-type Tela = "menu" | "mensalidade-ano" | "mensalidade-mes" | "lista";
++import Icon from "@/components/ui/Icon";
++import { SubtelasMenu } from "@/components/paineis/financeiroShared";
++import { AvisoCredenciaisPagamentos, PagamentosAcessoGuard, usePagamentosAcesso } from "@/components/paineis/PagamentosShared";
+ 
+ /**
+- * Painel de pagamentos para academia e admin (FPP).
+- *
+- * Dividido em subtelas a partir de um menu de cartões (mesmo padrão de
+- * FinanceiroConfiguracoesPainel — nada de <select> para escolher o tipo de
+- * cobrança): Mensalidade/Propina abre um drill-down adicional de ano
+- * letivo → mês antes de chegar na listagem; Taxa de matrícula vai direto
+- * para a listagem, sem esse passo extra (uma cobrança de matrícula não tem
+- * o conceito de "mês do ano letivo").
+- *
+- * O cartão "Outros" (cobranças avulsas) foi removido deste menu — avulsa
+- * deixou de ser um tipo consultável por aqui, então `origem` nunca chega a
+- * "avulsa" através desta tela (ver abrirLista, mais abaixo). O `else` para
+- * "avulsa" em `tituloLista`/`iconeLista` (mais abaixo) foi deixado como
+- * estava, deliberadamente: é código inatingível a partir desta UI só
+- * porque FinanceiroOrigemCobranca ainda inclui esse valor no tipo — não
+- * faz parte desta tarefa reescrevê-lo.
+- *
+- * A listagem final sempre mostra TODOS os estados (Pago/Aguardando
+- * pagamento/Falhado/Cancelado/Expirado) — o filtro de estado que já
+- * existia continua disponível para quem quiser restringir mais. Para
+- * Mensalidade, a mesma tabela também já traz os meses ainda não pagos sem
+- * nenhuma cobrança gerada, marcados com `status: "pendente"` (ver
+- * CobrancasTable e PagamentoResumo em types/api.ts — desde esta tarefa,
+- * "pendente" sozinho já diz isso, sem precisar de nenhum campo adicional)
+- * — antes disso vinha como uma segunda lista separada
+- * (`pendencias_sem_cobranca`), com paginação própria; agora é uma lista
+- * só, paginada pelo backend como uma única sequência (ver
+- * `ListarPagamentosUnificado` no backend). O drill-down por ano letivo/mês
+- * continua existindo pelo mesmo motivo de antes: sem um mês específico
+- * selecionado, o backend não computa pendências (evita varredura de toda
+- * a academia sem limite).
++ * /financas/pagamentos (Tarefa 13). Antes os dois cards ("Mensalidade /
++ * Propina" e "Taxa de matrícula") abriam subtelas dentro deste mesmo
++ * componente, com um estado local (`tela`) controlando o drill-down.
++ * Agora os dois navegam para páginas próprias — /financas/pagamentos/
++ * mensalidades e /financas/pagamentos/taxas-matricula — mesmo padrão de
++ * navegação por rota já usado em /financas/configuracoes desde a
++ * Tarefa 9; o visual não mudou em nada, só a navegação passou de estado
++ * local para rota de verdade.
+  *
+- * Admin (FPP): ainda não existe tipo de cobrança específico para o Spuri,
+- * então a tela mostra apenas um aviso "indisponível no momento" — igual a
+- * antes desta tarefa.
++ * O card "Outros" (cobranças avulsas) já não existia antes desta tarefa —
++ * avulsa não é mais um tipo consultável por aqui.
+  */
+ export default function FinanceiroPagamentosPainel() {
+-  const { user, isAdmin, isAcademia, loading } = useUserType();
+-  const isFpp = isAdmin && user?.admin?.role === "fpp";
+-
+-  const [codigoAcademia, setCodigoAcademia] = useState(user?.academia?.codigo_academia ?? "");
+-  const [tela, setTela] = useState<Tela>("menu");
+-  const [origem, setOrigem] = useState<FinanceiroOrigemCobranca | null>(null);
+-  const [anoLetivoSelecionado, setAnoLetivoSelecionado] = useState<string | null>(null);
+-  const [tipoAnoLetivoSelecionado, setTipoAnoLetivoSelecionado] = useState<"escolar" | "superior" | null>(null);
+-  const [mesSelecionado, setMesSelecionado] = useState<MesDoAnoLetivo | null>(null);
+-  const [estado, setEstado] = useState("");
+-  const [pagina, setPagina] = useState(1);
+-  const [alert, setAlert] = useState<string | null>(null);
+-  const [selecionada, setSelecionada] = useState<PagamentoResumo | null>(null);
+-
+-  const [anosLetivos, setAnosLetivos] = useState<{ ano_letivo: string; tipo: "escolar" | "superior" }[]>([]);
+-  const [anosLetivosCarregando, setAnosLetivosCarregando] = useState(false);
+-  const [anosLetivosErro, setAnosLetivosErro] = useState<string | null>(null);
+-
+-  const list = useApi(financeiroService.listarCobrancas);
+-  const cancelApi = useApi(financeiroService.cancelarCobranca);
+-  const credenciaisApi = useApi(financeiroService.listarCredenciais);
+-
+-  useEffect(() => {
+-    if (user?.academia?.codigo_academia) setCodigoAcademia(user.academia.codigo_academia);
+-  }, [user?.academia?.codigo_academia]);
+-
+-  useEffect(() => {
+-    if (!isAcademia || !codigoAcademia) return;
+-    void credenciaisApi.execute({ contexto_tipo: "academia", codigo_academia: codigoAcademia });
+-    // eslint-disable-next-line react-hooks/exhaustive-deps
+-  }, [isAcademia, codigoAcademia]);
+-
+-  // Anos letivos que a academia já teve — carregado uma vez, reaproveitado
+-  // sempre que o cartão "Mensalidade / Propina" é aberto. Mesma fonte já
+-  // usada em FinanceiroConfiguracoesPainel (DefinirInicioCobrancaForm).
+-  useEffect(() => {
+-    if (!codigoAcademia) return;
+-    setAnosLetivosCarregando(true);
+-    setAnosLetivosErro(null);
+-    academiaService
+-      .listarAnosLetivosLista({ codigo_academia: codigoAcademia })
+-      .then((r) => {
+-        const lista = (r?.anos_letivos_lista ?? [])
+-          .map((a) => ({ ano_letivo: a.ano_letivo, tipo: (a.tipo ?? a.type) as "escolar" | "superior" | undefined }))
+-          .filter((a): a is { ano_letivo: string; tipo: "escolar" | "superior" } => !!a.ano_letivo && (a.tipo === "escolar" || a.tipo === "superior"))
+-          .sort((a, b) => b.ano_letivo.localeCompare(a.ano_letivo));
+-        setAnosLetivos(lista);
+-      })
+-      .catch((e) => setAnosLetivosErro(formatApiError(e, "Não foi possível carregar os anos letivos.")))
+-      .finally(() => setAnosLetivosCarregando(false));
+-  }, [codigoAcademia]);
+-
+-  const parametros = useMemo(
+-    () => ({
+-      contexto_tipo: "academia" as const,
+-      codigo_academia: codigoAcademia || undefined,
+-      limit: PAGE_SIZE,
+-      offset: (pagina - 1) * PAGE_SIZE,
+-      tipo: origem ? [origem] : undefined,
+-      estado: estado ? [estado] : undefined,
+-      ano_letivo: origem === "mensalidade" && anoLetivoSelecionado ? anoLetivoSelecionado : undefined,
+-      mes: origem === "mensalidade" && mesSelecionado ? mesSelecionado.mes : undefined,
+-    }),
+-    [codigoAcademia, origem, estado, pagina, anoLetivoSelecionado, mesSelecionado]
+-  );
+-
+-  const carregar = useCallback(() => {
+-    if (!codigoAcademia || tela !== "lista") return Promise.resolve();
+-    return list.execute(parametros).catch((e) => setAlert(formatApiError(e, "Não foi possível carregar as cobranças.")));
+-    // eslint-disable-next-line react-hooks/exhaustive-deps
+-  }, [codigoAcademia, tela, parametros]);
+-
+-  useEffect(() => {
+-    if (!loading && isAcademia) void carregar();
+-  }, [loading, isAcademia, carregar]);
+-
+-  const abrirLista = (o: FinanceiroOrigemCobranca) => {
+-    setAlert(null);
+-    setOrigem(o);
+-    setEstado("");
+-    setPagina(1);
+-    if (o !== "mensalidade") {
+-      setAnoLetivoSelecionado(null);
+-      setTipoAnoLetivoSelecionado(null);
+-      setMesSelecionado(null);
+-    }
+-    setTela(o === "mensalidade" ? "mensalidade-ano" : "lista");
+-  };
+-
+-  const selecionarAnoLetivo = (anoLetivo: string, tipo: "escolar" | "superior") => {
+-    setAnoLetivoSelecionado(anoLetivo);
+-    setTipoAnoLetivoSelecionado(tipo);
+-    setMesSelecionado(null);
+-    setTela("mensalidade-mes");
+-  };
++  const { loading, isAcademia, isFpp, bloqueado } = usePagamentosAcesso();
+ 
+-  const selecionarMes = (m: MesDoAnoLetivo) => {
+-    setMesSelecionado(m);
+-    setEstado("");
+-    setPagina(1);
+-    setTela("lista");
+-  };
+-
+-  if (loading) return <LoadingState label="Carregando pagamentos..." />;
+-
+-  if (!isAcademia && !isFpp) {
+-    return (
+-      <UnauthorizedAccess
+-        requiredTypes={["Admin FPP", "Academia"]}
+-        message="O módulo financeiro é exclusivo de administradores com papel FPP e de academias."
+-      />
+-    );
+-  }
+-
+-  if (isFpp) {
+-    return (
+-      <section className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
+-        <div className="flex items-start gap-3">
+-          <Icon icon="mdi:credit-card-multiple-outline" width={24} className="text-gray-800 dark:text-white/90" />
+-          <div>
+-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Pagamentos</h2>
+-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+-              Ainda não existe um tipo de cobrança específico para o Spuri — indisponível no momento.
+-            </p>
+-          </div>
+-        </div>
+-      </section>
+-    );
+-  }
+-
+-  if (selecionada) {
+-    return (
+-      <SubtelaDetalheCobranca
+-        cobranca={selecionada}
+-        onVoltar={() => setSelecionada(null)}
+-        mostrarDadosEstudante
+-      />
+-    );
+-  }
+-
+-  const temCredenciais = (credenciaisApi.data?.length ?? 0) > 0;
+-  const bloquearSubtelas = credenciaisApi.loading || !temCredenciais;
+-  const avisoCredenciais = bloquearSubtelas && (
+-    <div className="space-y-3">
+-      <Alert variant="warning" title="Adesão ao Gateway de Pagamento Online" message="A sua instituição precisa aderir ao Gateway de Pagamento Online." />
+-      <Link href="/financas/credenciais" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600">
+-        Siga as instruções aqui <Icon icon="mdi:arrow-right" width={16} />
+-      </Link>
+-    </div>
+-  );
+-
+-  if (tela === "menu") {
+-    return (
++  return (
++    <PagamentosAcessoGuard loading={loading} isAcademia={isAcademia} isFpp={isFpp}>
+       <div className="space-y-6">
+-        {alert && <Alert variant="error" title="Finanças" message={alert} />}
+         <section className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
+           <div className="mb-4 flex items-start gap-3">
+             <Icon icon="mdi:credit-card-multiple-outline" width={24} className="text-gray-800 dark:text-white/90" />
+@@ -256,116 +33,13 @@ export default function FinanceiroPagamentosPainel() {
+           </div>
+           <SubtelasMenu
+             opcoes={[
+-              { id: "mensalidade", icon: "mdi:calendar-month-outline", label: "Mensalidade / Propina", descricao: "Consultar por ano letivo e mês.", onClick: () => abrirLista("mensalidade"), disabled: bloquearSubtelas },
+-              { id: "matricula", icon: "mdi:school-outline", label: "Taxa de matrícula", descricao: "Todas as cobranças de matrícula, em todos os estados.", onClick: () => abrirLista("matricula"), disabled: bloquearSubtelas },
++              { id: "mensalidade", icon: "mdi:calendar-month-outline", label: "Mensalidades", descricao: "Consultar por ano letivo e mês.", href: "/financas/pagamentos/mensalidades", disabled: bloqueado },
++              { id: "matricula", icon: "mdi:school-outline", label: "Taxas de matrícula", descricao: "Todas as cobranças de matrícula, em todos os estados.", href: "/financas/pagamentos/taxas-matricula", disabled: bloqueado },
+             ]}
+           />
+-          {avisoCredenciais}
++          {bloqueado && <AvisoCredenciaisPagamentos />}
+         </section>
+       </div>
+-    );
+-  }
+-
+-  if (tela === "mensalidade-ano") {
+-    return (
+-      <SubtelaPanel title="Mensalidade / Propina — selecione o ano letivo" icon="mdi:calendar-month-outline" onVoltar={() => setTela("menu")}>
+-        {anosLetivosCarregando ? (
+-          <LoadingState label="Carregando anos letivos..." />
+-        ) : anosLetivosErro ? (
+-          <Alert variant="error" title="Finanças" message={anosLetivosErro} />
+-        ) : anosLetivos.length === 0 ? (
+-          <EmptyState title="Nenhum ano letivo encontrado." description="Esta academia ainda não teve nenhum ano letivo definido." />
+-        ) : (
+-          <SubtelasMenu
+-            opcoes={anosLetivos.map((a) => ({
+-              id: a.ano_letivo,
+-              icon: "mdi:calendar-blank-outline",
+-              label: formatAnoLetivo(a.ano_letivo),
+-              descricao: a.tipo === "superior" ? "Ano letivo de ensino superior" : "Ano letivo escolar",
+-              onClick: () => selecionarAnoLetivo(a.ano_letivo, a.tipo),
+-            }))}
+-          />
+-        )}
+-      </SubtelaPanel>
+-    );
+-  }
+-
+-  if (tela === "mensalidade-mes" && anoLetivoSelecionado && tipoAnoLetivoSelecionado) {
+-    const meses = mesesDoAnoLetivo(anoLetivoSelecionado, tipoAnoLetivoSelecionado);
+-    return (
+-      <SubtelaPanel title={`Mensalidade / Propina — ${formatAnoLetivo(anoLetivoSelecionado)} — selecione o mês`} icon="mdi:calendar-month-outline" onVoltar={() => setTela("mensalidade-ano")}>
+-        <SubtelasMenu
+-          opcoes={meses.map((m) => ({
+-            id: `${m.ano}-${m.mes}`,
+-            icon: "mdi:calendar-today-outline",
+-            label: m.label,
+-            descricao: "Ver cobranças e pendências deste mês.",
+-            onClick: () => selecionarMes(m),
+-          }))}
+-        />
+-      </SubtelaPanel>
+-    );
+-  }
+-
+-  const totalGeral = list.data?.total_geral ?? 0;
+-  const totalPaginas = Math.max(1, Math.ceil(totalGeral / PAGE_SIZE));
+-  const pagamentos = list.data?.pagamentos ?? [];
+-
+-  const tituloLista =
+-    origem === "mensalidade" && anoLetivoSelecionado && mesSelecionado
+-      ? `Mensalidade / Propina — ${mesSelecionado.label}`
+-      : origem === "matricula"
+-      ? "Taxa de matrícula"
+-      : "Outros";
+-  const iconeLista = origem === "mensalidade" ? "mdi:calendar-month-outline" : origem === "matricula" ? "mdi:school-outline" : "mdi:cash-multiple";
+-  const voltarLista = () => (origem === "mensalidade" ? setTela("mensalidade-mes") : setTela("menu"));
+-
+-  return (
+-    <SubtelaPanel title={tituloLista} icon={iconeLista} onVoltar={voltarLista}>
+-      {alert && <Alert variant="error" title="Finanças" message={alert} />}
+-
+-      <div className="grid gap-3 sm:grid-cols-2">
+-        <SearchableSelect
+-          value={estado}
+-          options={ESTADO_OPCOES}
+-          onChange={(v) => {
+-            setEstado(v);
+-            setPagina(1);
+-          }}
+-          placeholder="Estado do pagamento"
+-          isSearchable={false}
+-          isClearable={false}
+-          inputId="pagamentos-estado"
+-          name="pagamentos-estado"
+-        />
+-      </div>
+-
+-      <div className="mt-4">
+-        {list.loading ? (
+-          <LoadingState label="Carregando pagamentos..." />
+-        ) : pagamentos.length > 0 ? (
+-          <CobrancasTable
+-            rows={pagamentos}
+-            onOpen={setSelecionada}
+-            onCancelar={async (pagamento, motivo) => {
+-              await cancelApi.execute(pagamento.id, motivo);
+-              await carregar();
+-            }}
+-          />
+-        ) : (
+-          <EmptyState title="Nenhum pagamento encontrado." description="Ajuste os filtros ou aguarde novas cobranças serem criadas." />
+-        )}
+-      </div>
+-
+-      <div className="mt-4">
+-        <PaginacaoSetas
+-          paginaAtual={pagina}
+-          totalPaginas={totalPaginas}
+-          total={totalGeral}
+-          porPagina={PAGE_SIZE}
+-          onChange={setPagina}
+-        />
+-      </div>
+-    </SubtelaPanel>
++    </PagamentosAcessoGuard>
+   );
+ }
+diff --git a/src/components/paineis/PagamentosMensalidadesPainel.tsx b/src/components/paineis/PagamentosMensalidadesPainel.tsx
+new file mode 100644
+index 0000000..4f515df
+--- /dev/null
++++ b/src/components/paineis/PagamentosMensalidadesPainel.tsx
+@@ -0,0 +1,118 @@
++"use client";
++
++import { useEffect, useState } from "react";
++import { academiaService } from "@/lib/api";
++import { formatApiError } from "@/lib/api/client";
++import Alert from "@/components/ui/alert/Alert";
++import { EmptyState, LoadingState, SubtelaPanel, SubtelasMenu, formatAnoLetivo } from "@/components/paineis/financeiroShared";
++import {
++  AvisoCredenciaisPagamentos, PagamentosAcessoGuard, PagamentosCobrancasSubtela,
++  mesesDoAnoLetivo, usePagamentosAcesso,
++} from "@/components/paineis/PagamentosShared";
++import type { MesDoAnoLetivo } from "@/components/paineis/PagamentosShared";
++
++type Tela = "ano" | "mes" | "lista";
++
++/**
++ * /financas/pagamentos/mensalidades (Tarefa 13) — antes era o card
++ * "Mensalidade / Propina" de /financas/pagamentos, que abria este mesmo
++ * fluxo (ano letivo → mês → lista) como uma subtela dentro daquele
++ * componente. O fluxo em si (drill-down por ano letivo e mês antes da
++ * listagem — sem um mês selecionado o backend não computa pendências, para
++ * evitar varrer a academia inteira sem limite) não mudou nada; só passou a
++ * viver na sua própria rota.
++ */
++export default function PagamentosMensalidadesPainel() {
++  const { loading, isAcademia, isFpp, codigoAcademia, bloqueado } = usePagamentosAcesso();
++  const [tela, setTela] = useState<Tela>("ano");
++  const [anoLetivoSelecionado, setAnoLetivoSelecionado] = useState<string | null>(null);
++  const [tipoAnoLetivoSelecionado, setTipoAnoLetivoSelecionado] = useState<"escolar" | "superior" | null>(null);
++  const [mesSelecionado, setMesSelecionado] = useState<MesDoAnoLetivo | null>(null);
++
++  const [anosLetivos, setAnosLetivos] = useState<{ ano_letivo: string; tipo: "escolar" | "superior" }[]>([]);
++  // Começa true (em vez de setado via effect) para nunca piscar "sem anos
++  // letivos" por um instante antes do efeito abaixo rodar.
++  const [anosLetivosCarregando, setAnosLetivosCarregando] = useState(true);
++  const [anosLetivosErro, setAnosLetivosErro] = useState<string | null>(null);
++
++  // Anos letivos que a academia já teve — mesma fonte já usada em
++  // /financas/configuracoes/mensalidade/inicio-cobranca.
++  useEffect(() => {
++    if (!codigoAcademia) return;
++    academiaService
++      .listarAnosLetivosLista({ codigo_academia: codigoAcademia })
++      .then((r) => {
++        const lista = (r?.anos_letivos_lista ?? [])
++          .map((a) => ({ ano_letivo: a.ano_letivo, tipo: (a.tipo ?? a.type) as "escolar" | "superior" | undefined }))
++          .filter((a): a is { ano_letivo: string; tipo: "escolar" | "superior" } => !!a.ano_letivo && (a.tipo === "escolar" || a.tipo === "superior"))
++          .sort((a, b) => b.ano_letivo.localeCompare(a.ano_letivo));
++        setAnosLetivos(lista);
++        setAnosLetivosErro(null);
++      })
++      .catch((e) => setAnosLetivosErro(formatApiError(e, "Não foi possível carregar os anos letivos.")))
++      .finally(() => setAnosLetivosCarregando(false));
++  }, [codigoAcademia]);
++
++  const selecionarAnoLetivo = (anoLetivo: string, tipo: "escolar" | "superior") => {
++    setAnoLetivoSelecionado(anoLetivo);
++    setTipoAnoLetivoSelecionado(tipo);
++    setTela("mes");
++  };
++
++  const selecionarMes = (m: MesDoAnoLetivo) => {
++    setMesSelecionado(m);
++    setTela("lista");
++  };
++
++  return (
++    <PagamentosAcessoGuard loading={loading} isAcademia={isAcademia} isFpp={isFpp}>
++      {bloqueado ? (
++        <SubtelaPanel title="Mensalidades" icon="mdi:calendar-month-outline" onVoltar="/financas/pagamentos">
++          <AvisoCredenciaisPagamentos />
++        </SubtelaPanel>
++      ) : tela === "ano" ? (
++        <SubtelaPanel title="Mensalidades — selecione o ano letivo" icon="mdi:calendar-month-outline" onVoltar="/financas/pagamentos">
++          {anosLetivosCarregando ? (
++            <LoadingState label="Carregando anos letivos..." />
++          ) : anosLetivosErro ? (
++            <Alert variant="error" title="Finanças" message={anosLetivosErro} />
++          ) : anosLetivos.length === 0 ? (
++            <EmptyState title="Nenhum ano letivo encontrado." description="Esta academia ainda não teve nenhum ano letivo definido." />
++          ) : (
++            <SubtelasMenu
++              opcoes={anosLetivos.map((a) => ({
++                id: a.ano_letivo,
++                icon: "mdi:calendar-blank-outline",
++                label: formatAnoLetivo(a.ano_letivo),
++                descricao: a.tipo === "superior" ? "Ano letivo de ensino superior" : "Ano letivo escolar",
++                onClick: () => selecionarAnoLetivo(a.ano_letivo, a.tipo),
++              }))}
++            />
++          )}
++        </SubtelaPanel>
++      ) : tela === "mes" && anoLetivoSelecionado && tipoAnoLetivoSelecionado ? (
++        <SubtelaPanel title={`Mensalidades — ${formatAnoLetivo(anoLetivoSelecionado)} — selecione o mês`} icon="mdi:calendar-month-outline" onVoltar={() => setTela("ano")}>
++          <SubtelasMenu
++            opcoes={mesesDoAnoLetivo(anoLetivoSelecionado, tipoAnoLetivoSelecionado).map((m) => ({
++              id: `${m.ano}-${m.mes}`,
++              icon: "mdi:calendar-today-outline",
++              label: m.label,
++              descricao: "Ver cobranças e pendências deste mês.",
++              onClick: () => selecionarMes(m),
++            }))}
++          />
++        </SubtelaPanel>
++      ) : anoLetivoSelecionado && mesSelecionado ? (
++        <PagamentosCobrancasSubtela
++          origem="mensalidade"
++          titulo={`Mensalidades — ${mesSelecionado.label}`}
++          icon="mdi:calendar-month-outline"
++          onVoltar={() => setTela("mes")}
++          codigoAcademia={codigoAcademia}
++          anoLetivo={anoLetivoSelecionado}
++          mes={mesSelecionado.mes}
++        />
++      ) : null}
++    </PagamentosAcessoGuard>
++  );
++}
+diff --git a/src/components/paineis/PagamentosShared.tsx b/src/components/paineis/PagamentosShared.tsx
+new file mode 100644
+index 0000000..587f730
+--- /dev/null
++++ b/src/components/paineis/PagamentosShared.tsx
+@@ -0,0 +1,216 @@
++"use client";
++
++/**
++ * Peças compartilhadas pelas duas páginas de /financas/pagamentos
++ * (Tarefa 13 — antes eram dois cards que abriam subtelas dentro de
++ * FinanceiroPagamentosPainel; agora `/financas/pagamentos/mensalidades` e
++ * `/financas/pagamentos/taxas-matricula` são páginas próprias, mesmo padrão
++ * de navegação por rota já usado em /financas/configuracoes desde a
++ * Tarefa 9). O visual de cada peça abaixo é idêntico ao que já existia em
++ * FinanceiroPagamentosPainel.tsx antes desta tarefa — só a divisão em
++ * arquivos/rotas mudou.
++ */
++
++import { useCallback, useEffect, useMemo, useState } from "react";
++import Link from "next/link";
++import { financeiroService, useApi } from "@/lib/api";
++import { formatApiError } from "@/lib/api/client";
++import { useUserType } from "@/hooks/useRoutePermission";
++import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
++import Alert from "@/components/ui/alert/Alert";
++import Icon from "@/components/ui/Icon";
++import SearchableSelect from "@/components/form/SearchableSelect";
++import {
++  CobrancasTable, EmptyState, ESTADO_PAGAMENTO_OPCOES, LoadingState, NOME_MES,
++  PaginacaoSetas, SubtelaDetalheCobranca, SubtelaPanel, capitalizar,
++} from "@/components/paineis/financeiroShared";
++import type { FinanceiroOrigemCobranca, PagamentoResumo } from "@/types/api";
++
++export const PAGE_SIZE = 30;
++export const ESTADO_OPCOES = [{ value: "", label: "Todos os estados" }, ...ESTADO_PAGAMENTO_OPCOES];
++
++export type MesDoAnoLetivo = { mes: number; ano: number; label: string };
++
++/**
++ * Meses fixos do sistema de um ano letivo, dado o tipo da academia
++ * (escolar ou superior) — mesma regra de mesesAnoLetivo() no backend
++ * (internal/finance/mensalidade.go) e de periodoLetivoEscolar/
++ * periodoLetivoSuperior (internal/handlers/ano_letivo_helpers.go):
++ * escolar começa em setembro, superior em outubro; os dois terminam em
++ * julho.
++ */
++export function mesesDoAnoLetivo(anoLetivo: string, tipo: "escolar" | "superior"): MesDoAnoLetivo[] {
++  const anoInicio = Number(anoLetivo.slice(0, 4));
++  const anoFim = anoInicio + 1;
++  const mesInicio = tipo === "superior" ? 10 : 9;
++  const meses: MesDoAnoLetivo[] = [];
++  for (let m = mesInicio; m <= 12; m++) meses.push({ mes: m, ano: anoInicio, label: `${capitalizar(NOME_MES[m - 1])} de ${anoInicio}` });
++  for (let m = 1; m <= 7; m++) meses.push({ mes: m, ano: anoFim, label: `${capitalizar(NOME_MES[m - 1])} de ${anoFim}` });
++  return meses;
++}
++
++/**
++ * A listagem final ("lista", no antigo estado local de
++ * FinanceiroPagamentosPainel) — filtro de estado, tabela (ou vazio/
++ * carregando), paginação, e a subtela de detalhe quando um pagamento é
++ * aberto. Reaproveitada por PagamentosMensalidadesPainel (com `anoLetivo` +
++ * `mes`) e por PagamentosTaxasMatriculaPainel (sem os dois, matrícula não
++ * tem o conceito de "mês do ano letivo").
++ */
++export function PagamentosCobrancasSubtela({
++  origem, titulo, icon, onVoltar, codigoAcademia, anoLetivo, mes,
++}: {
++  origem: FinanceiroOrigemCobranca;
++  titulo: string;
++  icon: string;
++  onVoltar: string | (() => void);
++  codigoAcademia: string;
++  anoLetivo?: string;
++  mes?: number;
++}) {
++  const [estado, setEstado] = useState("");
++  const [pagina, setPagina] = useState(1);
++  const [alert, setAlert] = useState<string | null>(null);
++  const [selecionada, setSelecionada] = useState<PagamentoResumo | null>(null);
++  const list = useApi(financeiroService.listarCobrancas);
++  const cancelApi = useApi(financeiroService.cancelarCobranca);
++
++  const parametros = useMemo(
++    () => ({
++      contexto_tipo: "academia" as const,
++      codigo_academia: codigoAcademia || undefined,
++      limit: PAGE_SIZE,
++      offset: (pagina - 1) * PAGE_SIZE,
++      tipo: [origem],
++      estado: estado ? [estado] : undefined,
++      ano_letivo: anoLetivo,
++      mes,
++    }),
++    [codigoAcademia, origem, estado, pagina, anoLetivo, mes]
++  );
++
++  const carregar = useCallback(() => {
++    if (!codigoAcademia) return Promise.resolve();
++    return list.execute(parametros).catch((e) => setAlert(formatApiError(e, "Não foi possível carregar as cobranças.")));
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [codigoAcademia, parametros]);
++
++  useEffect(() => {
++    void carregar();
++  }, [carregar]);
++
++  if (selecionada) {
++    return <SubtelaDetalheCobranca cobranca={selecionada} onVoltar={() => setSelecionada(null)} mostrarDadosEstudante />;
++  }
++
++  const totalGeral = list.data?.total_geral ?? 0;
++  const totalPaginas = Math.max(1, Math.ceil(totalGeral / PAGE_SIZE));
++  const pagamentos = list.data?.pagamentos ?? [];
++
++  return (
++    <SubtelaPanel title={titulo} icon={icon} onVoltar={onVoltar}>
++      {alert && <Alert variant="error" title="Finanças" message={alert} />}
++
++      <div className="grid gap-3 sm:grid-cols-2">
++        <SearchableSelect
++          value={estado}
++          options={ESTADO_OPCOES}
++          onChange={(v) => {
++            setEstado(v);
++            setPagina(1);
++          }}
++          placeholder="Estado do pagamento"
++          isSearchable={false}
++          isClearable={false}
++          inputId="pagamentos-estado"
++          name="pagamentos-estado"
++        />
++      </div>
++
++      <div className="mt-4">
++        {list.loading ? (
++          <LoadingState label="Carregando pagamentos..." />
++        ) : pagamentos.length > 0 ? (
++          <CobrancasTable
++            rows={pagamentos}
++            onOpen={setSelecionada}
++            onCancelar={async (pagamento, motivo) => {
++              await cancelApi.execute(pagamento.id, motivo);
++              await carregar();
++            }}
++          />
++        ) : (
++          <EmptyState title="Nenhum pagamento encontrado." description="Ajuste os filtros ou aguarde novas cobranças serem criadas." />
++        )}
++      </div>
++
++      <div className="mt-4">
++        <PaginacaoSetas paginaAtual={pagina} totalPaginas={totalPaginas} total={totalGeral} porPagina={PAGE_SIZE} onChange={setPagina} />
++      </div>
++    </SubtelaPanel>
++  );
++}
++
++/**
++ * Estado de acesso compartilhado pelas 3 páginas de /financas/pagamentos
++ * (menu + as duas listagens): quem está logado, se é academia/admin FPP, o
++ * código da academia, e se o Gateway de Pagamento Online já foi
++ * configurado (bloqueia a navegação enquanto não estiver).
++ */
++export function usePagamentosAcesso() {
++  const { user, isAdmin, isAcademia, loading } = useUserType();
++  const isFpp = isAdmin && user?.admin?.role === "fpp";
++  const [codigoAcademia, setCodigoAcademia] = useState(user?.academia?.codigo_academia ?? "");
++  const credenciaisApi = useApi(financeiroService.listarCredenciais);
++
++  useEffect(() => {
++    if (user?.academia?.codigo_academia) setCodigoAcademia(user.academia.codigo_academia);
++  }, [user?.academia?.codigo_academia]);
++
++  useEffect(() => {
++    if (!isAcademia || !codigoAcademia) return;
++    void credenciaisApi.execute({ contexto_tipo: "academia", codigo_academia: codigoAcademia });
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [isAcademia, codigoAcademia]);
++
++  const temCredenciais = (credenciaisApi.data?.length ?? 0) > 0;
++  const bloqueado = credenciaisApi.loading || !temCredenciais;
++
++  return { user, isAdmin, isAcademia, isFpp, loading, codigoAcademia, bloqueado };
++}
++
++/** Aviso + atalho para aderir ao Gateway de Pagamento Online — mesmo texto/visual que já existia embutido em FinanceiroPagamentosPainel antes da Tarefa 13. */
++export function AvisoCredenciaisPagamentos() {
++  return (
++    <div className="space-y-3">
++      <Alert variant="warning" title="Adesão ao Gateway de Pagamento Online" message="A sua instituição precisa aderir ao Gateway de Pagamento Online." />
++      <Link href="/financas/credenciais" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600">
++        Siga as instruções aqui <Icon icon="mdi:arrow-right" width={16} />
++      </Link>
++    </div>
++  );
++}
++
++/** Guarda de acesso comum às 3 páginas de /financas/pagamentos — mesmas 3 checagens (carregando → sem permissão → FPP indisponível) que já existiam dentro de FinanceiroPagamentosPainel antes da Tarefa 13. */
++export function PagamentosAcessoGuard({ loading, isAcademia, isFpp, children }: { loading: boolean; isAcademia: boolean; isFpp: boolean; children: React.ReactNode }) {
++  if (loading) return <LoadingState label="Carregando pagamentos..." />;
++  if (!isAcademia && !isFpp) {
++    return <UnauthorizedAccess requiredTypes={["Admin FPP", "Academia"]} message="O módulo financeiro é exclusivo de administradores com papel FPP e de academias." />;
++  }
++  if (isFpp) {
++    return (
++      <section className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
++        <div className="flex items-start gap-3">
++          <Icon icon="mdi:credit-card-multiple-outline" width={24} className="text-gray-800 dark:text-white/90" />
++          <div>
++            <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Pagamentos</h2>
++            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
++              Ainda não existe um tipo de cobrança específico para o Spuri — indisponível no momento.
++            </p>
++          </div>
++        </div>
++      </section>
++    );
++  }
++  return <>{children}</>;
++}
+diff --git a/src/components/paineis/PagamentosTaxasMatriculaPainel.tsx b/src/components/paineis/PagamentosTaxasMatriculaPainel.tsx
+new file mode 100644
+index 0000000..726f7f4
+--- /dev/null
++++ b/src/components/paineis/PagamentosTaxasMatriculaPainel.tsx
+@@ -0,0 +1,32 @@
++"use client";
++
++import { SubtelaPanel } from "@/components/paineis/financeiroShared";
++import { AvisoCredenciaisPagamentos, PagamentosAcessoGuard, PagamentosCobrancasSubtela, usePagamentosAcesso } from "@/components/paineis/PagamentosShared";
++
++/**
++ * /financas/pagamentos/taxas-matricula (Tarefa 13) — antes era o card
++ * "Taxa de matrícula" de /financas/pagamentos. Diferente de mensalidade,
++ * vai direto para a listagem — uma cobrança de matrícula não tem o
++ * conceito de "mês do ano letivo", então não há nenhum drill-down antes.
++ */
++export default function PagamentosTaxasMatriculaPainel() {
++  const { loading, isAcademia, isFpp, codigoAcademia, bloqueado } = usePagamentosAcesso();
++
++  return (
++    <PagamentosAcessoGuard loading={loading} isAcademia={isAcademia} isFpp={isFpp}>
++      {bloqueado ? (
++        <SubtelaPanel title="Taxas de matrícula" icon="mdi:school-outline" onVoltar="/financas/pagamentos">
++          <AvisoCredenciaisPagamentos />
++        </SubtelaPanel>
++      ) : (
++        <PagamentosCobrancasSubtela
++          origem="matricula"
++          titulo="Taxas de matrícula"
++          icon="mdi:school-outline"
++          onVoltar="/financas/pagamentos"
++          codigoAcademia={codigoAcademia}
++        />
++      )}
++    </PagamentosAcessoGuard>
++  );
++}
+diff --git a/src/lib/route-guards.ts b/src/lib/route-guards.ts
+index 2baef50..2e33625 100644
+--- a/src/lib/route-guards.ts
++++ b/src/lib/route-guards.ts
+@@ -189,6 +189,16 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
+     allowedTypes: ['admin', 'academia'],
+     redirectIfUnauthorized: '/',
+   },
++  {
++    path: '/financas/pagamentos/mensalidades',
++    allowedTypes: ['admin', 'academia'],
++    redirectIfUnauthorized: '/',
++  },
++  {
++    path: '/financas/pagamentos/taxas-matricula',
++    allowedTypes: ['admin', 'academia'],
++    redirectIfUnauthorized: '/',
++  },
+   {
+     path: '/pagamentos',
+     allowedTypes: ['estudante'],
