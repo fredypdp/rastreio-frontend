@@ -1613,6 +1613,8 @@ export const academiaService = {
   // ── Serviços Extras ───────────────────────────────────────────────
   criarCategoriaServico: (data: CategoriaServicoPayload, token?: string) => api.post<{ data: CategoriaServico }, CategoriaServicoPayload>('/academia/categorias-servico', data, { token: token || tokenStorage.get() || undefined }),
   atualizarCategoriaServico: (id: string, data: CategoriaServicoPayload, token?: string) => api.put<{ data: CategoriaServico }, CategoriaServicoPayload>(`/academia/categorias-servico/${id}`, data, { token: token || tokenStorage.get() || undefined }),
+  /** GET /academia/categorias-servico/:id — endpoint novo (Tarefa 110 do rastreio-backend); busca uma única categoria em vez de precisar carregar a lista inteira e filtrar no cliente. */
+  getCategoriaServico: (id: string, token?: string) => api.get<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}`, { token: token || tokenStorage.get() || undefined }),
   desativarCategoriaServico: (id: string, token?: string) => api.put<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
   reativarCategoriaServico: (id: string, token?: string) => api.put<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}/reativar`, undefined, { token: token || tokenStorage.get() || undefined }),
   // Tarefa 107/10: exige que a categoria já esteja desativada e sem
