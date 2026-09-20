@@ -1,0 +1,1108 @@
+diff --git a/src/app/(painel)/financas/configuracoes/mensalidade/criar/page.tsx b/src/app/(painel)/financas/configuracoes/mensalidade/criar/page.tsx
+index 421220e..470914d 100644
+--- a/src/app/(painel)/financas/configuracoes/mensalidade/criar/page.tsx
++++ b/src/app/(painel)/financas/configuracoes/mensalidade/criar/page.tsx
+@@ -1,5 +1,4 @@
+ import type { Metadata } from "next";
+-import { Suspense } from "react";
+ import MensalidadeCriarPainel from "@/components/paineis/MensalidadeCriarPainel";
+ 
+ export const metadata: Metadata = {
+@@ -8,9 +7,5 @@ export const metadata: Metadata = {
+ };
+ 
+ export default function MensalidadeCriarPage() {
+-  return (
+-    <Suspense fallback={null}>
+-      <MensalidadeCriarPainel />
+-    </Suspense>
+-  );
++  return <MensalidadeCriarPainel />;
+ }
+diff --git a/src/app/(painel)/financas/configuracoes/mensalidade/editar/page.tsx b/src/app/(painel)/financas/configuracoes/mensalidade/editar/page.tsx
+new file mode 100644
+index 0000000..6809bd0
+--- /dev/null
++++ b/src/app/(painel)/financas/configuracoes/mensalidade/editar/page.tsx
+@@ -0,0 +1,16 @@
++import type { Metadata } from "next";
++import { Suspense } from "react";
++import MensalidadeEditarPainel from "@/components/paineis/MensalidadeEditarPainel";
++
++export const metadata: Metadata = {
++  title: "Finanças - Editar Mensalidade",
++  description: "Editar uma configuração de mensalidade existente no Spuri.",
++};
++
++export default function MensalidadeEditarPage() {
++  return (
++    <Suspense fallback={null}>
++      <MensalidadeEditarPainel />
++    </Suspense>
++  );
++}
+diff --git a/src/components/form/BuscarEstudanteSelect.tsx b/src/components/form/BuscarEstudanteSelect.tsx
+new file mode 100644
+index 0000000..f4fb1bc
+--- /dev/null
++++ b/src/components/form/BuscarEstudanteSelect.tsx
+@@ -0,0 +1,104 @@
++"use client";
++
++import { useMemo, useRef, useState } from "react";
++import AsyncSelect from "react-select/async";
++import { useTheme } from "@/context/ThemeContext";
++import { consultasService } from "@/lib/api";
++import { createStyles, selectThemeColors, type SearchableSelectOption } from "@/components/form/SearchableSelect";
++
++/**
++ * Tarefa 111 — busca de estudante por Código/nome/BI/Telefone/E-mail, em
++ * vez do padrão anterior (carregar até um limite fixo de estudantes da
++ * academia inteira num <select> comum, sem nenhuma forma de busca real —
++ * ver AnularReativarObrigacoesForm.tsx e CancelarCobrancaPainel.tsx, os
++ * dois lugares onde isso existia). Usa GET /estudantes?busca= (que já
++ * casa contra as 5 colunas no backend), com um debounce simples para não
++ * disparar uma busca a cada tecla.
++ */
++export type BuscarEstudanteSelectProps = {
++  codigoAcademia: string;
++  value: string;
++  onChange: (codigoEstudante: string) => void;
++  placeholder?: string;
++  isClearable?: boolean;
++  isDisabled?: boolean;
++  inputId?: string;
++  name?: string;
++  error?: string;
++};
++
++const CARACTERES_MINIMOS = 2;
++const DEBOUNCE_MS = 300;
++
++export default function BuscarEstudanteSelect({
++  codigoAcademia,
++  value,
++  onChange,
++  placeholder = "Buscar por código, nome, BI, telefone ou e-mail...",
++  isClearable = true,
++  isDisabled,
++  inputId,
++  name,
++  error,
++}: BuscarEstudanteSelectProps) {
++  const { theme } = useTheme();
++  const styles = useMemo(() => createStyles<string>(selectThemeColors[theme]), [theme]);
++  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
++  const [selecionado, setSelecionado] = useState<SearchableSelectOption<string> | null>(null);
++
++  // O componente guarda a própria opção selecionada (rótulo incluído) —
++  // um <AsyncSelect> não tem uma lista de opções pré-carregada de onde
++  // derivar isso a partir só do código. Se o valor for limpo por fora
++  // (ex.: o formulário reseta), a seleção exibida também precisa limpar;
++  // isso é feito durante a própria renderização (padrão documentado pelo
++  // React para "ajustar estado quando uma prop muda"), não com um
++  // useEffect, que a nova regra de lint do projeto (react-hooks/set-state-
++  // in-effect) rejeita para um setState síncrono no corpo do efeito.
++  const [valorAnterior, setValorAnterior] = useState(value);
++  if (value !== valorAnterior) {
++    setValorAnterior(value);
++    if (!value) setSelecionado(null);
++  }
++
++  const loadOptions = (inputValue: string): Promise<SearchableSelectOption<string>[]> =>
++    new Promise((resolve) => {
++      const termo = inputValue.trim();
++      if (termo.length < CARACTERES_MINIMOS || !codigoAcademia) {
++        if (debounceRef.current) clearTimeout(debounceRef.current);
++        resolve([]);
++        return;
++      }
++      if (debounceRef.current) clearTimeout(debounceRef.current);
++      debounceRef.current = setTimeout(() => {
++        consultasService.listarEstudantes({ codigo_academia: codigoAcademia, busca: termo, limit: 10, offset: 0 })
++          .then((r) => resolve(r.estudantes.map((e) => ({ value: e.codigo_estudante, label: `${e.nome || e.codigo_estudante} (${e.codigo_estudante})` }))))
++          .catch(() => resolve([]));
++      }, DEBOUNCE_MS);
++    });
++
++  return (
++    <div className="space-y-1">
++      <AsyncSelect<SearchableSelectOption<string>, false>
++        inputId={inputId}
++        name={name}
++        instanceId={inputId ?? name}
++        value={selecionado}
++        loadOptions={loadOptions}
++        onChange={(option) => {
++          setSelecionado(option ?? null);
++          onChange(option?.value ?? "");
++        }}
++        placeholder={placeholder}
++        isDisabled={isDisabled}
++        isClearable={isClearable}
++        styles={styles}
++        aria-invalid={!!error}
++        cacheOptions
++        defaultOptions={false}
++        noOptionsMessage={({ inputValue }) => (inputValue.trim().length < CARACTERES_MINIMOS ? `Digite ao menos ${CARACTERES_MINIMOS} caracteres para buscar` : "Nenhum estudante encontrado")}
++        loadingMessage={() => "Buscando..."}
++      />
++      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
++    </div>
++  );
++}
+diff --git a/src/components/form/SearchableSelect.tsx b/src/components/form/SearchableSelect.tsx
+index 12354bc..21a8e26 100644
+--- a/src/components/form/SearchableSelect.tsx
++++ b/src/components/form/SearchableSelect.tsx
+@@ -27,7 +27,7 @@ type SearchableSelectProps<T extends string = string> = {
+   noOptionsMessage?: SelectProps<SearchableSelectOption<T>, false>["noOptionsMessage"];
+ };
+ 
+-type SelectThemeColors = {
++export type SelectThemeColors = {
+   background: string;
+   foreground: string;
+   mutedForeground: string;
+@@ -44,7 +44,7 @@ type SelectThemeColors = {
+   error: string;
+ };
+ 
+-const selectThemeColors = {
++export const selectThemeColors = {
+   light: {
+     background: "#ffffff",
+     foreground: "#1f2937",
+@@ -79,7 +79,7 @@ const selectThemeColors = {
+   },
+ } as const;
+ 
+-const createStyles = <T extends string>(colors: SelectThemeColors): StylesConfig<SearchableSelectOption<T>, false, GroupBase<SearchableSelectOption<T>>> => ({
++export const createStyles = <T extends string>(colors: SelectThemeColors): StylesConfig<SearchableSelectOption<T>, false, GroupBase<SearchableSelectOption<T>>> => ({
+   container: (base) => ({
+     ...base,
+     color: colors.foreground,
+diff --git a/src/components/paineis/AnularReativarObrigacoesForm.tsx b/src/components/paineis/AnularReativarObrigacoesForm.tsx
+index b52dd33..162c65f 100644
+--- a/src/components/paineis/AnularReativarObrigacoesForm.tsx
++++ b/src/components/paineis/AnularReativarObrigacoesForm.tsx
+@@ -1,8 +1,9 @@
+ "use client";
+ import { useEffect, useState } from "react";
+-import { academiaService, consultasService, financeiroService, useApi } from "@/lib/api";
++import { academiaService, financeiroService, useApi } from "@/lib/api";
+ import { formatApiError } from "@/lib/api/client";
+ import SearchableSelect from "@/components/form/SearchableSelect";
++import BuscarEstudanteSelect from "@/components/form/BuscarEstudanteSelect";
+ import Input from "@/components/form/input/InputField";
+ import Label from "@/components/form/Label";
+ import Button from "@/components/ui/button/Button";
+@@ -31,7 +32,6 @@ export default function AnularReativarObrigacoesForm({ acao, codigoAcademia, onS
+   codigoAcademia: string;
+   onSuccess?: () => void;
+ }) {
+-  const [estudantes, setEstudantes] = useState<{ value: string; label: string }[]>([]);
+   const [codigoEstudante, setCodigoEstudante] = useState("");
+   const [anosLetivos, setAnosLetivos] = useState<string[]>([]);
+   const [anoLetivo, setAnoLetivo] = useState("");
+@@ -42,13 +42,6 @@ export default function AnularReativarObrigacoesForm({ acao, codigoAcademia, onS
+   const reativar = useApi(financeiroService.reativarObrigacoes);
+   const executando = acao === "anular" ? anular : reativar;
+ 
+-  useEffect(() => {
+-    if (!codigoAcademia) return;
+-    consultasService.listarEstudantes({ codigo_academia: codigoAcademia, limit: 300, offset: 0 })
+-      .then((r) => setEstudantes((r.estudantes ?? []).map((e: any) => ({ value: e.codigo_estudante, label: `${e.nome ?? e.codigo_estudante} (${e.codigo_estudante})` }))))
+-      .catch(() => setEstudantes([]));
+-  }, [codigoAcademia]);
+-
+   useEffect(() => {
+     if (!codigoAcademia) return;
+     Promise.all([
+@@ -76,7 +69,7 @@ export default function AnularReativarObrigacoesForm({ acao, codigoAcademia, onS
+ 
+   return <div className="space-y-4 rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]">
+     {alert && <Alert variant={alert.variant} title="Obrigações de mensalidade" message={alert.message} />}
+-    <div><Label>Estudante</Label><SearchableSelect value={codigoEstudante} options={estudantes} onChange={setCodigoEstudante} placeholder="Buscar estudante..." isClearable /></div>
++    <div><Label>Estudante</Label><BuscarEstudanteSelect codigoAcademia={codigoAcademia} value={codigoEstudante} onChange={setCodigoEstudante} isClearable /></div>
+     <div className="grid gap-4 sm:grid-cols-2">
+       <div>
+         <Label>Ano letivo</Label>
+diff --git a/src/components/paineis/CancelarCobrancaPainel.tsx b/src/components/paineis/CancelarCobrancaPainel.tsx
+index 2a01c2f..fe361f5 100644
+--- a/src/components/paineis/CancelarCobrancaPainel.tsx
++++ b/src/components/paineis/CancelarCobrancaPainel.tsx
+@@ -1,13 +1,13 @@
+ "use client";
+ 
+-import { useEffect, useState } from "react";
+-import { consultasService, financeiroService, useApi } from "@/lib/api";
++import { useState } from "react";
++import { financeiroService, useApi } from "@/lib/api";
+ import { formatApiError } from "@/lib/api/client";
+ import { useUserType } from "@/hooks/useRoutePermission";
+ import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
+ import Alert from "@/components/ui/alert/Alert";
+ import Label from "@/components/form/Label";
+-import SearchableSelect from "@/components/form/SearchableSelect";
++import BuscarEstudanteSelect from "@/components/form/BuscarEstudanteSelect";
+ import {
+   CobrancasTable, EmptyState, LoadingState, SubtelaDetalheCobranca, SubtelaPanel,
+ } from "@/components/paineis/financeiroShared";
+@@ -32,20 +32,12 @@ export default function CancelarCobrancaPainel() {
+   const isFpp = isAdmin && user?.admin?.role === "fpp";
+   const codigoAcademia = user?.academia?.codigo_academia ?? "";
+ 
+-  const [estudantes, setEstudantes] = useState<{ value: string; label: string }[]>([]);
+   const [codigoEstudante, setCodigoEstudante] = useState("");
+   const [selecionada, setSelecionada] = useState<PagamentoResumo | null>(null);
+   const [alert, setAlert] = useState<string | null>(null);
+   const cobrancas = useApi(financeiroService.consultarCobrancasEstudante);
+   const cancelApi = useApi(financeiroService.cancelarCobranca);
+ 
+-  useEffect(() => {
+-    if (!codigoAcademia) return;
+-    consultasService.listarEstudantes({ codigo_academia: codigoAcademia, limit: 300, offset: 0 })
+-      .then((r) => setEstudantes((r.estudantes ?? []).map((e: any) => ({ value: e.codigo_estudante, label: `${e.nome ?? e.codigo_estudante} (${e.codigo_estudante})` }))))
+-      .catch(() => setEstudantes([]));
+-  }, [codigoAcademia]);
+-
+   const carregar = (codigo: string) => {
+     setAlert(null);
+     setSelecionada(null);
+@@ -71,11 +63,10 @@ export default function CancelarCobrancaPainel() {
+       {alert && <Alert variant="error" title="Gestão de cobranças" message={alert} />}
+       <div className="mt-4 max-w-md">
+         <Label>Estudante</Label>
+-        <SearchableSelect
++        <BuscarEstudanteSelect
++          codigoAcademia={codigoAcademia}
+           value={codigoEstudante}
+-          options={estudantes}
+           onChange={(v) => { setCodigoEstudante(v); carregar(v); }}
+-          placeholder="Buscar estudante..."
+           isClearable
+         />
+       </div>
+diff --git a/src/components/paineis/CategoriasServicoPainel.tsx b/src/components/paineis/CategoriasServicoPainel.tsx
+index ffbda74..2f8bdec 100644
+--- a/src/components/paineis/CategoriasServicoPainel.tsx
++++ b/src/components/paineis/CategoriasServicoPainel.tsx
+@@ -7,20 +7,18 @@ import type { CategoriaServico } from "@/types/api";
+ import Button from "@/components/ui/button/Button";
+ import Icon from "@/components/ui/Icon";
+ import Alert from "@/components/ui/alert/Alert";
++import Badge from "@/components/ui/badge/Badge";
+ import { PageHeading, PageDescription } from "@/components/ui/typography/Typography";
+ import { ConfirmDialog } from "@/components/paineis/financeiroShared";
+ import { formatarDataHora } from "@/components/paineis/financeiroNivelShared";
+ 
+ /**
+- * /servicos-extras/categorias-servico (Tarefa 14). Antes tinha um
+- * mini-formulário de criação acima da tabela e edição inline (um campo de
+- * texto aparecia dentro da própria linha ao clicar "Editar"). Agora:
+- * criação e edição têm rota própria (ver CategoriaServicoFormPainel.tsx),
+- * a tabela ganhou as colunas "Criado em"/"Editado em", e um botão "Ver
+- * mais" por linha abre uma subtela com todas as informações da categoria
+- * — de onde "Editar" e "Excluir" passaram a ser acionados (Desativar/
+- * Reativar continuam disponíveis direto na linha, por serem ações rápidas
+- * e reversíveis).
++ * /servicos-extras/categorias-servico (Tarefa 16). Antes era uma tabela
++ * com um botão "Ver mais" por linha, que abria uma subtela só para
++ * mostrar status/datas/ações. Convertido para cards em grid: cada
++ * categoria já mostra status, datas e ações diretamente no card, então a
++ * subtela deixou de ser necessária — criação e edição continuam em rota
++ * própria (ver CategoriaServicoFormPainel.tsx, /criar e /editar/[id]).
+  */
+ export default function CategoriasServicoPainel() {
+   const lista = useApi(academiaService.listarCategoriasServico);
+@@ -30,7 +28,6 @@ export default function CategoriasServicoPainel() {
+ 
+   const [erro, setErro] = useState<string | null>(null);
+   const [categoriaParaExcluir, setCategoriaParaExcluir] = useState<CategoriaServico | null>(null);
+-  const [selecionada, setSelecionada] = useState<CategoriaServico | null>(null);
+ 
+   const recarregar = () => lista.execute();
+   useEffect(() => { recarregar(); }, []);
+@@ -45,52 +42,20 @@ export default function CategoriasServicoPainel() {
+     }
+   };
+ 
+-  if (selecionada) {
+-    return (
+-      <div className="space-y-5">
+-        {categoriaParaExcluir && (
+-          <ConfirmDialog
+-            title="Excluir categoria de serviço"
+-            message={`Tem certeza que deseja excluir "${categoriaParaExcluir.nome}"? Isto não pode ser desfeito. Só é possível excluir se não houver nenhum serviço vinculado a esta categoria.`}
+-            confirmLabel="Excluir"
+-            onConfirm={async () => {
+-              await tratar(() => deletar.execute(categoriaParaExcluir.id), "Não foi possível excluir a categoria.");
+-              setCategoriaParaExcluir(null);
+-              setSelecionada(null);
+-            }}
+-            onClose={() => setCategoriaParaExcluir(null)}
+-          />
+-        )}
+-        <button type="button" onClick={() => setSelecionada(null)} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+-          <Icon icon="mdi:arrow-left" width={16} /> Voltar
+-        </button>
+-        <div className="max-w-lg space-y-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
+-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{selecionada.nome}</h3>
+-          <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+-            <div><dt className="text-gray-500 dark:text-gray-400">Status</dt><dd className="font-medium text-gray-800 dark:text-white/90">{selecionada.ativo ? "Ativo" : "Inativo"}</dd></div>
+-            <div><dt className="text-gray-500 dark:text-gray-400">Criado em</dt><dd className="font-medium text-gray-800 dark:text-white/90">{formatarDataHora(selecionada.created_at)}</dd></div>
+-            <div><dt className="text-gray-500 dark:text-gray-400">Editado em</dt><dd className="font-medium text-gray-800 dark:text-white/90">{formatarDataHora(selecionada.updated_at)}</dd></div>
+-          </dl>
+-          <div className="flex flex-wrap gap-2 pt-2">
+-            <Link href={`/servicos-extras/categorias-servico/editar/${selecionada.id}`} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
+-              <Icon icon="mdi:pencil-outline" width={16} /> Editar
+-            </Link>
+-            <Button size="sm" variant="outline" onClick={() => tratar(() => (selecionada.ativo ? desativar : reativar).execute(selecionada.id))}>
+-              {selecionada.ativo ? "Desativar" : "Reativar"}
+-            </Button>
+-            {!selecionada.ativo && (
+-              <Button size="sm" variant="danger" onClick={() => setCategoriaParaExcluir(selecionada)} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
+-                Excluir
+-              </Button>
+-            )}
+-          </div>
+-        </div>
+-      </div>
+-    );
+-  }
+-
+   return (
+     <div className="space-y-5">
++      {categoriaParaExcluir && (
++        <ConfirmDialog
++          title="Excluir categoria de serviço"
++          message={`Tem certeza que deseja excluir "${categoriaParaExcluir.nome}"? Isto não pode ser desfeito. Só é possível excluir se não houver nenhum serviço vinculado a esta categoria.`}
++          confirmLabel="Excluir"
++          onConfirm={async () => {
++            await tratar(() => deletar.execute(categoriaParaExcluir.id), "Não foi possível excluir a categoria.");
++            setCategoriaParaExcluir(null);
++          }}
++          onClose={() => setCategoriaParaExcluir(null)}
++        />
++      )}
+       <div className="flex flex-wrap items-start justify-between gap-3">
+         <div>
+           <PageHeading>Categorias de Serviço</PageHeading>
+@@ -108,40 +73,45 @@ export default function CategoriasServicoPainel() {
+ 
+       {erro && <Alert variant="error" title="Categorias" message={erro} />}
+ 
+-      <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+-        <table className="w-full text-sm">
+-          <thead className="bg-gray-50 dark:bg-gray-800/70">
+-            <tr>
+-              {["Nome", "Status", "Criado em", "Editado em", "Ações", ""].map((x) => (
+-                <th key={x} className="p-3 text-left font-medium text-gray-600 dark:text-gray-400">{x}</th>
+-              ))}
+-            </tr>
+-          </thead>
+-          <tbody>
+-            {lista.data?.categorias_servico.map((c) => (
+-              <tr key={c.id} className="border-t border-gray-200 dark:border-gray-700">
+-                <td className="p-3 font-medium text-gray-900 dark:text-white">{c.nome}</td>
+-                <td className="p-3 text-gray-500 dark:text-gray-400">{c.ativo ? "Ativo" : "Inativo"}</td>
+-                <td className="p-3 text-gray-500 dark:text-gray-400">{formatarDataHora(c.created_at)}</td>
+-                <td className="p-3 text-gray-500 dark:text-gray-400">{formatarDataHora(c.updated_at)}</td>
+-                <td className="p-3">
+-                  <button
+-                    className="text-brand-600 dark:text-brand-400"
+-                    onClick={() => tratar(() => (c.ativo ? desativar : reativar).execute(c.id))}
+-                  >
+-                    {c.ativo ? "Desativar" : "Reativar"}
+-                  </button>
+-                </td>
+-                <td className="p-3">
+-                  <button className="font-medium text-brand-600 dark:text-brand-400" onClick={() => setSelecionada(c)}>
+-                    Ver mais
+-                  </button>
+-                </td>
+-              </tr>
+-            ))}
+-          </tbody>
+-        </table>
+-      </div>
++      {lista.data && lista.data.categorias_servico.length === 0 ? (
++        <p className="rounded-xl border border-gray-200 p-5 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
++          Nenhuma categoria cadastrada ainda.
++        </p>
++      ) : (
++        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
++          {lista.data?.categorias_servico.map((c) => (
++            <div key={c.id} className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
++              <div className="flex items-start justify-between gap-2">
++                <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">{c.nome}</h3>
++                <Badge size="sm" color={c.ativo ? "success" : "light"}>{c.ativo ? "Ativo" : "Inativo"}</Badge>
++              </div>
++              <dl className="space-y-1.5 text-xs text-gray-500 dark:text-gray-400">
++                <div className="flex items-center justify-between gap-2">
++                  <dt>Criado em</dt>
++                  <dd className="font-medium text-gray-700 dark:text-gray-300">{formatarDataHora(c.created_at)}</dd>
++                </div>
++                <div className="flex items-center justify-between gap-2">
++                  <dt>Editado em</dt>
++                  <dd className="font-medium text-gray-700 dark:text-gray-300">{formatarDataHora(c.updated_at)}</dd>
++                </div>
++              </dl>
++              <div className="mt-auto flex flex-wrap gap-2 pt-1">
++                <Link href={`/servicos-extras/categorias-servico/editar/${c.id}`} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
++                  <Icon icon="mdi:pencil-outline" width={14} /> Editar
++                </Link>
++                <Button size="sm" variant="outline" onClick={() => tratar(() => (c.ativo ? desativar : reativar).execute(c.id))}>
++                  {c.ativo ? "Desativar" : "Reativar"}
++                </Button>
++                {!c.ativo && (
++                  <Button size="sm" variant="danger" onClick={() => setCategoriaParaExcluir(c)} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
++                    Excluir
++                  </Button>
++                )}
++              </div>
++            </div>
++          ))}
++        </div>
++      )}
+     </div>
+   );
+ }
+diff --git a/src/components/paineis/InicioCobrancaPainel.tsx b/src/components/paineis/InicioCobrancaPainel.tsx
+index 3de7d62..d86de21 100644
+--- a/src/components/paineis/InicioCobrancaPainel.tsx
++++ b/src/components/paineis/InicioCobrancaPainel.tsx
+@@ -71,6 +71,14 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
+   const [alert, setAlert] = useState<{ variant: "success" | "error" | "info"; message: string } | null>(null);
+   const definirInicio = useApi(financeiroService.definirInicioCobranca);
+   const removerInicio = useApi(financeiroService.removerInicioCobranca);
++  const consultarInicio = useApi(financeiroService.consultarInicioCobranca);
++  // Tarefa 111: null enquanto ainda não foi verificado (ou a verificação
++  // falhou por outro motivo que não "não existe"); true/false depois que
++  // GET /financeiro/mensalidades/inicio-cobranca responde. O botão
++  // "Remover" só fica habilitado quando isto é true — antes não havia essa
++  // consulta e o botão ficava sempre disponível (ver nota em
++  // removerException, abaixo).
++  const [existeExcecao, setExisteExcecao] = useState<boolean | null>(null);
+   // Controla a exibição do ConfirmDialog antes de remover a exceção (ver
+   // abrirConfirmacaoRemocao/removerException, abaixo).
+   const [confirmandoRemocao, setConfirmandoRemocao] = useState(false);
+@@ -82,6 +90,19 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
+       .catch(() => setAnoLetivo(""));
+   }, [codigoAcademia]);
+ 
++  const verificarExcecaoAtual = () => {
++    if (!codigoAcademia || !anoLetivo) return;
++    consultarInicio.execute({ codigo_academia: codigoAcademia, ano_letivo: anoLetivo })
++      .then(() => setExisteExcecao(true))
++      .catch((err) => setExisteExcecao(err instanceof ApiError && err.status === 404 ? false : null));
++  };
++
++  useEffect(() => {
++    setExisteExcecao(null);
++    verificarExcecaoAtual();
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [codigoAcademia, anoLetivo]);
++
+   const mesNatural = user?.academia?.nivel === "superior" ? 10 : 9;
+   // Igual ao "menor" em validateMesInicioCobranca: o mes_fim_cobranca mais
+   // restritivo entre as configurações de mensalidade já feitas (em
+@@ -108,6 +129,7 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
+   // sempre a primeira opção da lista (mesOpcoes já vem ordenada a partir do
+   // mês natural).
+   const mesInicio = mesOpcoes.some((o) => o.value === mesInicioSelecionado) ? mesInicioSelecionado : (mesOpcoes[0]?.value ?? "");
++  const mesAtualLabel = consultarInicio.data ? capitalizar(MES_NOME_OPCOES.find((o) => o.value === String(consultarInicio.data!.mes_inicio))?.label ?? "") : "";
+ 
+   const submit = async () => {
+     setAlert(null);
+@@ -115,6 +137,7 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
+     try {
+       await definirInicio.execute({ codigo_academia: codigoAcademia, ano_letivo: anoLetivo, mes_inicio: Number(mesInicio) });
+       setAlert({ variant: "success", message: "Início de cobrança definido com sucesso." });
++      verificarExcecaoAtual();
+     } catch (err) {
+       setAlert({ variant: "error", message: formatApiError(err, "Não foi possível definir o início de cobrança.") });
+     }
+@@ -134,19 +157,23 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
+   /**
+    * Remove a exceção de início de cobrança do ano letivo atual, revertendo
+    * ao mês natural (setembro para Ensino Primário/Iº Ciclo e Médio, outubro
+-   * para Superior). Não há como esta tela saber de antemão se existe uma
+-   * exceção definida para o ano letivo atual (não existe uma consulta
+-   * dedicada para isso) — por isso o botão fica sempre disponível, e um 404
+-   * do backend (nada para remover) é tratado como informação neutra, não
+-   * como erro.
++   * para Superior). O botão que chama isto (via abrirConfirmacaoRemocao) só
++   * fica habilitado depois que GET /financeiro/mensalidades/inicio-cobranca
++   * (Tarefa 111) confirma que existe uma exceção — o catch de 404 aqui é só
++   * uma rede de segurança para o caso raro de a exceção ter sido removida
++   * por outra aba/pessoa entre a verificação e o clique, não o mecanismo
++   * principal (era assim antes desta tarefa, quando não existia consulta
++   * dedicada e o botão ficava sempre disponível).
+    */
+   const removerException = async () => {
+     try {
+       await removerInicio.execute({ codigo_academia: codigoAcademia, ano_letivo: anoLetivo });
+       setAlert({ variant: "success", message: "Início de cobrança removido — voltou ao mês natural do ano letivo." });
++      setExisteExcecao(false);
+     } catch (err) {
+       if (err instanceof ApiError && err.status === 404) {
+         setAlert({ variant: "info", message: "Não havia nenhuma exceção de início de cobrança definida para este ano letivo — já está no mês natural." });
++        setExisteExcecao(false);
+         return;
+       }
+       setAlert({ variant: "error", message: formatApiError(err, "Não foi possível remover o início de cobrança.") });
+@@ -189,10 +216,14 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
+       </div>
+       <div className="border-t border-gray-100 pt-4 dark:border-white/[0.05]">
+         <p className="text-xs text-gray-500 dark:text-gray-400">
+-          Se este ano letivo não deveria mais ter um início de cobrança fora do padrão, remova a exceção — a cobrança volta a considerar o mês natural.
++          {existeExcecao === true
++            ? `Este ano letivo já tem um início de cobrança fora do padrão definido${mesAtualLabel ? ` (${mesAtualLabel})` : ""}. Se não for mais necessário, remova a exceção — a cobrança volta a considerar o mês natural.`
++            : existeExcecao === false
++            ? "Este ano letivo ainda não tem nenhum início de cobrança fora do padrão definido — não há nada para remover."
++            : "Verificando se este ano letivo já tem um início de cobrança fora do padrão definido..."}
+         </p>
+         <div className="mt-2">
+-          <Button size="sm" variant="danger" onClick={abrirConfirmacaoRemocao} disabled={!anoLetivo || removerInicio.loading} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
++          <Button size="sm" variant="danger" onClick={abrirConfirmacaoRemocao} disabled={!anoLetivo || removerInicio.loading || existeExcecao !== true} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
+             {removerInicio.loading ? "Removendo..." : "Remover início de cobrança deste ano letivo"}
+           </Button>
+         </div>
+diff --git a/src/components/paineis/MensalidadeCriarPainel.tsx b/src/components/paineis/MensalidadeCriarPainel.tsx
+index 2412c43..5882fb1 100644
+--- a/src/components/paineis/MensalidadeCriarPainel.tsx
++++ b/src/components/paineis/MensalidadeCriarPainel.tsx
+@@ -2,7 +2,6 @@
+ 
+ import { useEffect, useMemo, useState } from "react";
+ import Link from "next/link";
+-import { useSearchParams } from "next/navigation";
+ import Alert from "@/components/ui/alert/Alert";
+ import Button from "@/components/ui/button/Button";
+ import Icon from "@/components/ui/Icon";
+@@ -15,63 +14,36 @@ import {
+   FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, NivelCamposFields, MetodosPagamentoCheckboxes,
+   validarValorEAno, existeConfiguracaoParaEscopo, useFinanceiroNivelContext, MES_FIM_OPCOES, type NivelFormState, type FormFieldErrors,
+ } from "@/components/paineis/financeiroNivelShared";
+-import type { FinanceiroModoVigencia, FinanceiroNivel, MensalidadeConfiguracaoInput } from "@/types/api";
++import type { FinanceiroModoVigencia, MensalidadeConfiguracaoInput } from "@/types/api";
+ 
+ /**
+- * /financas/configuracoes/mensalidade/criar (Tarefa 12) — página "Definir
+- * Nova Mensalidade". Serve dois casos:
+- *
+- * 1. Sem parâmetros na URL: criação normal, nível/curso/ano em branco. Como
+- *    é a primeira configuração de qualquer escopo escolhido aqui, "o que
+- *    acontece com quem já está pendente?" não é perguntado (ver
+- *    NivelCamposFields/existeConfiguracaoParaEscopo) — o backend (Tarefa
+- *    108) já aceita modo_vigencia omitido nesse caso e aplica o padrão
+- *    "vale para todos" sozinho.
+- * 2. Com `?nivel=&ano_academico=&curso_id=` na URL — chegou por "Editar" a
+- *    partir de um cartão em ConfiguracoesDefinidasCards (lista de
+- *    "Mensalidades definidas"): nível/curso/ano vêm travados
+- *    (NivelCamposFields escopoFixo), valor/mês de encerramento/métodos já
+- *    vêm pré-preenchidos com a configuração atual, e a pergunta sobre
+- *    pendentes aparece (porque aqui já existe uma configuração vigente).
++ * /financas/configuracoes/mensalidade/criar (Tarefa 16) — página "Definir
++ * Nova Mensalidade". Nível/curso/ano começam em branco (ou no primeiro
++ * nível disponível) para o usuário escolher do zero. Se o combo
++ * nível+ano+curso escolhido aqui já tiver uma configuração salva (isso
++ * pode acontecer mesmo aqui, sem vir de nenhum link — o usuário está
++ * livre para escolher qualquer combinação), a tela se comporta como uma
++ * edição (pergunta "o que acontece com quem já está pendente?" e salva
++ * como nova versão) — mesmo comportamento de antes, só que agora quem
++ * chega aqui a partir do cartão "Editar" de uma configuração já existente
++ * vai para uma rota própria: ver MensalidadeEditarPainel.tsx
++ * (/financas/configuracoes/mensalidade/editar). Antes as duas ficavam
++ * nesta mesma rota, diferenciadas só por um `?nivel=` opcional na URL.
+  */
+ export default function MensalidadeCriarPainel() {
+   const ctx = useFinanceiroNivelContext();
+-  const searchParams = useSearchParams();
+-  const escopoFixo = searchParams.has("nivel");
+   const [form, setForm] = useState<NivelFormState>({ nivel: "fundamental", ano_academico: "", curso_id: "", valor: "", metodos_pagamento: ["GPO"], modo_vigencia: "" });
+   const [mesFim, setMesFim] = useState("6");
+   const [errors, setErrors] = useState<FormFieldErrors>({});
+   const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
+-  const [preenchidoDaUrl, setPreenchidoDaUrl] = useState(false);
+   const salvar = useApi(financeiroService.configurarMensalidade);
+   const atualizar = useApi(financeiroService.atualizarConfiguracaoMensalidade);
+   const configuracoes = useMemo(() => ctx.mensalidadesApi.data?.configuracoes ?? [], [ctx.mensalidadesApi.data]);
+ 
+   useEffect(() => {
+-    if (escopoFixo || ctx.niveisDisponiveis.length === 0) return;
++    if (ctx.niveisDisponiveis.length === 0) return;
+     setForm((prev) => (ctx.niveisDisponiveis.includes(prev.nivel) ? prev : { ...prev, nivel: ctx.niveisDisponiveis[0], curso_id: "", ano_academico: "" }));
+-  }, [ctx.niveisDisponiveis, escopoFixo]);
+-
+-  // Pré-preenche nível/ano/curso (e valor/mês/métodos, se já houver uma
+-  // configuração salva para esse escopo) a partir da URL — só uma vez,
+-  // quando a lista de configurações termina de carregar.
+-  useEffect(() => {
+-    if (!escopoFixo || preenchidoDaUrl || ctx.mensalidadesApi.loading) return;
+-    const nivel = (searchParams.get("nivel") ?? "fundamental") as FinanceiroNivel;
+-    const ano_academico = searchParams.get("ano_academico") ?? "";
+-    const curso_id = searchParams.get("curso_id") ?? "";
+-    const atual = configuracoes.find((c) => c.nivel === nivel && c.ano_academico === ano_academico && (c.curso_id ?? "") === curso_id);
+-    setForm((prev) => ({
+-      ...prev,
+-      nivel,
+-      ano_academico,
+-      curso_id,
+-      valor: atual ? String(atual.valor) : prev.valor,
+-      metodos_pagamento: atual?.metodos_pagamento ?? prev.metodos_pagamento,
+-    }));
+-    if (atual) setMesFim(String(atual.mes_fim_cobranca));
+-    setPreenchidoDaUrl(true);
+-  }, [escopoFixo, preenchidoDaUrl, ctx.mensalidadesApi.loading, configuracoes, searchParams]);
++  }, [ctx.niveisDisponiveis]);
+ 
+   // form completo não entra nas deps de propósito — a existência da
+   // configuração só depende de nivel/ano_academico/curso_id, não de
+@@ -107,11 +79,11 @@ export default function MensalidadeCriarPainel() {
+ 
+   return (
+     <FinanceiroAcessoGuard ctx={ctx}>
+-      <SubtelaPanel title={escopoFixo ? "Editar Mensalidade" : "Definir Nova Mensalidade"} icon="mdi:calendar-month-outline" onVoltar="/financas/configuracoes/mensalidade">
++      <SubtelaPanel title="Definir Nova Mensalidade" icon="mdi:calendar-month-outline" onVoltar="/financas/configuracoes/mensalidade">
+         <ManualDeFuncionamento>
+           <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+             <li>O <b>valor</b> definido aqui passa a valer a partir de agora, para todos os estudantes do nível/ano/curso escolhido.</li>
+-            <li>Ao editar uma mensalidade já existente, escolha com atenção <b>o que acontece com quem já está pendente</b>: isso decide se cobranças de meses anteriores (ainda não pagas) também mudam para o novo valor, ou se continuam no valor antigo. Na primeira configuração de um nível/ano/curso isso não é perguntado — o valor novo já vale para tudo, já que ainda não havia nenhum valor definido antes.</li>
++            <li>Ao escolher um nível/ano/curso que já tem uma mensalidade configurada, escolha com atenção <b>o que acontece com quem já está pendente</b>: isso decide se cobranças de meses anteriores (ainda não pagas) também mudam para o novo valor, ou se continuam no valor antigo. Na primeira configuração de um nível/ano/curso isso não é perguntado — o valor novo já vale para tudo, já que ainda não havia nenhum valor definido antes.</li>
+             <li>O <b>mês de encerramento da cobrança</b> define até quando a mensalidade é cobrada dentro do ano letivo — depois desse mês, a cobrança para automaticamente até o próximo ano letivo.</li>
+             <li>Só é possível salvar depois de aderir ao Gateway de Pagamento Online e escolher pelo menos um método de pagamento aceite.</li>
+           </ul>
+@@ -127,7 +99,7 @@ export default function MensalidadeCriarPainel() {
+             niveisDisponiveis={ctx.niveisDisponiveis}
+             cursos={ctx.cursos}
+             anosAcademicosAcademia={ctx.anosAcademicosAcademia}
+-            escopoFixo={escopoFixo}
++            escopoFixo={false}
+             existeConfiguracaoParaEscopo={existe}
+           />
+           <Label>Mês de encerramento da cobrança</Label>
+diff --git a/src/components/paineis/MensalidadeEditarPainel.tsx b/src/components/paineis/MensalidadeEditarPainel.tsx
+new file mode 100644
+index 0000000..44a5b93
+--- /dev/null
++++ b/src/components/paineis/MensalidadeEditarPainel.tsx
+@@ -0,0 +1,161 @@
++"use client";
++
++import { useEffect, useMemo, useState } from "react";
++import Link from "next/link";
++import { useSearchParams } from "next/navigation";
++import Alert from "@/components/ui/alert/Alert";
++import Button from "@/components/ui/button/Button";
++import Icon from "@/components/ui/Icon";
++import Label from "@/components/form/Label";
++import SearchableSelect from "@/components/form/SearchableSelect";
++import { financeiroService, useApi } from "@/lib/api";
++import { formatApiError } from "@/lib/api/client";
++import { SubtelaPanel } from "@/components/paineis/financeiroShared";
++import {
++  FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, NivelCamposFields, MetodosPagamentoCheckboxes,
++  validarValorEAno, existeConfiguracaoParaEscopo, useFinanceiroNivelContext, MES_FIM_OPCOES, type NivelFormState, type FormFieldErrors,
++} from "@/components/paineis/financeiroNivelShared";
++import type { FinanceiroModoVigencia, FinanceiroNivel, MensalidadeConfiguracaoInput } from "@/types/api";
++
++/**
++ * /financas/configuracoes/mensalidade/editar (Tarefa 16) — chegada a
++ * partir do botão "Editar" de um cartão em ConfiguracoesDefinidasCards
++ * (lista de "Mensalidades definidas"), sempre com
++ * `?nivel=&ano_academico=&curso_id=` na URL. Nível/curso/ano vêm travados
++ * (NivelCamposFields escopoFixo), valor/mês de encerramento/métodos já
++ * pré-preenchidos com a configuração atual, e a pergunta sobre pendentes
++ * aparece (porque aqui já existe uma configuração vigente). Antes esta
++ * rota era a mesma de /criar, diferenciada só pela presença de `?nivel=`
++ * — separada porque misturava duas lógicas (criar do zero vs. editar algo
++ * que já existe) numa rota só.
++ *
++ * O efeito de pré-preenchimento espera `ctx.mensalidadesApi.data` (não
++ * `.loading`) para decidir quando aplicar os valores salvos: `loading`
++ * começa `false` antes do primeiro carregamento também ser disparado, e
++ * como o `useEffect` que dispara esse carregamento (dentro de
++ * useFinanceiroNivelContext) roda antes deste no mesmo commit, mas sua
++ * chamada a setState só é processada depois que TODOS os efeitos deste
++ * commit terminam — este efeito lia `loading` ainda com o valor antigo
++ * (`false`) e rodava com `configuracoes` vazio, travando o formulário nos
++ * valores padrão (reproduzido e confirmado num sandbox isolado com React
++ * 19 antes desta correção). `data` só deixa de ser `null` depois que a
++ * primeira busca real termina, então não sofre dessa corrida.
++ */
++export default function MensalidadeEditarPainel() {
++  const ctx = useFinanceiroNivelContext();
++  const searchParams = useSearchParams();
++  const [form, setForm] = useState<NivelFormState>({ nivel: "fundamental", ano_academico: "", curso_id: "", valor: "", metodos_pagamento: ["GPO"], modo_vigencia: "" });
++  const [mesFim, setMesFim] = useState("6");
++  const [errors, setErrors] = useState<FormFieldErrors>({});
++  const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
++  const [preenchidoDaUrl, setPreenchidoDaUrl] = useState(false);
++  const salvar = useApi(financeiroService.configurarMensalidade);
++  const atualizar = useApi(financeiroService.atualizarConfiguracaoMensalidade);
++  const configuracoes = useMemo(() => ctx.mensalidadesApi.data?.configuracoes ?? [], [ctx.mensalidadesApi.data]);
++
++  // Pré-preenche nível/ano/curso e valor/mês/métodos a partir da URL — só
++  // uma vez, quando os dados de fato chegam (ver nota acima sobre por que
++  // é `data` e não `loading`).
++  useEffect(() => {
++    if (preenchidoDaUrl || !ctx.mensalidadesApi.data) return;
++    const nivel = (searchParams.get("nivel") ?? "fundamental") as FinanceiroNivel;
++    const ano_academico = searchParams.get("ano_academico") ?? "";
++    const curso_id = searchParams.get("curso_id") ?? "";
++    const atual = configuracoes.find((c) => c.nivel === nivel && c.ano_academico === ano_academico && (c.curso_id ?? "") === curso_id);
++    setForm((prev) => ({
++      ...prev,
++      nivel,
++      ano_academico,
++      curso_id,
++      valor: atual ? String(atual.valor) : prev.valor,
++      metodos_pagamento: atual?.metodos_pagamento ?? prev.metodos_pagamento,
++    }));
++    if (atual) setMesFim(String(atual.mes_fim_cobranca));
++    setPreenchidoDaUrl(true);
++  }, [preenchidoDaUrl, ctx.mensalidadesApi.data, configuracoes, searchParams]);
++
++  // form completo não entra nas deps de propósito — a existência da
++  // configuração só depende de nivel/ano_academico/curso_id, não de
++  // valor/metodos_pagamento/modo_vigencia (que mudam a cada tecla digitada
++  // e não devem re-executar esta checagem).
++  const existe = useMemo(() => existeConfiguracaoParaEscopo(configuracoes, form),
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++    [configuracoes, form.nivel, form.ano_academico, form.curso_id]);
++
++  const submit = async () => {
++    const errs = validarValorEAno(form, existe);
++    setErrors(errs);
++    if (Object.keys(errs).length > 0) return;
++    try {
++      if (!ctx.codigoAcademia) throw new Error("Academia não identificada.");
++      const p: MensalidadeConfiguracaoInput = {
++        codigo_academia: ctx.codigoAcademia,
++        nivel: form.nivel,
++        ano_academico: form.ano_academico,
++        curso_id: form.nivel === "fundamental" ? undefined : form.curso_id,
++        valor: Number(form.valor),
++        mes_fim_cobranca: Number(mesFim) as 6 | 7,
++        metodos_pagamento: form.metodos_pagamento,
++        modo_vigencia: form.modo_vigencia ? (form.modo_vigencia as FinanceiroModoVigencia) : undefined,
++      };
++      await (existe ? atualizar.execute(p) : salvar.execute(p));
++      setAlert({ variant: "success", message: "Configuração de mensalidade versionada com sucesso." });
++      await ctx.reload();
++    } catch (err) {
++      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível salvar mensalidade.") });
++    }
++  };
++
++  return (
++    <FinanceiroAcessoGuard ctx={ctx}>
++      <SubtelaPanel title="Editar Mensalidade" icon="mdi:calendar-month-outline" onVoltar="/financas/configuracoes/mensalidade">
++        <ManualDeFuncionamento>
++          <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
++            <li>O <b>valor</b> definido aqui passa a valer a partir de agora, para todos os estudantes do nível/ano/curso escolhido.</li>
++            <li>Escolha com atenção <b>o que acontece com quem já está pendente</b>: isso decide se cobranças de meses anteriores (ainda não pagas) também mudam para o novo valor, ou se continuam no valor antigo.</li>
++            <li>O <b>mês de encerramento da cobrança</b> define até quando a mensalidade é cobrada dentro do ano letivo — depois desse mês, a cobrança para automaticamente até o próximo ano letivo.</li>
++            <li>Só é possível salvar depois de aderir ao Gateway de Pagamento Online e escolher pelo menos um método de pagamento aceite.</li>
++          </ul>
++        </ManualDeFuncionamento>
++        {alert && <Alert variant={alert.variant} title="Finanças" message={alert.message} />}
++        {ctx.bloquear && <AvisoCredenciais />}
++        <div className="grid gap-4">
++          <NivelCamposFields
++            kind="mensalidade"
++            form={form}
++            errors={errors}
++            setForm={setForm}
++            niveisDisponiveis={ctx.niveisDisponiveis}
++            cursos={ctx.cursos}
++            anosAcademicosAcademia={ctx.anosAcademicosAcademia}
++            escopoFixo
++            existeConfiguracaoParaEscopo={existe}
++          />
++          <Label>Mês de encerramento da cobrança</Label>
++          <SearchableSelect
++            value={mesFim}
++            options={MES_FIM_OPCOES}
++            onChange={(v) => setMesFim(v || "6")}
++            isSearchable={false}
++            isClearable={false}
++            inputId="mensalidade-mes-fim"
++            name="mensalidade-mes-fim"
++          />
++          <p className="-mt-2 text-xs text-gray-500 dark:text-gray-400">
++            Como nem todos os níveis académicos terminam as aulas no mesmo mês, é preciso definir em que mês a cobrança da mensalidade desta configuração termina — a partir desse mês, a mensalidade deixa de ser cobrada até o próximo ano letivo.
++          </p>
++          <Label>Métodos de pagamento aceites</Label>
++          <MetodosPagamentoCheckboxes kind="mensalidade" selected={form.metodos_pagamento} onToggle={(m) => setForm((prev) => ({ ...prev, metodos_pagamento: prev.metodos_pagamento.includes(m) ? prev.metodos_pagamento.filter((x) => x !== m) : [...prev.metodos_pagamento, m] }))} />
++          <div className="flex flex-wrap items-center gap-3">
++            <Button onClick={submit} disabled={ctx.bloquear || (existe && !form.modo_vigencia) || salvar.loading || atualizar.loading} startIcon={<Icon icon="mdi:content-save-outline" width={16} />}>
++              {existe ? "Salvar alterações" : "Salvar nova versão"}
++            </Button>
++            <Link href="/financas/configuracoes/mensalidade" className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-300">
++              Voltar para a lista de mensalidades
++            </Link>
++          </div>
++        </div>
++      </SubtelaPanel>
++    </FinanceiroAcessoGuard>
++  );
++}
+diff --git a/src/components/paineis/ServicosExtrasPainel.tsx b/src/components/paineis/ServicosExtrasPainel.tsx
+index 28aded5..0e1b274 100644
+--- a/src/components/paineis/ServicosExtrasPainel.tsx
++++ b/src/components/paineis/ServicosExtrasPainel.tsx
+@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
+ import Link from "next/link";
+ import { academiaService, useApi } from "@/lib/api";
+ import { formatApiError } from "@/lib/api/client";
+-import type { ServicoExtra } from "@/types/api";
++import type { ServicoExtra, DetalhePersonalizado } from "@/types/api";
+ import Button from "@/components/ui/button/Button";
+ import Icon from "@/components/ui/Icon";
+ import Alert from "@/components/ui/alert/Alert";
++import Badge from "@/components/ui/badge/Badge";
+ import { PageHeading, PageDescription } from "@/components/ui/typography/Typography";
+ import { METODO_PAGAMENTO_LABEL, ConfirmDialog } from "@/components/paineis/financeiroShared";
+ import { formatarDataHora } from "@/components/paineis/financeiroNivelShared";
+@@ -16,6 +17,16 @@ const formatarAnoLabel = (ano: string) =>
+     tipo === "fundamental" ? `${n}ª Classe` : `${n}º Ano ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`
+   );
+ 
++/** cursos_disponiveis guarda pares "cursoId|ano" (ver ServicoExtraFormPainel.tsx)
++ * — aqui só precisamos do número do ano, já que o nome do curso ao lado já
++ * deixa claro se é médio ou superior. */
++const formatarAnoCurso = (ano: string) => ano.replace(/^(\d+)_ano_.+$/, (_, n) => `${n}º Ano`);
++
++/** Personalizações booleanas guardavam true/false cru na tela; ver também
++ * o mesmo tratamento em ServicosExtrasCatalogoPainel.tsx (tela do estudante). */
++const formatarValorPersonalizado = (d: DetalhePersonalizado) =>
++  d.tipo === "booleano" ? (d.valor ? "Sim" : "Não") : Array.isArray(d.valor) ? d.valor.join(", ") : String(d.valor);
++
+ /**
+  * /servicos-extras/gerenciar-servicos (Tarefa 14). Antes esta mesma tela
+  * também continha o formulário inteiro de criação/edição, ativado por um
+@@ -30,6 +41,7 @@ const formatarAnoLabel = (ano: string) =>
+ export default function ServicosExtrasPainel() {
+   const lista = useApi(academiaService.listarServicosExtras);
+   const cats = useApi(academiaService.listarCategoriasServico);
++  const cursosApi = useApi(academiaService.listarCursos);
+   const desativarServico = useApi(academiaService.desativarServicoExtra);
+   const reativarServico = useApi(academiaService.reativarServicoExtra);
+   const deletarServico = useApi(academiaService.deletarServicoExtra);
+@@ -38,9 +50,11 @@ export default function ServicosExtrasPainel() {
+   const [servicoParaExcluir, setServicoParaExcluir] = useState<ServicoExtra | null>(null);
+   const [selecionado, setSelecionado] = useState<ServicoExtra | null>(null);
+ 
+-  const recarregar = () => Promise.all([lista.execute(), cats.execute()]);
++  const recarregar = () => Promise.all([lista.execute(), cats.execute(), cursosApi.execute()]);
+   useEffect(() => { recarregar(); }, []);
+ 
++  const nomeCurso = (id: string) => (cursosApi.data?.cursos ?? []).find(c => c.id === id)?.nome ?? id;
++
+   /** Ativar/desativar/excluir — mesmo padrão de tratamento de erro de antes, só que sem sair da tela de listagem. */
+   const tratarAcaoServico = async (fn: () => Promise<unknown>, fallback: string) => {
+     try {
+@@ -96,22 +110,46 @@ export default function ServicosExtrasPainel() {
+               </dd>
+             </div>
+             <div><dt className="text-gray-500 dark:text-gray-400">Exige documento na inscrição</dt><dd className="font-medium text-gray-800 dark:text-white/90">{selecionado.documento_obrigatorio ? "Sim" : "Não"}</dd></div>
+-            <div>
+-              <dt className="text-gray-500 dark:text-gray-400">Disponibilidade</dt>
+-              <dd className="font-medium text-gray-800 dark:text-white/90">
+-                {(selecionado.anos_academicos_disponiveis?.length || selecionado.cursos_disponiveis?.length)
+-                  ? [...(selecionado.anos_academicos_disponiveis ?? []).map(formatarAnoLabel), ...(selecionado.cursos_disponiveis ?? [])].join(", ")
+-                  : "Todos os estudantes"}
+-              </dd>
+-            </div>
+           </dl>
++          <div>
++            <dt className="text-sm text-gray-500 dark:text-gray-400">Disponibilidade</dt>
++            {(selecionado.anos_academicos_disponiveis?.length || selecionado.cursos_disponiveis?.length) ? (
++              <div className="mt-2 space-y-3">
++                {(selecionado.anos_academicos_disponiveis?.length ?? 0) > 0 && (
++                  <div className="space-y-1.5">
++                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Ensino Primário e Iº Ciclo</p>
++                    <div className="flex flex-wrap gap-2">
++                      {(selecionado.anos_academicos_disponiveis ?? []).map(ano => (
++                        <Badge key={ano} size="sm" color="primary">{formatarAnoLabel(ano)}</Badge>
++                      ))}
++                    </div>
++                  </div>
++                )}
++                {(selecionado.cursos_disponiveis?.length ?? 0) > 0 && (
++                  <div className="space-y-1.5">
++                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Cursos (Médio / Superior)</p>
++                    <div className="flex flex-wrap gap-2">
++                      {(selecionado.cursos_disponiveis ?? []).map(chave => {
++                        const [cursoId, ano] = chave.split("|");
++                        return (
++                          <Badge key={chave} size="sm" color="primary">{nomeCurso(cursoId)} - {formatarAnoCurso(ano)}</Badge>
++                        );
++                      })}
++                    </div>
++                  </div>
++                )}
++              </div>
++            ) : (
++              <p className="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">Todos os estudantes</p>
++            )}
++          </div>
+           {Object.keys(selecionado.detalhes_personalizados ?? {}).length > 0 && (
+             <div>
+               <dt className="text-sm text-gray-500 dark:text-gray-400">Personalizações</dt>
+               <dd className="mt-1 flex flex-wrap gap-2">
+                 {Object.values(selecionado.detalhes_personalizados ?? {}).map((d, i) => (
+                   <span key={i} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+-                    {d.rotulo}: {Array.isArray(d.valor) ? d.valor.join(", ") : String(d.valor)}
++                    {d.rotulo}: {formatarValorPersonalizado(d)}
+                   </span>
+                 ))}
+               </dd>
+@@ -168,7 +206,7 @@ export default function ServicosExtrasPainel() {
+                 <td className="p-3 text-gray-700 dark:text-gray-300">{nomeCategoria(s)}</td>
+                 <td
+                   className="p-3 text-gray-500 dark:text-gray-400"
+-                  title={Object.values(s.detalhes_personalizados ?? {}).map(d => `${d.rotulo}: ${Array.isArray(d.valor) ? d.valor.join(", ") : String(d.valor)}`).join("; ")}
++                  title={Object.values(s.detalhes_personalizados ?? {}).map(d => `${d.rotulo}: ${formatarValorPersonalizado(d)}`).join("; ")}
+                 >
+                   {Object.keys(s.detalhes_personalizados ?? {}).length} personalizações
+                 </td>
+diff --git a/src/components/paineis/TaxaMatriculaCriarPainel.tsx b/src/components/paineis/TaxaMatriculaCriarPainel.tsx
+index 85ceeea..8d9fffa 100644
+--- a/src/components/paineis/TaxaMatriculaCriarPainel.tsx
++++ b/src/components/paineis/TaxaMatriculaCriarPainel.tsx
+@@ -41,8 +41,21 @@ export default function TaxaMatriculaCriarPainel() {
+     setForm((prev) => (ctx.niveisDisponiveis.includes(prev.nivel) ? prev : { ...prev, nivel: ctx.niveisDisponiveis[0], curso_id: "", ano_academico: "" }));
+   }, [ctx.niveisDisponiveis, escopoFixo]);
+ 
++  // Pré-preenche nível/ano/curso (e valor/métodos, se já houver uma
++  // configuração salva para esse escopo) a partir da URL — só uma vez,
++  // quando os dados de fato chegam. Usa `ctx.matriculasApi.data` (não
++  // `.loading`) de propósito: `loading` começa `false` antes do primeiro
++  // carregamento ser disparado, e como o efeito que dispara esse
++  // carregamento (dentro de useFinanceiroNivelContext) roda antes deste no
++  // mesmo commit — mas sua chamada a setState só é processada depois que
++  // todos os efeitos deste commit terminam — este efeito lia `loading`
++  // ainda com o valor antigo (`false`) e rodava com `configuracoes` vazio,
++  // travando o formulário nos valores padrão (reproduzido e confirmado
++  // num sandbox isolado com React 19). `data` só deixa de ser `null`
++  // depois que a primeira busca real termina, então não sofre dessa
++  // corrida.
+   useEffect(() => {
+-    if (!escopoFixo || preenchidoDaUrl || ctx.matriculasApi.loading) return;
++    if (!escopoFixo || preenchidoDaUrl || !ctx.matriculasApi.data) return;
+     const nivel = (searchParams.get("nivel") ?? "fundamental") as FinanceiroNivel;
+     const ano_academico = searchParams.get("ano_academico") ?? "";
+     const curso_id = searchParams.get("curso_id") ?? "";
+@@ -56,7 +69,7 @@ export default function TaxaMatriculaCriarPainel() {
+       metodos_pagamento: atual?.metodos_pagamento ?? prev.metodos_pagamento,
+     }));
+     setPreenchidoDaUrl(true);
+-  }, [escopoFixo, preenchidoDaUrl, ctx.matriculasApi.loading, configuracoes, searchParams]);
++  }, [escopoFixo, preenchidoDaUrl, ctx.matriculasApi.data, configuracoes, searchParams]);
+ 
+   // form completo não entra nas deps de propósito — a existência da
+   // configuração só depende de nivel/ano_academico/curso_id, não de
+diff --git a/src/components/paineis/financeiroNivelShared.tsx b/src/components/paineis/financeiroNivelShared.tsx
+index 3a40ddd..8e221a2 100644
+--- a/src/components/paineis/financeiroNivelShared.tsx
++++ b/src/components/paineis/financeiroNivelShared.tsx
+@@ -515,9 +515,14 @@ export function ConfiguracoesDefinidasCards({
+   const labelEscopo = (c: { ano_academico?: string; curso_id?: string }) =>
+     c.ano_academico ? labelAnoAcademico(c.ano_academico) : (cursos.find((cu) => cu.id === c.curso_id)?.nome ?? "este escopo");
+ 
+-  const criarHref = (c: ConfigRow) => {
++  const editarHref = (c: ConfigRow) => {
+     const qs = new URLSearchParams({ nivel: c.nivel, ...(c.ano_academico ? { ano_academico: c.ano_academico } : {}), ...(c.curso_id ? { curso_id: c.curso_id } : {}) });
+-    return `/financas/configuracoes/${kind === "mensalidade" ? "mensalidade" : "taxa-matricula"}/criar?${qs.toString()}`;
++    // Tarefa 16: mensalidade passou a ter uma rota de edição própria,
++    // separada de /criar (ver MensalidadeEditarPainel.tsx). Taxa de
++    // matrícula ainda não tem essa separação — continua na rota antiga,
++    // com o nível/ano/curso vindo travado por estes mesmos parâmetros.
++    if (kind === "mensalidade") return `/financas/configuracoes/mensalidade/editar?${qs.toString()}`;
++    return `/financas/configuracoes/taxa-matricula/criar?${qs.toString()}`;
+   };
+ 
+   const onRemover = async () => {
+@@ -572,7 +577,7 @@ export function ConfiguracoesDefinidasCards({
+             <div><dt className="text-gray-500 dark:text-gray-400">Vigente desde</dt><dd className="font-medium text-gray-800 dark:text-white/90">{formatarDataHora(selecionada.vigente_em)}</dd></div>
+           </dl>
+           <div className="flex gap-2 pt-2">
+-            <Link href={criarHref(selecionada)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
++            <Link href={editarHref(selecionada)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
+               <Icon icon="mdi:pencil-outline" width={16} /> Editar
+             </Link>
+             <Button size="sm" variant="danger" disabled={removendo} onClick={() => setConfirmarRemocao(true)} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
+diff --git a/src/components/paineis/financeiroShared.tsx b/src/components/paineis/financeiroShared.tsx
+index c770a70..bb7ddc8 100644
+--- a/src/components/paineis/financeiroShared.tsx
++++ b/src/components/paineis/financeiroShared.tsx
+@@ -158,7 +158,7 @@ export const ESTADOS_COBRANCA_REAL = ESTADO_PAGAMENTO_OPCOES
+  * usuário (nunca mostrar "GPO"/"REF"/"GPO_QR" cru).
+  */
+ export const METODO_PAGAMENTO_LABEL: Record<FinanceiroMetodoPagamento, string> = {
+-  GPO: "MCX Express via número de telefone",
++  GPO: "MCX Express",
+   REF: "Pagamento por referência",
+   GPO_QR: "QR Code",
+ };
+diff --git a/src/lib/api/services.ts b/src/lib/api/services.ts
+index 20cf9b4..99d0746 100644
+--- a/src/lib/api/services.ts
++++ b/src/lib/api/services.ts
+@@ -170,6 +170,7 @@ import type {
+   RemoverMensalidadeConfiguracaoRequest,
+   MesInicioCobrancaInput,
+   RemoverMesInicioCobrancaRequest,
++  ConsultarMesInicioCobrancaResponse,
+   ObrigacaoMensalidadeInput,
+   ConsultarMensalidadesEstudanteResponse,
+   MensalidadePagamentoInput,
+@@ -676,12 +677,15 @@ export const consultasService = {
+     turno?: string | string[];
+     codigo_turma?: string | string[];
+     com_turma?: boolean;
++    /** Tarefa 111: busca livre por código, nome, BI, telefone ou e-mail — ver GET /estudantes?busca=. */
++    busca?: string;
+   }): Promise<ConsultarEstudantesResponse> => {
+     if (!hasExplicitPagination(params)) {
+       return getAllPaginated((limit, offset) => consultasService.listarEstudantes({ ...params, limit, offset }), 'estudantes');
+     }
+     const qs = new URLSearchParams();
+     appendPageParams(qs, params);
++    if (params?.busca) qs.append('busca', params.busca);
+     appendMultiValueParam(qs, 'genero', params?.genero);
+     if (params?.idade_min !== undefined) qs.append('idade_min', String(params.idade_min));
+     if (params?.idade_max !== undefined) qs.append('idade_max', String(params.idade_max));
+@@ -950,6 +954,9 @@ export const financeiroService = {
+   /** DELETE /financeiro/mensalidades/configuracoes — remove a configuração vigente do escopo; nunca reescreve preço de mês já cobrado. */
+   removerConfiguracaoMensalidade: (data: RemoverMensalidadeConfiguracaoRequest, token?: string) => api.delete<void, RemoverMensalidadeConfiguracaoRequest>('/financeiro/mensalidades/configuracoes', data, { token: token || tokenStorage.get() || undefined }),
+   definirInicioCobranca: (data: MesInicioCobrancaInput, token?: string) => api.post<void, MesInicioCobrancaInput>('/financeiro/mensalidades/inicio-cobranca', data, { token: token || tokenStorage.get() || undefined }),
++  /** GET /financeiro/mensalidades/inicio-cobranca — 404 quando não há nenhuma exceção definida para o ano letivo (ver Tarefa 111). */
++  consultarInicioCobranca: (params: { codigo_academia: string; ano_letivo: string }, token?: string) =>
++    api.get<ConsultarMesInicioCobrancaResponse>(`/financeiro/mensalidades/inicio-cobranca?codigo_academia=${encodeURIComponent(params.codigo_academia)}&ano_letivo=${encodeURIComponent(params.ano_letivo)}`, { token: token || tokenStorage.get() || undefined }),
+   /** DELETE /financeiro/mensalidades/inicio-cobranca — reverte ao mês natural do ano letivo. */
+   removerInicioCobranca: (data: RemoverMesInicioCobrancaRequest, token?: string) => api.delete<void, RemoverMesInicioCobrancaRequest>('/financeiro/mensalidades/inicio-cobranca', data, { token: token || tokenStorage.get() || undefined }),
+   anularObrigacoes: (data: ObrigacaoMensalidadeInput, token?: string) => api.post<void, ObrigacaoMensalidadeInput>('/financeiro/mensalidades/obrigacoes/anular', data, { token: token || tokenStorage.get() || undefined }),
+diff --git a/src/types/api.ts b/src/types/api.ts
+index 3841882..aaab3c3 100644
+--- a/src/types/api.ts
++++ b/src/types/api.ts
+@@ -1599,6 +1599,13 @@ export interface RemoverMesInicioCobrancaRequest {
+   ano_letivo: string;
+ }
+ 
++/** Resposta de GET /financeiro/mensalidades/inicio-cobranca (Tarefa 111). */
++export interface ConsultarMesInicioCobrancaResponse {
++  codigo_academia: string;
++  ano_letivo: string;
++  mes_inicio: number;
++}
++
+ export interface ObrigacaoMensalidadeInput {
+   codigo_estudante: string;
+   codigo_academia: string;
