@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import MensalidadeCriarPainel from "@/components/paineis/MensalidadeCriarPainel";
 
 export const metadata: Metadata = {
@@ -8,9 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function MensalidadeCriarPage() {
-  return (
-    <Suspense fallback={null}>
-      <MensalidadeCriarPainel />
-    </Suspense>
-  );
+  return <MensalidadeCriarPainel />;
 }

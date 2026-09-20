@@ -41,8 +41,21 @@ export default function TaxaMatriculaCriarPainel() {
     setForm((prev) => (ctx.niveisDisponiveis.includes(prev.nivel) ? prev : { ...prev, nivel: ctx.niveisDisponiveis[0], curso_id: "", ano_academico: "" }));
   }, [ctx.niveisDisponiveis, escopoFixo]);
 
+  // Pré-preenche nível/ano/curso (e valor/métodos, se já houver uma
+  // configuração salva para esse escopo) a partir da URL — só uma vez,
+  // quando os dados de fato chegam. Usa `ctx.matriculasApi.data` (não
+  // `.loading`) de propósito: `loading` começa `false` antes do primeiro
+  // carregamento ser disparado, e como o efeito que dispara esse
+  // carregamento (dentro de useFinanceiroNivelContext) roda antes deste no
+  // mesmo commit — mas sua chamada a setState só é processada depois que
+  // todos os efeitos deste commit terminam — este efeito lia `loading`
+  // ainda com o valor antigo (`false`) e rodava com `configuracoes` vazio,
+  // travando o formulário nos valores padrão (reproduzido e confirmado
+  // num sandbox isolado com React 19). `data` só deixa de ser `null`
+  // depois que a primeira busca real termina, então não sofre dessa
+  // corrida.
   useEffect(() => {
-    if (!escopoFixo || preenchidoDaUrl || ctx.matriculasApi.loading) return;
+    if (!escopoFixo || preenchidoDaUrl || !ctx.matriculasApi.data) return;
     const nivel = (searchParams.get("nivel") ?? "fundamental") as FinanceiroNivel;
     const ano_academico = searchParams.get("ano_academico") ?? "";
     const curso_id = searchParams.get("curso_id") ?? "";
@@ -56,7 +69,7 @@ export default function TaxaMatriculaCriarPainel() {
       metodos_pagamento: atual?.metodos_pagamento ?? prev.metodos_pagamento,
     }));
     setPreenchidoDaUrl(true);
-  }, [escopoFixo, preenchidoDaUrl, ctx.matriculasApi.loading, configuracoes, searchParams]);
+  }, [escopoFixo, preenchidoDaUrl, ctx.matriculasApi.data, configuracoes, searchParams]);
 
   // form completo não entra nas deps de propósito — a existência da
   // configuração só depende de nivel/ano_academico/curso_id, não de

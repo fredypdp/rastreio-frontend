@@ -27,7 +27,7 @@ type SearchableSelectProps<T extends string = string> = {
   noOptionsMessage?: SelectProps<SearchableSelectOption<T>, false>["noOptionsMessage"];
 };
 
-type SelectThemeColors = {
+export type SelectThemeColors = {
   background: string;
   foreground: string;
   mutedForeground: string;
@@ -44,7 +44,7 @@ type SelectThemeColors = {
   error: string;
 };
 
-const selectThemeColors = {
+export const selectThemeColors = {
   light: {
     background: "#ffffff",
     foreground: "#1f2937",
@@ -79,7 +79,7 @@ const selectThemeColors = {
   },
 } as const;
 
-const createStyles = <T extends string>(colors: SelectThemeColors): StylesConfig<SearchableSelectOption<T>, false, GroupBase<SearchableSelectOption<T>>> => ({
+export const createStyles = <T extends string>(colors: SelectThemeColors): StylesConfig<SearchableSelectOption<T>, false, GroupBase<SearchableSelectOption<T>>> => ({
   container: (base) => ({
     ...base,
     color: colors.foreground,

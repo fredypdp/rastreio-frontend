@@ -158,7 +158,7 @@ export const ESTADOS_COBRANCA_REAL = ESTADO_PAGAMENTO_OPCOES
  * usuário (nunca mostrar "GPO"/"REF"/"GPO_QR" cru).
  */
 export const METODO_PAGAMENTO_LABEL: Record<FinanceiroMetodoPagamento, string> = {
-  GPO: "MCX Express via número de telefone",
+  GPO: "MCX Express",
   REF: "Pagamento por referência",
   GPO_QR: "QR Code",
 };
