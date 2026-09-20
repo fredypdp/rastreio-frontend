@@ -1,0 +1,128 @@
+diff --git a/src/components/paineis/CategoriaServicoFormPainel.tsx b/src/components/paineis/CategoriaServicoFormPainel.tsx
+index a0b40ec..b32a74d 100644
+--- a/src/components/paineis/CategoriaServicoFormPainel.tsx
++++ b/src/components/paineis/CategoriaServicoFormPainel.tsx
+@@ -3,7 +3,7 @@
+ import { useEffect, useState } from "react";
+ import { useRouter } from "next/navigation";
+ import { academiaService, useApi } from "@/lib/api";
+-import { formatApiError } from "@/lib/api/client";
++import { formatApiError, ApiError } from "@/lib/api/client";
+ import Button from "@/components/ui/button/Button";
+ import Input from "@/components/form/input/InputField";
+ import Label from "@/components/form/Label";
+@@ -20,13 +20,15 @@ import { LoadingState } from "@/components/paineis/financeiroShared";
+  * — este componente serve as duas, dependendo se `categoriaId` foi
+  * passado.
+  *
+- * Sem endpoint de "buscar uma categoria por id": a edição busca a lista
+- * inteira (o mesmo `listarCategoriasServico` que a página de lista já usa)
+- * e filtra pelo id — não existe uma chamada mais específica disponível.
++ * Tarefa 15: a edição buscava a lista inteira e filtrava pelo id no
++ * cliente, porque na Tarefa 14 não existia nenhuma chamada mais específica
++ * disponível. A Tarefa 110 do rastreio-backend adicionou
++ * `GET /academia/categorias-servico/:id`; a edição agora busca só a
++ * categoria em questão.
+  */
+ export default function CategoriaServicoFormPainel({ categoriaId }: { categoriaId?: string }) {
+   const router = useRouter();
+-  const lista = useApi(academiaService.listarCategoriasServico);
++  const obter = useApi(academiaService.getCategoriaServico);
+   const criar = useApi(academiaService.criarCategoriaServico);
+   const atualizar = useApi(academiaService.atualizarCategoriaServico);
+   const [nome, setNome] = useState("");
+@@ -35,11 +37,12 @@ export default function CategoriaServicoFormPainel({ categoriaId }: { categoriaI
+ 
+   useEffect(() => {
+     if (!categoriaId) return;
+-    lista.execute().then((r) => {
+-      const atual = r?.categorias_servico.find((c) => c.id === categoriaId);
+-      if (!atual) return setNaoEncontrada(true);
+-      setNome(atual.nome);
+-    }).catch((e) => setErro(formatApiError(e, "Não foi possível carregar a categoria.")));
++    obter.execute(categoriaId)
++      .then((r) => setNome(r?.data.nome ?? ""))
++      .catch((e) => {
++        if (e instanceof ApiError && e.status === 404) return setNaoEncontrada(true);
++        setErro(formatApiError(e, "Não foi possível carregar a categoria."));
++      });
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [categoriaId]);
+ 
+@@ -56,7 +59,7 @@ export default function CategoriaServicoFormPainel({ categoriaId }: { categoriaI
+     }
+   };
+ 
+-  if (categoriaId && lista.loading && !erro) return <LoadingState label="Carregando categoria..." />;
++  if (categoriaId && obter.loading && !erro) return <LoadingState label="Carregando categoria..." />;
+   if (naoEncontrada) return <Alert variant="error" title="Categorias" message="Categoria não encontrada." />;
+ 
+   return (
+diff --git a/src/components/paineis/ServicoExtraFormPainel.tsx b/src/components/paineis/ServicoExtraFormPainel.tsx
+index f700ed6..61cbd36 100644
+--- a/src/components/paineis/ServicoExtraFormPainel.tsx
++++ b/src/components/paineis/ServicoExtraFormPainel.tsx
+@@ -2,7 +2,7 @@
+ import { useEffect, useState } from "react";
+ import { useRouter } from "next/navigation";
+ import { academiaService, useApi } from "@/lib/api";
+-import { formatApiError } from "@/lib/api/client";
++import { formatApiError, ApiError } from "@/lib/api/client";
+ import { useUserCookie } from "@/hooks/useUserCookie";
+ import type {
+   DetalhePersonalizado,
+@@ -185,13 +185,17 @@ function Builder({ value, onChange }: { value: Record<string, DetalhePersonaliza
+  * ativado por um estado local (`view === "form"`). Agora tem rota própria
+  * — este componente serve as duas (criação e edição, dependendo se
+  * `servicoId` foi passado) para não duplicar o formulário inteiro duas
+- * vezes. Sem endpoint de "buscar um serviço por id": a edição busca a
+- * lista inteira (o mesmo `listarServicosExtras` que a página de lista já
+- * usa) e filtra pelo id.
++ * vezes.
++ *
++ * Tarefa 15: a edição buscava a lista inteira e filtrava pelo id no
++ * cliente, porque na Tarefa 14 não existia nenhuma chamada mais
++ * específica disponível — só que, nesse caso, o endpoint específico já
++ * existia (`GET /academia/servicos-extras/:id`, `getServicoExtra`), só não
++ * tinha sido usado. A edição agora busca só o serviço em questão.
+  */
+ export default function ServicoExtraFormPainel({ servicoId }: { servicoId?: string }) {
+   const router = useRouter();
+-  const lista = useApi(academiaService.listarServicosExtras);
++  const obterServico = useApi(academiaService.getServicoExtra);
+   const cats = useApi(academiaService.listarCategoriasServico);
+   const cursosApi = useApi(academiaService.listarCursos);
+   const criar = useApi(academiaService.criarServicoExtra);
+@@ -215,13 +219,14 @@ export default function ServicoExtraFormPainel({ servicoId }: { servicoId?: stri
+ 
+   useEffect(() => {
+     if (!servicoId) return;
+-    lista.execute()
++    obterServico.execute(servicoId)
+       .then((r) => {
+-        const atual = r?.servicos_extras.find((s) => s.id === servicoId);
+-        if (!atual) return setNaoEncontrado(true);
+-        setForm(paraForm(atual));
++        if (r?.data) setForm(paraForm(r.data));
++      })
++      .catch((e) => {
++        if (e instanceof ApiError && e.status === 404) return setNaoEncontrado(true);
++        setAlert(formatApiError(e, "Não foi possível carregar o serviço."));
+       })
+-      .catch((e) => setAlert(formatApiError(e, "Não foi possível carregar o serviço.")))
+       .finally(() => setCarregandoServico(false));
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [servicoId]);
+diff --git a/src/lib/api/services.ts b/src/lib/api/services.ts
+index eb9bdfc..20cf9b4 100644
+--- a/src/lib/api/services.ts
++++ b/src/lib/api/services.ts
+@@ -1613,6 +1613,8 @@ export const academiaService = {
+   // ── Serviços Extras ───────────────────────────────────────────────
+   criarCategoriaServico: (data: CategoriaServicoPayload, token?: string) => api.post<{ data: CategoriaServico }, CategoriaServicoPayload>('/academia/categorias-servico', data, { token: token || tokenStorage.get() || undefined }),
+   atualizarCategoriaServico: (id: string, data: CategoriaServicoPayload, token?: string) => api.put<{ data: CategoriaServico }, CategoriaServicoPayload>(`/academia/categorias-servico/${id}`, data, { token: token || tokenStorage.get() || undefined }),
++  /** GET /academia/categorias-servico/:id — endpoint novo (Tarefa 110 do rastreio-backend); busca uma única categoria em vez de precisar carregar a lista inteira e filtrar no cliente. */
++  getCategoriaServico: (id: string, token?: string) => api.get<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}`, { token: token || tokenStorage.get() || undefined }),
+   desativarCategoriaServico: (id: string, token?: string) => api.put<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
+   reativarCategoriaServico: (id: string, token?: string) => api.put<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}/reativar`, undefined, { token: token || tokenStorage.get() || undefined }),
+   // Tarefa 107/10: exige que a categoria já esteja desativada e sem
