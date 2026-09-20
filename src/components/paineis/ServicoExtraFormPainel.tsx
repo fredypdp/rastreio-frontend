@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { academiaService, useApi } from "@/lib/api";
-import { formatApiError } from "@/lib/api/client";
+import { formatApiError, ApiError } from "@/lib/api/client";
 import { useUserCookie } from "@/hooks/useUserCookie";
 import type {
   DetalhePersonalizado,
@@ -185,13 +185,17 @@ function Builder({ value, onChange }: { value: Record<string, DetalhePersonaliza
  * ativado por um estado local (`view === "form"`). Agora tem rota própria
  * — este componente serve as duas (criação e edição, dependendo se
  * `servicoId` foi passado) para não duplicar o formulário inteiro duas
- * vezes. Sem endpoint de "buscar um serviço por id": a edição busca a
- * lista inteira (o mesmo `listarServicosExtras` que a página de lista já
- * usa) e filtra pelo id.
+ * vezes.
+ *
+ * Tarefa 15: a edição buscava a lista inteira e filtrava pelo id no
+ * cliente, porque na Tarefa 14 não existia nenhuma chamada mais
+ * específica disponível — só que, nesse caso, o endpoint específico já
+ * existia (`GET /academia/servicos-extras/:id`, `getServicoExtra`), só não
+ * tinha sido usado. A edição agora busca só o serviço em questão.
  */
 export default function ServicoExtraFormPainel({ servicoId }: { servicoId?: string }) {
   const router = useRouter();
-  const lista = useApi(academiaService.listarServicosExtras);
+  const obterServico = useApi(academiaService.getServicoExtra);
   const cats = useApi(academiaService.listarCategoriasServico);
   const cursosApi = useApi(academiaService.listarCursos);
   const criar = useApi(academiaService.criarServicoExtra);
@@ -215,13 +219,14 @@ export default function ServicoExtraFormPainel({ servicoId }: { servicoId?: stri
 
   useEffect(() => {
     if (!servicoId) return;
-    lista.execute()
+    obterServico.execute(servicoId)
       .then((r) => {
-        const atual = r?.servicos_extras.find((s) => s.id === servicoId);
-        if (!atual) return setNaoEncontrado(true);
-        setForm(paraForm(atual));
+        if (r?.data) setForm(paraForm(r.data));
       })
-      .catch((e) => setAlert(formatApiError(e, "Não foi possível carregar o serviço.")))
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 404) return setNaoEncontrado(true);
+        setAlert(formatApiError(e, "Não foi possível carregar o serviço."));
+      })
       .finally(() => setCarregandoServico(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [servicoId]);

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { academiaService, useApi } from "@/lib/api";
-import { formatApiError } from "@/lib/api/client";
+import { formatApiError, ApiError } from "@/lib/api/client";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
@@ -20,13 +20,15 @@ import { LoadingState } from "@/components/paineis/financeiroShared";
  * — este componente serve as duas, dependendo se `categoriaId` foi
  * passado.
  *
- * Sem endpoint de "buscar uma categoria por id": a edição busca a lista
- * inteira (o mesmo `listarCategoriasServico` que a página de lista já usa)
- * e filtra pelo id — não existe uma chamada mais específica disponível.
+ * Tarefa 15: a edição buscava a lista inteira e filtrava pelo id no
+ * cliente, porque na Tarefa 14 não existia nenhuma chamada mais específica
+ * disponível. A Tarefa 110 do rastreio-backend adicionou
+ * `GET /academia/categorias-servico/:id`; a edição agora busca só a
+ * categoria em questão.
  */
 export default function CategoriaServicoFormPainel({ categoriaId }: { categoriaId?: string }) {
   const router = useRouter();
-  const lista = useApi(academiaService.listarCategoriasServico);
+  const obter = useApi(academiaService.getCategoriaServico);
   const criar = useApi(academiaService.criarCategoriaServico);
   const atualizar = useApi(academiaService.atualizarCategoriaServico);
   const [nome, setNome] = useState("");
@@ -35,11 +37,12 @@ export default function CategoriaServicoFormPainel({ categoriaId }: { categoriaI
 
   useEffect(() => {
     if (!categoriaId) return;
-    lista.execute().then((r) => {
-      const atual = r?.categorias_servico.find((c) => c.id === categoriaId);
-      if (!atual) return setNaoEncontrada(true);
-      setNome(atual.nome);
-    }).catch((e) => setErro(formatApiError(e, "Não foi possível carregar a categoria.")));
+    obter.execute(categoriaId)
+      .then((r) => setNome(r?.data.nome ?? ""))
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 404) return setNaoEncontrada(true);
+        setErro(formatApiError(e, "Não foi possível carregar a categoria."));
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoriaId]);
 
@@ -56,7 +59,7 @@ export default function CategoriaServicoFormPainel({ categoriaId }: { categoriaI
     }
   };
 
-  if (categoriaId && lista.loading && !erro) return <LoadingState label="Carregando categoria..." />;
+  if (categoriaId && obter.loading && !erro) return <LoadingState label="Carregando categoria..." />;
   if (naoEncontrada) return <Alert variant="error" title="Categorias" message="Categoria não encontrada." />;
 
   return (
