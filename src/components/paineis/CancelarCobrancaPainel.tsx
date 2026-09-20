@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { consultasService, financeiroService, useApi } from "@/lib/api";
+import { useState } from "react";
+import { financeiroService, useApi } from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
 import { useUserType } from "@/hooks/useRoutePermission";
 import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
 import Alert from "@/components/ui/alert/Alert";
 import Label from "@/components/form/Label";
-import SearchableSelect from "@/components/form/SearchableSelect";
+import BuscarEstudanteSelect from "@/components/form/BuscarEstudanteSelect";
 import {
   CobrancasTable, EmptyState, LoadingState, SubtelaDetalheCobranca, SubtelaPanel,
 } from "@/components/paineis/financeiroShared";
@@ -32,19 +32,11 @@ export default function CancelarCobrancaPainel() {
   const isFpp = isAdmin && user?.admin?.role === "fpp";
   const codigoAcademia = user?.academia?.codigo_academia ?? "";
 
-  const [estudantes, setEstudantes] = useState<{ value: string; label: string }[]>([]);
   const [codigoEstudante, setCodigoEstudante] = useState("");
   const [selecionada, setSelecionada] = useState<PagamentoResumo | null>(null);
   const [alert, setAlert] = useState<string | null>(null);
   const cobrancas = useApi(financeiroService.consultarCobrancasEstudante);
   const cancelApi = useApi(financeiroService.cancelarCobranca);
-
-  useEffect(() => {
-    if (!codigoAcademia) return;
-    consultasService.listarEstudantes({ codigo_academia: codigoAcademia, limit: 300, offset: 0 })
-      .then((r) => setEstudantes((r.estudantes ?? []).map((e: any) => ({ value: e.codigo_estudante, label: `${e.nome ?? e.codigo_estudante} (${e.codigo_estudante})` }))))
-      .catch(() => setEstudantes([]));
-  }, [codigoAcademia]);
 
   const carregar = (codigo: string) => {
     setAlert(null);
@@ -71,11 +63,10 @@ export default function CancelarCobrancaPainel() {
       {alert && <Alert variant="error" title="Gestão de cobranças" message={alert} />}
       <div className="mt-4 max-w-md">
         <Label>Estudante</Label>
-        <SearchableSelect
+        <BuscarEstudanteSelect
+          codigoAcademia={codigoAcademia}
           value={codigoEstudante}
-          options={estudantes}
           onChange={(v) => { setCodigoEstudante(v); carregar(v); }}
-          placeholder="Buscar estudante..."
           isClearable
         />
       </div>

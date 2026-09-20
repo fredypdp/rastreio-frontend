@@ -71,6 +71,14 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
   const [alert, setAlert] = useState<{ variant: "success" | "error" | "info"; message: string } | null>(null);
   const definirInicio = useApi(financeiroService.definirInicioCobranca);
   const removerInicio = useApi(financeiroService.removerInicioCobranca);
+  const consultarInicio = useApi(financeiroService.consultarInicioCobranca);
+  // Tarefa 111: null enquanto ainda não foi verificado (ou a verificação
+  // falhou por outro motivo que não "não existe"); true/false depois que
+  // GET /financeiro/mensalidades/inicio-cobranca responde. O botão
+  // "Remover" só fica habilitado quando isto é true — antes não havia essa
+  // consulta e o botão ficava sempre disponível (ver nota em
+  // removerException, abaixo).
+  const [existeExcecao, setExisteExcecao] = useState<boolean | null>(null);
   // Controla a exibição do ConfirmDialog antes de remover a exceção (ver
   // abrirConfirmacaoRemocao/removerException, abaixo).
   const [confirmandoRemocao, setConfirmandoRemocao] = useState(false);
@@ -81,6 +89,19 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
       .then((atual) => setAnoLetivo(atual?.ano_letivo || ""))
       .catch(() => setAnoLetivo(""));
   }, [codigoAcademia]);
+
+  const verificarExcecaoAtual = () => {
+    if (!codigoAcademia || !anoLetivo) return;
+    consultarInicio.execute({ codigo_academia: codigoAcademia, ano_letivo: anoLetivo })
+      .then(() => setExisteExcecao(true))
+      .catch((err) => setExisteExcecao(err instanceof ApiError && err.status === 404 ? false : null));
+  };
+
+  useEffect(() => {
+    setExisteExcecao(null);
+    verificarExcecaoAtual();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codigoAcademia, anoLetivo]);
 
   const mesNatural = user?.academia?.nivel === "superior" ? 10 : 9;
   // Igual ao "menor" em validateMesInicioCobranca: o mes_fim_cobranca mais
@@ -108,6 +129,7 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
   // sempre a primeira opção da lista (mesOpcoes já vem ordenada a partir do
   // mês natural).
   const mesInicio = mesOpcoes.some((o) => o.value === mesInicioSelecionado) ? mesInicioSelecionado : (mesOpcoes[0]?.value ?? "");
+  const mesAtualLabel = consultarInicio.data ? capitalizar(MES_NOME_OPCOES.find((o) => o.value === String(consultarInicio.data!.mes_inicio))?.label ?? "") : "";
 
   const submit = async () => {
     setAlert(null);
@@ -115,6 +137,7 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
     try {
       await definirInicio.execute({ codigo_academia: codigoAcademia, ano_letivo: anoLetivo, mes_inicio: Number(mesInicio) });
       setAlert({ variant: "success", message: "Início de cobrança definido com sucesso." });
+      verificarExcecaoAtual();
     } catch (err) {
       setAlert({ variant: "error", message: formatApiError(err, "Não foi possível definir o início de cobrança.") });
     }
@@ -134,19 +157,23 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
   /**
    * Remove a exceção de início de cobrança do ano letivo atual, revertendo
    * ao mês natural (setembro para Ensino Primário/Iº Ciclo e Médio, outubro
-   * para Superior). Não há como esta tela saber de antemão se existe uma
-   * exceção definida para o ano letivo atual (não existe uma consulta
-   * dedicada para isso) — por isso o botão fica sempre disponível, e um 404
-   * do backend (nada para remover) é tratado como informação neutra, não
-   * como erro.
+   * para Superior). O botão que chama isto (via abrirConfirmacaoRemocao) só
+   * fica habilitado depois que GET /financeiro/mensalidades/inicio-cobranca
+   * (Tarefa 111) confirma que existe uma exceção — o catch de 404 aqui é só
+   * uma rede de segurança para o caso raro de a exceção ter sido removida
+   * por outra aba/pessoa entre a verificação e o clique, não o mecanismo
+   * principal (era assim antes desta tarefa, quando não existia consulta
+   * dedicada e o botão ficava sempre disponível).
    */
   const removerException = async () => {
     try {
       await removerInicio.execute({ codigo_academia: codigoAcademia, ano_letivo: anoLetivo });
       setAlert({ variant: "success", message: "Início de cobrança removido — voltou ao mês natural do ano letivo." });
+      setExisteExcecao(false);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setAlert({ variant: "info", message: "Não havia nenhuma exceção de início de cobrança definida para este ano letivo — já está no mês natural." });
+        setExisteExcecao(false);
         return;
       }
       setAlert({ variant: "error", message: formatApiError(err, "Não foi possível remover o início de cobrança.") });
@@ -189,10 +216,14 @@ function DefinirInicioCobrancaForm({ codigoAcademia, mensalidades }: { codigoAca
       </div>
       <div className="border-t border-gray-100 pt-4 dark:border-white/[0.05]">
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Se este ano letivo não deveria mais ter um início de cobrança fora do padrão, remova a exceção — a cobrança volta a considerar o mês natural.
+          {existeExcecao === true
+            ? `Este ano letivo já tem um início de cobrança fora do padrão definido${mesAtualLabel ? ` (${mesAtualLabel})` : ""}. Se não for mais necessário, remova a exceção — a cobrança volta a considerar o mês natural.`
+            : existeExcecao === false
+            ? "Este ano letivo ainda não tem nenhum início de cobrança fora do padrão definido — não há nada para remover."
+            : "Verificando se este ano letivo já tem um início de cobrança fora do padrão definido..."}
         </p>
         <div className="mt-2">
-          <Button size="sm" variant="danger" onClick={abrirConfirmacaoRemocao} disabled={!anoLetivo || removerInicio.loading} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
+          <Button size="sm" variant="danger" onClick={abrirConfirmacaoRemocao} disabled={!anoLetivo || removerInicio.loading || existeExcecao !== true} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>
             {removerInicio.loading ? "Removendo..." : "Remover início de cobrança deste ano letivo"}
           </Button>
         </div>

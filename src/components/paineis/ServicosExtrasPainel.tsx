@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { academiaService, useApi } from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
-import type { ServicoExtra } from "@/types/api";
+import type { ServicoExtra, DetalhePersonalizado } from "@/types/api";
 import Button from "@/components/ui/button/Button";
 import Icon from "@/components/ui/Icon";
 import Alert from "@/components/ui/alert/Alert";
+import Badge from "@/components/ui/badge/Badge";
 import { PageHeading, PageDescription } from "@/components/ui/typography/Typography";
 import { METODO_PAGAMENTO_LABEL, ConfirmDialog } from "@/components/paineis/financeiroShared";
 import { formatarDataHora } from "@/components/paineis/financeiroNivelShared";
@@ -15,6 +16,16 @@ const formatarAnoLabel = (ano: string) =>
   ano.replace(/^(\d+)_ano_(.+)$/, (_, n, tipo) =>
     tipo === "fundamental" ? `${n}ª Classe` : `${n}º Ano ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`
   );
+
+/** cursos_disponiveis guarda pares "cursoId|ano" (ver ServicoExtraFormPainel.tsx)
+ * — aqui só precisamos do número do ano, já que o nome do curso ao lado já
+ * deixa claro se é médio ou superior. */
+const formatarAnoCurso = (ano: string) => ano.replace(/^(\d+)_ano_.+$/, (_, n) => `${n}º Ano`);
+
+/** Personalizações booleanas guardavam true/false cru na tela; ver também
+ * o mesmo tratamento em ServicosExtrasCatalogoPainel.tsx (tela do estudante). */
+const formatarValorPersonalizado = (d: DetalhePersonalizado) =>
+  d.tipo === "booleano" ? (d.valor ? "Sim" : "Não") : Array.isArray(d.valor) ? d.valor.join(", ") : String(d.valor);
 
 /**
  * /servicos-extras/gerenciar-servicos (Tarefa 14). Antes esta mesma tela
@@ -30,6 +41,7 @@ const formatarAnoLabel = (ano: string) =>
 export default function ServicosExtrasPainel() {
   const lista = useApi(academiaService.listarServicosExtras);
   const cats = useApi(academiaService.listarCategoriasServico);
+  const cursosApi = useApi(academiaService.listarCursos);
   const desativarServico = useApi(academiaService.desativarServicoExtra);
   const reativarServico = useApi(academiaService.reativarServicoExtra);
   const deletarServico = useApi(academiaService.deletarServicoExtra);
@@ -38,8 +50,10 @@ export default function ServicosExtrasPainel() {
   const [servicoParaExcluir, setServicoParaExcluir] = useState<ServicoExtra | null>(null);
   const [selecionado, setSelecionado] = useState<ServicoExtra | null>(null);
 
-  const recarregar = () => Promise.all([lista.execute(), cats.execute()]);
+  const recarregar = () => Promise.all([lista.execute(), cats.execute(), cursosApi.execute()]);
   useEffect(() => { recarregar(); }, []);
+
+  const nomeCurso = (id: string) => (cursosApi.data?.cursos ?? []).find(c => c.id === id)?.nome ?? id;
 
   /** Ativar/desativar/excluir — mesmo padrão de tratamento de erro de antes, só que sem sair da tela de listagem. */
   const tratarAcaoServico = async (fn: () => Promise<unknown>, fallback: string) => {
@@ -96,22 +110,46 @@ export default function ServicosExtrasPainel() {
               </dd>
             </div>
             <div><dt className="text-gray-500 dark:text-gray-400">Exige documento na inscrição</dt><dd className="font-medium text-gray-800 dark:text-white/90">{selecionado.documento_obrigatorio ? "Sim" : "Não"}</dd></div>
-            <div>
-              <dt className="text-gray-500 dark:text-gray-400">Disponibilidade</dt>
-              <dd className="font-medium text-gray-800 dark:text-white/90">
-                {(selecionado.anos_academicos_disponiveis?.length || selecionado.cursos_disponiveis?.length)
-                  ? [...(selecionado.anos_academicos_disponiveis ?? []).map(formatarAnoLabel), ...(selecionado.cursos_disponiveis ?? [])].join(", ")
-                  : "Todos os estudantes"}
-              </dd>
-            </div>
           </dl>
+          <div>
+            <dt className="text-sm text-gray-500 dark:text-gray-400">Disponibilidade</dt>
+            {(selecionado.anos_academicos_disponiveis?.length || selecionado.cursos_disponiveis?.length) ? (
+              <div className="mt-2 space-y-3">
+                {(selecionado.anos_academicos_disponiveis?.length ?? 0) > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Ensino Primário e Iº Ciclo</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(selecionado.anos_academicos_disponiveis ?? []).map(ano => (
+                        <Badge key={ano} size="sm" color="primary">{formatarAnoLabel(ano)}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(selecionado.cursos_disponiveis?.length ?? 0) > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Cursos (Médio / Superior)</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(selecionado.cursos_disponiveis ?? []).map(chave => {
+                        const [cursoId, ano] = chave.split("|");
+                        return (
+                          <Badge key={chave} size="sm" color="primary">{nomeCurso(cursoId)} - {formatarAnoCurso(ano)}</Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">Todos os estudantes</p>
+            )}
+          </div>
           {Object.keys(selecionado.detalhes_personalizados ?? {}).length > 0 && (
             <div>
               <dt className="text-sm text-gray-500 dark:text-gray-400">Personalizações</dt>
               <dd className="mt-1 flex flex-wrap gap-2">
                 {Object.values(selecionado.detalhes_personalizados ?? {}).map((d, i) => (
                   <span key={i} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    {d.rotulo}: {Array.isArray(d.valor) ? d.valor.join(", ") : String(d.valor)}
+                    {d.rotulo}: {formatarValorPersonalizado(d)}
                   </span>
                 ))}
               </dd>
@@ -168,7 +206,7 @@ export default function ServicosExtrasPainel() {
                 <td className="p-3 text-gray-700 dark:text-gray-300">{nomeCategoria(s)}</td>
                 <td
                   className="p-3 text-gray-500 dark:text-gray-400"
-                  title={Object.values(s.detalhes_personalizados ?? {}).map(d => `${d.rotulo}: ${Array.isArray(d.valor) ? d.valor.join(", ") : String(d.valor)}`).join("; ")}
+                  title={Object.values(s.detalhes_personalizados ?? {}).map(d => `${d.rotulo}: ${formatarValorPersonalizado(d)}`).join("; ")}
                 >
                   {Object.keys(s.detalhes_personalizados ?? {}).length} personalizações
                 </td>

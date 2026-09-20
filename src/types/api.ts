@@ -1599,6 +1599,13 @@ export interface RemoverMesInicioCobrancaRequest {
   ano_letivo: string;
 }
 
+/** Resposta de GET /financeiro/mensalidades/inicio-cobranca (Tarefa 111). */
+export interface ConsultarMesInicioCobrancaResponse {
+  codigo_academia: string;
+  ano_letivo: string;
+  mes_inicio: number;
+}
+
 export interface ObrigacaoMensalidadeInput {
   codigo_estudante: string;
   codigo_academia: string;

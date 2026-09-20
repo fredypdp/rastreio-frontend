@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { academiaService, consultasService, financeiroService, useApi } from "@/lib/api";
+import { academiaService, financeiroService, useApi } from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
 import SearchableSelect from "@/components/form/SearchableSelect";
+import BuscarEstudanteSelect from "@/components/form/BuscarEstudanteSelect";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
@@ -31,7 +32,6 @@ export default function AnularReativarObrigacoesForm({ acao, codigoAcademia, onS
   codigoAcademia: string;
   onSuccess?: () => void;
 }) {
-  const [estudantes, setEstudantes] = useState<{ value: string; label: string }[]>([]);
   const [codigoEstudante, setCodigoEstudante] = useState("");
   const [anosLetivos, setAnosLetivos] = useState<string[]>([]);
   const [anoLetivo, setAnoLetivo] = useState("");
@@ -41,13 +41,6 @@ export default function AnularReativarObrigacoesForm({ acao, codigoAcademia, onS
   const anular = useApi(financeiroService.anularObrigacoes);
   const reativar = useApi(financeiroService.reativarObrigacoes);
   const executando = acao === "anular" ? anular : reativar;
-
-  useEffect(() => {
-    if (!codigoAcademia) return;
-    consultasService.listarEstudantes({ codigo_academia: codigoAcademia, limit: 300, offset: 0 })
-      .then((r) => setEstudantes((r.estudantes ?? []).map((e: any) => ({ value: e.codigo_estudante, label: `${e.nome ?? e.codigo_estudante} (${e.codigo_estudante})` }))))
-      .catch(() => setEstudantes([]));
-  }, [codigoAcademia]);
 
   useEffect(() => {
     if (!codigoAcademia) return;
@@ -76,7 +69,7 @@ export default function AnularReativarObrigacoesForm({ acao, codigoAcademia, onS
 
   return <div className="space-y-4 rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]">
     {alert && <Alert variant={alert.variant} title="Obrigações de mensalidade" message={alert.message} />}
-    <div><Label>Estudante</Label><SearchableSelect value={codigoEstudante} options={estudantes} onChange={setCodigoEstudante} placeholder="Buscar estudante..." isClearable /></div>
+    <div><Label>Estudante</Label><BuscarEstudanteSelect codigoAcademia={codigoAcademia} value={codigoEstudante} onChange={setCodigoEstudante} isClearable /></div>
     <div className="grid gap-4 sm:grid-cols-2">
       <div>
         <Label>Ano letivo</Label>

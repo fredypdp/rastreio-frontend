@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Alert from "@/components/ui/alert/Alert";
 import Button from "@/components/ui/button/Button";
 import Icon from "@/components/ui/Icon";
@@ -14,36 +15,64 @@ import {
   FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, NivelCamposFields, MetodosPagamentoCheckboxes,
   validarValorEAno, existeConfiguracaoParaEscopo, useFinanceiroNivelContext, MES_FIM_OPCOES, type NivelFormState, type FormFieldErrors,
 } from "@/components/paineis/financeiroNivelShared";
-import type { FinanceiroModoVigencia, MensalidadeConfiguracaoInput } from "@/types/api";
+import type { FinanceiroModoVigencia, FinanceiroNivel, MensalidadeConfiguracaoInput } from "@/types/api";
 
 /**
- * /financas/configuracoes/mensalidade/criar (Tarefa 16) — página "Definir
- * Nova Mensalidade". Nível/curso/ano começam em branco (ou no primeiro
- * nível disponível) para o usuário escolher do zero. Se o combo
- * nível+ano+curso escolhido aqui já tiver uma configuração salva (isso
- * pode acontecer mesmo aqui, sem vir de nenhum link — o usuário está
- * livre para escolher qualquer combinação), a tela se comporta como uma
- * edição (pergunta "o que acontece com quem já está pendente?" e salva
- * como nova versão) — mesmo comportamento de antes, só que agora quem
- * chega aqui a partir do cartão "Editar" de uma configuração já existente
- * vai para uma rota própria: ver MensalidadeEditarPainel.tsx
- * (/financas/configuracoes/mensalidade/editar). Antes as duas ficavam
- * nesta mesma rota, diferenciadas só por um `?nivel=` opcional na URL.
+ * /financas/configuracoes/mensalidade/editar (Tarefa 16) — chegada a
+ * partir do botão "Editar" de um cartão em ConfiguracoesDefinidasCards
+ * (lista de "Mensalidades definidas"), sempre com
+ * `?nivel=&ano_academico=&curso_id=` na URL. Nível/curso/ano vêm travados
+ * (NivelCamposFields escopoFixo), valor/mês de encerramento/métodos já
+ * pré-preenchidos com a configuração atual, e a pergunta sobre pendentes
+ * aparece (porque aqui já existe uma configuração vigente). Antes esta
+ * rota era a mesma de /criar, diferenciada só pela presença de `?nivel=`
+ * — separada porque misturava duas lógicas (criar do zero vs. editar algo
+ * que já existe) numa rota só.
+ *
+ * O efeito de pré-preenchimento espera `ctx.mensalidadesApi.data` (não
+ * `.loading`) para decidir quando aplicar os valores salvos: `loading`
+ * começa `false` antes do primeiro carregamento também ser disparado, e
+ * como o `useEffect` que dispara esse carregamento (dentro de
+ * useFinanceiroNivelContext) roda antes deste no mesmo commit, mas sua
+ * chamada a setState só é processada depois que TODOS os efeitos deste
+ * commit terminam — este efeito lia `loading` ainda com o valor antigo
+ * (`false`) e rodava com `configuracoes` vazio, travando o formulário nos
+ * valores padrão (reproduzido e confirmado num sandbox isolado com React
+ * 19 antes desta correção). `data` só deixa de ser `null` depois que a
+ * primeira busca real termina, então não sofre dessa corrida.
  */
-export default function MensalidadeCriarPainel() {
+export default function MensalidadeEditarPainel() {
   const ctx = useFinanceiroNivelContext();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState<NivelFormState>({ nivel: "fundamental", ano_academico: "", curso_id: "", valor: "", metodos_pagamento: ["GPO"], modo_vigencia: "" });
   const [mesFim, setMesFim] = useState("6");
   const [errors, setErrors] = useState<FormFieldErrors>({});
   const [alert, setAlert] = useState<{ variant: "success" | "error"; message: string } | null>(null);
+  const [preenchidoDaUrl, setPreenchidoDaUrl] = useState(false);
   const salvar = useApi(financeiroService.configurarMensalidade);
   const atualizar = useApi(financeiroService.atualizarConfiguracaoMensalidade);
   const configuracoes = useMemo(() => ctx.mensalidadesApi.data?.configuracoes ?? [], [ctx.mensalidadesApi.data]);
 
+  // Pré-preenche nível/ano/curso e valor/mês/métodos a partir da URL — só
+  // uma vez, quando os dados de fato chegam (ver nota acima sobre por que
+  // é `data` e não `loading`).
   useEffect(() => {
-    if (ctx.niveisDisponiveis.length === 0) return;
-    setForm((prev) => (ctx.niveisDisponiveis.includes(prev.nivel) ? prev : { ...prev, nivel: ctx.niveisDisponiveis[0], curso_id: "", ano_academico: "" }));
-  }, [ctx.niveisDisponiveis]);
+    if (preenchidoDaUrl || !ctx.mensalidadesApi.data) return;
+    const nivel = (searchParams.get("nivel") ?? "fundamental") as FinanceiroNivel;
+    const ano_academico = searchParams.get("ano_academico") ?? "";
+    const curso_id = searchParams.get("curso_id") ?? "";
+    const atual = configuracoes.find((c) => c.nivel === nivel && c.ano_academico === ano_academico && (c.curso_id ?? "") === curso_id);
+    setForm((prev) => ({
+      ...prev,
+      nivel,
+      ano_academico,
+      curso_id,
+      valor: atual ? String(atual.valor) : prev.valor,
+      metodos_pagamento: atual?.metodos_pagamento ?? prev.metodos_pagamento,
+    }));
+    if (atual) setMesFim(String(atual.mes_fim_cobranca));
+    setPreenchidoDaUrl(true);
+  }, [preenchidoDaUrl, ctx.mensalidadesApi.data, configuracoes, searchParams]);
 
   // form completo não entra nas deps de propósito — a existência da
   // configuração só depende de nivel/ano_academico/curso_id, não de
@@ -70,7 +99,7 @@ export default function MensalidadeCriarPainel() {
         modo_vigencia: form.modo_vigencia ? (form.modo_vigencia as FinanceiroModoVigencia) : undefined,
       };
       await (existe ? atualizar.execute(p) : salvar.execute(p));
-      setAlert({ variant: "success", message: "Configuração de mensalidade versionada com sucesso. Você pode configurar outro nível/curso agora, ou voltar para a lista." });
+      setAlert({ variant: "success", message: "Configuração de mensalidade versionada com sucesso." });
       await ctx.reload();
     } catch (err) {
       setAlert({ variant: "error", message: formatApiError(err, "Não foi possível salvar mensalidade.") });
@@ -79,11 +108,11 @@ export default function MensalidadeCriarPainel() {
 
   return (
     <FinanceiroAcessoGuard ctx={ctx}>
-      <SubtelaPanel title="Definir Nova Mensalidade" icon="mdi:calendar-month-outline" onVoltar="/financas/configuracoes/mensalidade">
+      <SubtelaPanel title="Editar Mensalidade" icon="mdi:calendar-month-outline" onVoltar="/financas/configuracoes/mensalidade">
         <ManualDeFuncionamento>
           <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
             <li>O <b>valor</b> definido aqui passa a valer a partir de agora, para todos os estudantes do nível/ano/curso escolhido.</li>
-            <li>Ao escolher um nível/ano/curso que já tem uma mensalidade configurada, escolha com atenção <b>o que acontece com quem já está pendente</b>: isso decide se cobranças de meses anteriores (ainda não pagas) também mudam para o novo valor, ou se continuam no valor antigo. Na primeira configuração de um nível/ano/curso isso não é perguntado — o valor novo já vale para tudo, já que ainda não havia nenhum valor definido antes.</li>
+            <li>Escolha com atenção <b>o que acontece com quem já está pendente</b>: isso decide se cobranças de meses anteriores (ainda não pagas) também mudam para o novo valor, ou se continuam no valor antigo.</li>
             <li>O <b>mês de encerramento da cobrança</b> define até quando a mensalidade é cobrada dentro do ano letivo — depois desse mês, a cobrança para automaticamente até o próximo ano letivo.</li>
             <li>Só é possível salvar depois de aderir ao Gateway de Pagamento Online e escolher pelo menos um método de pagamento aceite.</li>
           </ul>
@@ -99,7 +128,7 @@ export default function MensalidadeCriarPainel() {
             niveisDisponiveis={ctx.niveisDisponiveis}
             cursos={ctx.cursos}
             anosAcademicosAcademia={ctx.anosAcademicosAcademia}
-            escopoFixo={false}
+            escopoFixo
             existeConfiguracaoParaEscopo={existe}
           />
           <Label>Mês de encerramento da cobrança</Label>

@@ -515,9 +515,14 @@ export function ConfiguracoesDefinidasCards({
   const labelEscopo = (c: { ano_academico?: string; curso_id?: string }) =>
     c.ano_academico ? labelAnoAcademico(c.ano_academico) : (cursos.find((cu) => cu.id === c.curso_id)?.nome ?? "este escopo");
 
-  const criarHref = (c: ConfigRow) => {
+  const editarHref = (c: ConfigRow) => {
     const qs = new URLSearchParams({ nivel: c.nivel, ...(c.ano_academico ? { ano_academico: c.ano_academico } : {}), ...(c.curso_id ? { curso_id: c.curso_id } : {}) });
-    return `/financas/configuracoes/${kind === "mensalidade" ? "mensalidade" : "taxa-matricula"}/criar?${qs.toString()}`;
+    // Tarefa 16: mensalidade passou a ter uma rota de edição própria,
+    // separada de /criar (ver MensalidadeEditarPainel.tsx). Taxa de
+    // matrícula ainda não tem essa separação — continua na rota antiga,
+    // com o nível/ano/curso vindo travado por estes mesmos parâmetros.
+    if (kind === "mensalidade") return `/financas/configuracoes/mensalidade/editar?${qs.toString()}`;
+    return `/financas/configuracoes/taxa-matricula/criar?${qs.toString()}`;
   };
 
   const onRemover = async () => {
@@ -572,7 +577,7 @@ export function ConfiguracoesDefinidasCards({
             <div><dt className="text-gray-500 dark:text-gray-400">Vigente desde</dt><dd className="font-medium text-gray-800 dark:text-white/90">{formatarDataHora(selecionada.vigente_em)}</dd></div>
           </dl>
           <div className="flex gap-2 pt-2">
-            <Link href={criarHref(selecionada)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
+            <Link href={editarHref(selecionada)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
               <Icon icon="mdi:pencil-outline" width={16} /> Editar
             </Link>
             <Button size="sm" variant="danger" disabled={removendo} onClick={() => setConfirmarRemocao(true)} startIcon={<Icon icon="mdi:delete-outline" width={14} />}>

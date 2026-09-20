@@ -170,6 +170,7 @@ import type {
   RemoverMensalidadeConfiguracaoRequest,
   MesInicioCobrancaInput,
   RemoverMesInicioCobrancaRequest,
+  ConsultarMesInicioCobrancaResponse,
   ObrigacaoMensalidadeInput,
   ConsultarMensalidadesEstudanteResponse,
   MensalidadePagamentoInput,
@@ -676,12 +677,15 @@ export const consultasService = {
     turno?: string | string[];
     codigo_turma?: string | string[];
     com_turma?: boolean;
+    /** Tarefa 111: busca livre por código, nome, BI, telefone ou e-mail — ver GET /estudantes?busca=. */
+    busca?: string;
   }): Promise<ConsultarEstudantesResponse> => {
     if (!hasExplicitPagination(params)) {
       return getAllPaginated((limit, offset) => consultasService.listarEstudantes({ ...params, limit, offset }), 'estudantes');
     }
     const qs = new URLSearchParams();
     appendPageParams(qs, params);
+    if (params?.busca) qs.append('busca', params.busca);
     appendMultiValueParam(qs, 'genero', params?.genero);
     if (params?.idade_min !== undefined) qs.append('idade_min', String(params.idade_min));
     if (params?.idade_max !== undefined) qs.append('idade_max', String(params.idade_max));
@@ -950,6 +954,9 @@ export const financeiroService = {
   /** DELETE /financeiro/mensalidades/configuracoes — remove a configuração vigente do escopo; nunca reescreve preço de mês já cobrado. */
   removerConfiguracaoMensalidade: (data: RemoverMensalidadeConfiguracaoRequest, token?: string) => api.delete<void, RemoverMensalidadeConfiguracaoRequest>('/financeiro/mensalidades/configuracoes', data, { token: token || tokenStorage.get() || undefined }),
   definirInicioCobranca: (data: MesInicioCobrancaInput, token?: string) => api.post<void, MesInicioCobrancaInput>('/financeiro/mensalidades/inicio-cobranca', data, { token: token || tokenStorage.get() || undefined }),
+  /** GET /financeiro/mensalidades/inicio-cobranca — 404 quando não há nenhuma exceção definida para o ano letivo (ver Tarefa 111). */
+  consultarInicioCobranca: (params: { codigo_academia: string; ano_letivo: string }, token?: string) =>
+    api.get<ConsultarMesInicioCobrancaResponse>(`/financeiro/mensalidades/inicio-cobranca?codigo_academia=${encodeURIComponent(params.codigo_academia)}&ano_letivo=${encodeURIComponent(params.ano_letivo)}`, { token: token || tokenStorage.get() || undefined }),
   /** DELETE /financeiro/mensalidades/inicio-cobranca — reverte ao mês natural do ano letivo. */
   removerInicioCobranca: (data: RemoverMesInicioCobrancaRequest, token?: string) => api.delete<void, RemoverMesInicioCobrancaRequest>('/financeiro/mensalidades/inicio-cobranca', data, { token: token || tokenStorage.get() || undefined }),
   anularObrigacoes: (data: ObrigacaoMensalidadeInput, token?: string) => api.post<void, ObrigacaoMensalidadeInput>('/financeiro/mensalidades/obrigacoes/anular', data, { token: token || tokenStorage.get() || undefined }),
