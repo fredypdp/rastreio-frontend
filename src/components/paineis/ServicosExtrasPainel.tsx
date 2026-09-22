@@ -22,6 +22,21 @@ const formatarAnoLabel = (ano: string) =>
  * deixa claro se é médio ou superior. */
 const formatarAnoCurso = (ano: string) => ano.replace(/^(\d+)_ano_.+$/, (_, n) => `${n}º Ano`);
 
+/** Agrupa cursos_disponiveis ("cursoId|ano") por curso, juntando todos os
+ * anos daquele curso numa lista só — assim um curso com vários anos
+ * selecionados vira um badge só ("Nome do curso - 1º Ano, 2º Ano"), em vez
+ * de um badge por combinação curso+ano. */
+const agruparCursosDisponiveis = (cursosDisponiveis: string[]): { cursoId: string; anos: string[] }[] => {
+  const porCurso: Record<string, string[]> = {};
+  const ordem: string[] = [];
+  cursosDisponiveis.forEach((chave) => {
+    const [cursoId, ano] = chave.split("|");
+    if (!porCurso[cursoId]) { porCurso[cursoId] = []; ordem.push(cursoId); }
+    porCurso[cursoId].push(formatarAnoCurso(ano));
+  });
+  return ordem.map((cursoId) => ({ cursoId, anos: porCurso[cursoId] }));
+};
+
 /** Personalizações booleanas guardavam true/false cru na tela; ver também
  * o mesmo tratamento em ServicosExtrasCatalogoPainel.tsx (tela do estudante). */
 const formatarValorPersonalizado = (d: DetalhePersonalizado) =>
@@ -127,14 +142,11 @@ export default function ServicosExtrasPainel() {
                 )}
                 {(selecionado.cursos_disponiveis?.length ?? 0) > 0 && (
                   <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Cursos (Médio / Superior)</p>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Cursos</p>
                     <div className="flex flex-wrap gap-2">
-                      {(selecionado.cursos_disponiveis ?? []).map(chave => {
-                        const [cursoId, ano] = chave.split("|");
-                        return (
-                          <Badge key={chave} size="sm" color="primary">{nomeCurso(cursoId)} - {formatarAnoCurso(ano)}</Badge>
-                        );
-                      })}
+                      {agruparCursosDisponiveis(selecionado.cursos_disponiveis ?? []).map(({ cursoId, anos }) => (
+                        <Badge key={cursoId} size="sm" color="primary">{nomeCurso(cursoId)} - {anos.join(", ")}</Badge>
+                      ))}
                     </div>
                   </div>
                 )}
