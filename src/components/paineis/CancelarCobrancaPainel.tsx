@@ -9,7 +9,7 @@ import Alert from "@/components/ui/alert/Alert";
 import Label from "@/components/form/Label";
 import BuscarEstudanteSelect from "@/components/form/BuscarEstudanteSelect";
 import {
-  CobrancasTable, EmptyState, LoadingState, SubtelaDetalheCobranca, SubtelaPanel,
+  CobrancasTable, EmptyState, LoadingState, SubtelaDetalheCobranca, SubtelaPanel, registrarPagamentoExterno,
 } from "@/components/paineis/financeiroShared";
 import type { PagamentoResumo } from "@/types/api";
 
@@ -81,6 +81,10 @@ export default function CancelarCobrancaPainel() {
             onOpen={setSelecionada}
             onCancelar={async (pagamento, motivo) => {
               await cancelApi.execute(pagamento.id, motivo);
+              await carregar(codigoEstudante);
+            }}
+            onPagoExternamente={async (pagamento, dados) => {
+              await registrarPagamentoExterno(pagamento, dados);
               await carregar(codigoEstudante);
             }}
           />

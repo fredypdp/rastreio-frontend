@@ -64,6 +64,9 @@ import type {
   IniciarPagamentoTaxaInscricaoRequest,
   IniciarPagamentoObrigacaoRequest,
   QRCodeChargeResult,
+  PagamentoExternoInput,
+  PagamentoExternoMensalidadesInput,
+  PagamentoExternoResultado,
   ListarCursosResponse,
   ListarMateriasResponse,
   AtualizarDadosPessoaisEstudanteRequest,
@@ -1002,6 +1005,10 @@ export const financeiroService = {
     return api.get<ListarCobrancasResponse>(`/financeiro/cobrancas/estudante/${encodeURIComponent(codigoEstudante)}${qs.toString() ? `?${qs.toString()}` : ''}`, { token: token || tokenStorage.get() || undefined });
   },
   cancelarCobranca: (id: string, motivo?: string, token?: string) => api.post<ChargeResult, { motivo?: string }>(`/financeiro/appypay/cobrancas/${encodeURIComponent(id)}/cancelar`, { motivo }, { token: token || tokenStorage.get() || undefined }),
+  /** Academia: marca uma cobrança real aguardando pagamento como paga fora da plataforma. */
+  registrarPagamentoExternoCobranca: (id: string, data?: PagamentoExternoInput, token?: string) => api.post<PagamentoExternoResultado, PagamentoExternoInput>(`/financeiro/appypay/cobrancas/${encodeURIComponent(id)}/pago-externamente`, data ?? {}, { token: token || tokenStorage.get() || undefined }),
+  /** Academia: marca mensalidades pendentes (sem cobrança gerada) como pagas fora da plataforma. */
+  registrarPagamentoExternoMensalidades: (data: PagamentoExternoMensalidadesInput, token?: string) => api.post<PagamentoExternoResultado, PagamentoExternoMensalidadesInput>('/financeiro/mensalidades/obrigacoes/pago-externamente', data, { token: token || tokenStorage.get() || undefined }),
 };
 
 // =====================

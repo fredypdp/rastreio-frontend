@@ -1,6 +1,6 @@
-# Tarefa 20 — Marcar cobrança/pendência como paga fora da plataforma
+# (feito) Tarefa 20 — Marcar cobrança/pendência como paga fora da plataforma
 
-**Estado:** pendente
+**Estado:** feito
 
 **Repositório:** https://github.com/fredypdp/rastreio-frontend
 **Branch base:** main (validado contra o commit `182e6da`)
@@ -120,3 +120,8 @@ Depois que os Passos 1–2 passarem sem problema:
 - [ ] Item pago fora da plataforma mostra o selo "Pago fora da plataforma", método "Fora da plataforma" e **não** mostra o botão "Cancelar"
 - [ ] Estado trocado para **feito**, título com `(feito)`, secção **Resultado** adicionada
 - [ ] `.md` e `.patch` movidos para `src/docs/Tarefas feitas/` com o mesmo nome
+
+
+## Resultado
+
+O patch foi aplicado sem conflitos, disponibilizando o fluxo de marcar cobranças e pendências de mensalidade elegíveis como pagas fora da plataforma. A verificação de tipos passou; o lint dos arquivos alterados passou e o lint global manteve apenas os problemas pré-existentes. `npm install` não concluiu por um erro 403 de acesso ao registo de pacotes, sem alterar o `package-lock.json`.

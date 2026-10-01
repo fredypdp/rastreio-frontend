@@ -1651,6 +1651,23 @@ export interface ChargeResult {
   response?: Record<string, unknown>;
 }
 
+export interface PagamentoExternoInput {
+  observacao?: string;
+  referencia_externa?: string;
+}
+
+export interface PagamentoExternoMensalidadesInput extends PagamentoExternoInput {
+  codigo_estudante: string;
+  meses: { ano_letivo: string; mes: number }[];
+}
+
+export interface PagamentoExternoResultado extends ChargeResult {
+  /** true quando a mesma cobrança já tinha sido marcada antes (a operação é idempotente). */
+  ja_registrado?: boolean;
+  valor?: number;
+  meses?: { ano_letivo: string; mes: number }[];
+}
+
 export interface QRCodeChargeResult extends ChargeResult {
   qrCodeArr?: string;
 }
@@ -1673,10 +1690,15 @@ export interface CobrancaResumo {
   valor: number;
   moeda?: string;
   descricao?: string;
-  metodo_pagamento?: FinanceiroMetodoPagamento;
+  /** "EXTERNO" aparece quando a cobrança foi criada já paga fora da plataforma (pendência sem cobrança marcada como paga). */
+  metodo_pagamento?: FinanceiroMetodoPagamento | 'EXTERNO';
   codigo_estudante?: string;
   codigo_solicitacao?: string;
   mensalidades?: { ano_letivo: string; mes: number }[];
+  /** true quando a academia marcou manualmente a cobrança como paga fora da plataforma (status "Success"). */
+  pagamento_externo?: boolean;
+  /** Referência do comprovativo informada pela academia ao marcar o pagamento externo (opcional). */
+  referencia_externa?: string;
   /**
    * Ausente para um item sintético (`status === "pendente"`, ver
    * PagamentoResumo) — não existe nenhuma atividade real para reportar
