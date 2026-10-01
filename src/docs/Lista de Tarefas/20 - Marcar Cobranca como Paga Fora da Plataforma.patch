@@ -1,0 +1,367 @@
+diff --git a/src/components/paineis/CancelarCobrancaPainel.tsx b/src/components/paineis/CancelarCobrancaPainel.tsx
+index fe361f5..d32e934 100644
+--- a/src/components/paineis/CancelarCobrancaPainel.tsx
++++ b/src/components/paineis/CancelarCobrancaPainel.tsx
+@@ -9,7 +9,7 @@ import Alert from "@/components/ui/alert/Alert";
+ import Label from "@/components/form/Label";
+ import BuscarEstudanteSelect from "@/components/form/BuscarEstudanteSelect";
+ import {
+-  CobrancasTable, EmptyState, LoadingState, SubtelaDetalheCobranca, SubtelaPanel,
++  CobrancasTable, EmptyState, LoadingState, SubtelaDetalheCobranca, SubtelaPanel, registrarPagamentoExterno,
+ } from "@/components/paineis/financeiroShared";
+ import type { PagamentoResumo } from "@/types/api";
+ 
+@@ -83,6 +83,10 @@ export default function CancelarCobrancaPainel() {
+               await cancelApi.execute(pagamento.id, motivo);
+               await carregar(codigoEstudante);
+             }}
++            onPagoExternamente={async (pagamento, dados) => {
++              await registrarPagamentoExterno(pagamento, dados);
++              await carregar(codigoEstudante);
++            }}
+           />
+         ) : (
+           <EmptyState title="Nenhuma cobrança encontrada." description="Este estudante ainda não tem nenhuma cobrança gerada." />
+diff --git a/src/components/paineis/PagamentosShared.tsx b/src/components/paineis/PagamentosShared.tsx
+index 587f730..20328ed 100644
+--- a/src/components/paineis/PagamentosShared.tsx
++++ b/src/components/paineis/PagamentosShared.tsx
+@@ -22,7 +22,7 @@ import Icon from "@/components/ui/Icon";
+ import SearchableSelect from "@/components/form/SearchableSelect";
+ import {
+   CobrancasTable, EmptyState, ESTADO_PAGAMENTO_OPCOES, LoadingState, NOME_MES,
+-  PaginacaoSetas, SubtelaDetalheCobranca, SubtelaPanel, capitalizar,
++  PaginacaoSetas, SubtelaDetalheCobranca, SubtelaPanel, capitalizar, registrarPagamentoExterno,
+ } from "@/components/paineis/financeiroShared";
+ import type { FinanceiroOrigemCobranca, PagamentoResumo } from "@/types/api";
+ 
+@@ -74,6 +74,7 @@ export function PagamentosCobrancasSubtela({
+   const [selecionada, setSelecionada] = useState<PagamentoResumo | null>(null);
+   const list = useApi(financeiroService.listarCobrancas);
+   const cancelApi = useApi(financeiroService.cancelarCobranca);
++  const { isAcademia } = useUserType();
+ 
+   const parametros = useMemo(
+     () => ({
+@@ -138,6 +139,10 @@ export function PagamentosCobrancasSubtela({
+               await cancelApi.execute(pagamento.id, motivo);
+               await carregar();
+             }}
++            onPagoExternamente={isAcademia ? async (pagamento, dados) => {
++              await registrarPagamentoExterno(pagamento, dados);
++              await carregar();
++            } : undefined}
+           />
+         ) : (
+           <EmptyState title="Nenhum pagamento encontrado." description="Ajuste os filtros ou aguarde novas cobranças serem criadas." />
+diff --git a/src/components/paineis/financeiroShared.tsx b/src/components/paineis/financeiroShared.tsx
+index bb7ddc8..7b362ec 100644
+--- a/src/components/paineis/financeiroShared.tsx
++++ b/src/components/paineis/financeiroShared.tsx
+@@ -2,7 +2,7 @@
+ import { useEffect, useState, type ChangeEvent } from "react";
+ import Link from "next/link";
+ import { useRouter } from "next/navigation";
+-import { consultasService } from "@/lib/api";
++import { consultasService, financeiroService } from "@/lib/api";
+ import { formatApiError } from "@/lib/api/client";
+ import Button from "@/components/ui/button/Button";
+ import Icon from "@/components/ui/Icon";
+@@ -163,6 +163,31 @@ export const METODO_PAGAMENTO_LABEL: Record<FinanceiroMetodoPagamento, string> =
+   GPO_QR: "QR Code",
+ };
+ 
++/**
++ * Texto do método de uma cobrança na listagem/detalhe. Um pagamento marcado
++ * pela academia como feito fora da plataforma mostra "Fora da plataforma" em
++ * vez do método original (a cobrança pode ter sido gerada como REF/GPO e
++ * paga em numerário) — o backend também devolve metodo_pagamento="EXTERNO"
++ * quando a cobrança nasce já paga (pendência sem cobrança).
++ */
++export function rotuloMetodoCobranca(r: PagamentoResumo): string {
++  if (r.pagamento_externo || r.metodo_pagamento === "EXTERNO") return "Fora da plataforma";
++  return r.metodo_pagamento ? METODO_PAGAMENTO_LABEL[r.metodo_pagamento] : "—";
++}
++
++/**
++ * Quando a academia pode marcar o item como pago fora da plataforma:
++ * - cobrança real ainda aguardando pagamento (status "aguardando_pagamento"); ou
++ * - pendência sintética de UMA mensalidade (status "pendente", sem cobrança
++ *   gerada), que o backend transforma numa cobrança já paga.
++ * Pago, cancelado, expirado e falhado nunca são elegíveis.
++ */
++export function podeMarcarComoPagoExterno(r: PagamentoResumo): boolean {
++  const status = r.status.toLowerCase();
++  if (status === "aguardando_pagamento") return true;
++  return status === "pendente" && r.origem === "mensalidade" && !!r.codigo_estudante && r.mensalidades?.length === 1;
++}
++
+ /**
+  * Nomes reais dos meses em pt-AO, com a primeira letra maiúscula — extraído
+  * de FinanceiroPagamentosPainel (mesesDoAnoLetivo) para ser a única fonte
+@@ -469,6 +494,80 @@ export function PromptDialog({
+   );
+ }
+ 
++export type DadosPagamentoExterno = { observacao?: string; referencia_externa?: string };
++
++/**
++ * Executa a ação "marcar como pago fora da plataforma" para uma linha da
++ * listagem unificada: pendência sintética (status "pendente") usa o endpoint
++ * por mensalidade; cobrança real aguardando pagamento usa o endpoint por
++ * cobrança. Quem chama recarrega a listagem depois.
++ */
++export async function registrarPagamentoExterno(r: PagamentoResumo, dados: DadosPagamentoExterno): Promise<void> {
++  if (r.status.toLowerCase() === "pendente") {
++    const mes = r.mensalidades?.[0];
++    if (!r.codigo_estudante || !mes) throw new Error("Não foi possível identificar o estudante e o mês desta pendência.");
++    await financeiroService.registrarPagamentoExternoMensalidades({ codigo_estudante: r.codigo_estudante, meses: [{ ano_letivo: mes.ano_letivo, mes: mes.mes }], ...dados });
++    return;
++  }
++  await financeiroService.registrarPagamentoExternoCobranca(r.id, dados);
++}
++
++/**
++ * Modal para marcar uma cobrança/pendência como paga FORA da plataforma.
++ * Dois campos opcionais (referência do comprovativo e observação) — os
++ * limites (100 e 500 caracteres) espelham a validação do backend. "Voltar"
++ * fecha sem executar nada; só o botão de ação confirma.
++ */
++export function PagamentoExternoDialog({ valor, onConfirm, onClose }: {
++  valor: string;
++  onConfirm: (dados: DadosPagamentoExterno) => Promise<void>;
++  onClose: () => void;
++}) {
++  const [referencia, setReferencia] = useState("");
++  const [observacao, setObservacao] = useState("");
++  const [loading, setLoading] = useState(false);
++  async function handle() {
++    setLoading(true);
++    try {
++      await onConfirm({ referencia_externa: referencia.trim() || undefined, observacao: observacao.trim() || undefined });
++      onClose();
++    } finally {
++      setLoading(false);
++    }
++  }
++  return (
++    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
++      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
++        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Marcar como pago fora da plataforma</h3>
++        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
++          Confirme apenas se os {valor} já foram recebidos fora do sistema (ex.: numerário, depósito, transferência). O pagamento será registado como confirmado e seguirá o mesmo processo de um pagamento feito na plataforma.
++        </p>
++        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-300 mb-3">
++          Depois de marcado como pago, este item não poderá ser cancelado, anulado nem reativado.
++        </p>
++        <div className="mb-3">
++          <Label>Referência do comprovativo (opcional)</Label>
++          <Input value={referencia} onChange={(e) => setReferencia(e.target.value.slice(0, 100))} placeholder="Ex.: recibo 0123" disabled={loading} />
++        </div>
++        <div className="mb-4">
++          <Label>Observação (opcional)</Label>
++          <Input value={observacao} onChange={(e) => setObservacao(e.target.value.slice(0, 500))} placeholder="Ex.: pago em numerário na secretaria" disabled={loading} />
++        </div>
++        <div className="flex gap-3 justify-end">
++          <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>Voltar</Button>
++          <button
++            onClick={handle}
++            disabled={loading}
++            className="px-4 py-2 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50 transition-colors"
++          >
++            {loading ? "Aguarde..." : "Marcar como pago"}
++          </button>
++        </div>
++      </div>
++    </div>
++  );
++}
++
+ /**
+  * Paginação por botões numerados. Mesmo padrão visual e de comportamento
+  * do componente PaginacaoSetas usado em /estudantes (PageContent.tsx) —
+@@ -590,14 +689,18 @@ export function SubtelasMenu({ opcoes }: { opcoes: { id: string; icon: string; l
+  * (na própria linha, não dentro do detalhe — cancelar é uma ação sobre a
+  * cobrança, não parte de "ler os detalhes dela").
+  */
+-export function CobrancasTable({ rows, onOpen, onCancelar }: {
++export function CobrancasTable({ rows, onOpen, onCancelar, onPagoExternamente }: {
+   rows: PagamentoResumo[];
+   onOpen: (r: PagamentoResumo) => void;
+   onCancelar?: (r: PagamentoResumo, motivo?: string) => Promise<void>;
++  /** Só a academia dona deve receber esta prop: habilita "Pago fora da plataforma" nos itens elegíveis. */
++  onPagoExternamente?: (r: PagamentoResumo, dados: DadosPagamentoExterno) => Promise<void>;
+ }) {
+   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
+   const [erro, setErro] = useState<string | null>(null);
+   const [cobrancaParaCancelar, setCobrancaParaCancelar] = useState<PagamentoResumo | null>(null);
++  const [pagoExternoId, setPagoExternoId] = useState<string | null>(null);
++  const [cobrancaParaPagoExterno, setCobrancaParaPagoExterno] = useState<PagamentoResumo | null>(null);
+   // Uma pendência sintética (status="pendente") nunca é cancelável — não
+   // existe nenhuma cobrança real por trás dela para cancelar (ver
+   // PagamentoResumo em types/api.ts: desde esta tarefa, status="pendente"
+@@ -607,6 +710,7 @@ export function CobrancasTable({ rows, onOpen, onCancelar }: {
+   // botão "Cancelar" aparecer para uma referência REF já expirada na
+   // AppyPay.
+   const cancelavel = (r: PagamentoResumo) =>
++    !r.pagamento_externo &&
+     r.status.toLowerCase() !== "pendente" &&
+     !["success", "pago", "cancelado", "cancelled", "failed", "falhado", "expired", "expirado"].includes(r.status.toLowerCase());
+ 
+@@ -628,10 +732,15 @@ export function CobrancasTable({ rows, onOpen, onCancelar }: {
+                 <TableCell className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{origemLabel[r.origem] ?? r.origem}</TableCell>
+                 <TableCell className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{r.codigo_estudante || "—"}</TableCell>
+                 <TableCell className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{money(r.valor)}</TableCell>
+-                <TableCell className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{r.metodo_pagamento ? METODO_PAGAMENTO_LABEL[r.metodo_pagamento] : "—"}</TableCell>
++                <TableCell className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{rotuloMetodoCobranca(r)}</TableCell>
+                 <TableCell className="px-3 py-2">
+                   <div className="flex flex-wrap items-center gap-1.5">
+                     <StatusBadge status={r.status} />
++                    {r.pagamento_externo && (
++                      <span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
++                        Pago fora da plataforma
++                      </span>
++                    )}
+                     {r.status.toLowerCase() === "pendente" && (
+                       <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                         Sem cobrança gerada
+@@ -643,6 +752,16 @@ export function CobrancasTable({ rows, onOpen, onCancelar }: {
+                 <TableCell className="px-3 py-2">
+                   <div className="flex flex-wrap gap-2">
+                     <Button size="sm" variant="outline" onClick={() => onOpen(r)}>Ver detalhes</Button>
++                    {onPagoExternamente && podeMarcarComoPagoExterno(r) && (
++                      <Button
++                        size="sm"
++                        variant="outline"
++                        disabled={pagoExternoId === r.id}
++                        onClick={() => { setErro(null); setCobrancaParaPagoExterno(r); }}
++                      >
++                        Pago fora da plataforma
++                      </Button>
++                    )}
+                     {onCancelar && cancelavel(r) && (
+                       <Button
+                         size="sm"
+@@ -680,6 +799,22 @@ export function CobrancasTable({ rows, onOpen, onCancelar }: {
+           onClose={() => setCobrancaParaCancelar(null)}
+         />
+       )}
++      {cobrancaParaPagoExterno && onPagoExternamente && (
++        <PagamentoExternoDialog
++          valor={money(cobrancaParaPagoExterno.valor)}
++          onConfirm={async (dados) => {
++            setPagoExternoId(cobrancaParaPagoExterno.id);
++            try {
++              await onPagoExternamente(cobrancaParaPagoExterno, dados);
++            } catch (e) {
++              setErro(formatApiError(e, "Não foi possível marcar o pagamento como feito fora da plataforma."));
++            } finally {
++              setPagoExternoId(null);
++            }
++          }}
++          onClose={() => setCobrancaParaPagoExterno(null)}
++        />
++      )}
+     </div>
+   );
+ }
+@@ -786,6 +921,12 @@ export function SubtelaDetalheCobranca({ cobranca, onVoltar, mostrarDadosEstudan
+           </p>
+         )}
+ 
++        {cobranca.pagamento_externo && (
++          <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
++            Pagamento registado manualmente pela academia como feito fora da plataforma.
++          </p>
++        )}
++
+         {/* Cabeçalho: tipo + valor em destaque + estado — as duas informações mais escaneadas ao abrir o detalhe. */}
+         <div className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-white/[0.05] dark:bg-white/[0.02]">
+           <div>
+@@ -804,7 +945,7 @@ export function SubtelaDetalheCobranca({ cobranca, onVoltar, mostrarDadosEstudan
+ 
+         {/* Grade de metadados — dois campos por linha em telas largas. */}
+         <div className="grid gap-4 sm:grid-cols-2">
+-          <CampoDetalheCobranca label="Método de pagamento" valor={cobranca.metodo_pagamento ? METODO_PAGAMENTO_LABEL[cobranca.metodo_pagamento] : "—"} />
++          <CampoDetalheCobranca label="Método de pagamento" valor={rotuloMetodoCobranca(cobranca)} />
+           <CampoDetalheCobranca label="Atualizado em" valor={dt(cobranca.atualizado_em)} />
+           <CampoDetalheCobranca
+             label="Referência AppyPay"
+@@ -819,6 +960,7 @@ export function SubtelaDetalheCobranca({ cobranca, onVoltar, mostrarDadosEstudan
+             copiado={copiado === "transacao"}
+           />
+           {cobranca.codigo_solicitacao && <CampoDetalheCobranca label="Solicitação de matrícula" valor={cobranca.codigo_solicitacao} />}
++          {cobranca.referencia_externa && <CampoDetalheCobranca label="Referência do comprovativo" valor={cobranca.referencia_externa} />}
+         </div>
+ 
+         {cobranca.descricao && (
+diff --git a/src/lib/api/services.ts b/src/lib/api/services.ts
+index ee1c46b..65f268c 100644
+--- a/src/lib/api/services.ts
++++ b/src/lib/api/services.ts
+@@ -64,6 +64,9 @@ import type {
+   IniciarPagamentoTaxaInscricaoRequest,
+   IniciarPagamentoObrigacaoRequest,
+   QRCodeChargeResult,
++  PagamentoExternoInput,
++  PagamentoExternoMensalidadesInput,
++  PagamentoExternoResultado,
+   ListarCursosResponse,
+   ListarMateriasResponse,
+   AtualizarDadosPessoaisEstudanteRequest,
+@@ -1002,6 +1005,10 @@ export const financeiroService = {
+     return api.get<ListarCobrancasResponse>(`/financeiro/cobrancas/estudante/${encodeURIComponent(codigoEstudante)}${qs.toString() ? `?${qs.toString()}` : ''}`, { token: token || tokenStorage.get() || undefined });
+   },
+   cancelarCobranca: (id: string, motivo?: string, token?: string) => api.post<ChargeResult, { motivo?: string }>(`/financeiro/appypay/cobrancas/${encodeURIComponent(id)}/cancelar`, { motivo }, { token: token || tokenStorage.get() || undefined }),
++  /** Academia: marca uma cobrança real aguardando pagamento como paga fora da plataforma. */
++  registrarPagamentoExternoCobranca: (id: string, data?: PagamentoExternoInput, token?: string) => api.post<PagamentoExternoResultado, PagamentoExternoInput>(`/financeiro/appypay/cobrancas/${encodeURIComponent(id)}/pago-externamente`, data ?? {}, { token: token || tokenStorage.get() || undefined }),
++  /** Academia: marca mensalidades pendentes (sem cobrança gerada) como pagas fora da plataforma. */
++  registrarPagamentoExternoMensalidades: (data: PagamentoExternoMensalidadesInput, token?: string) => api.post<PagamentoExternoResultado, PagamentoExternoMensalidadesInput>('/financeiro/mensalidades/obrigacoes/pago-externamente', data, { token: token || tokenStorage.get() || undefined }),
+ };
+ 
+ // =====================
+diff --git a/src/types/api.ts b/src/types/api.ts
+index aaab3c3..c7d0dc6 100644
+--- a/src/types/api.ts
++++ b/src/types/api.ts
+@@ -1651,6 +1651,23 @@ export interface ChargeResult {
+   response?: Record<string, unknown>;
+ }
+ 
++export interface PagamentoExternoInput {
++  observacao?: string;
++  referencia_externa?: string;
++}
++
++export interface PagamentoExternoMensalidadesInput extends PagamentoExternoInput {
++  codigo_estudante: string;
++  meses: { ano_letivo: string; mes: number }[];
++}
++
++export interface PagamentoExternoResultado extends ChargeResult {
++  /** true quando a mesma cobrança já tinha sido marcada antes (a operação é idempotente). */
++  ja_registrado?: boolean;
++  valor?: number;
++  meses?: { ano_letivo: string; mes: number }[];
++}
++
+ export interface QRCodeChargeResult extends ChargeResult {
+   qrCodeArr?: string;
+ }
+@@ -1673,10 +1690,15 @@ export interface CobrancaResumo {
+   valor: number;
+   moeda?: string;
+   descricao?: string;
+-  metodo_pagamento?: FinanceiroMetodoPagamento;
++  /** "EXTERNO" aparece quando a cobrança foi criada já paga fora da plataforma (pendência sem cobrança marcada como paga). */
++  metodo_pagamento?: FinanceiroMetodoPagamento | 'EXTERNO';
+   codigo_estudante?: string;
+   codigo_solicitacao?: string;
+   mensalidades?: { ano_letivo: string; mes: number }[];
++  /** true quando a academia marcou manualmente a cobrança como paga fora da plataforma (status "Success"). */
++  pagamento_externo?: boolean;
++  /** Referência do comprovativo informada pela academia ao marcar o pagamento externo (opcional). */
++  referencia_externa?: string;
+   /**
+    * Ausente para um item sintético (`status === "pendente"`, ver
+    * PagamentoResumo) — não existe nenhuma atividade real para reportar
