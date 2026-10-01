@@ -22,7 +22,7 @@ import Icon from "@/components/ui/Icon";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import {
   CobrancasTable, EmptyState, ESTADO_PAGAMENTO_OPCOES, LoadingState, NOME_MES,
-  PaginacaoSetas, SubtelaDetalheCobranca, SubtelaPanel, capitalizar,
+  PaginacaoSetas, SubtelaDetalheCobranca, SubtelaPanel, capitalizar, registrarPagamentoExterno,
 } from "@/components/paineis/financeiroShared";
 import type { FinanceiroOrigemCobranca, PagamentoResumo } from "@/types/api";
 
@@ -74,6 +74,7 @@ export function PagamentosCobrancasSubtela({
   const [selecionada, setSelecionada] = useState<PagamentoResumo | null>(null);
   const list = useApi(financeiroService.listarCobrancas);
   const cancelApi = useApi(financeiroService.cancelarCobranca);
+  const { isAcademia } = useUserType();
 
   const parametros = useMemo(
     () => ({
@@ -138,6 +139,10 @@ export function PagamentosCobrancasSubtela({
               await cancelApi.execute(pagamento.id, motivo);
               await carregar();
             }}
+            onPagoExternamente={isAcademia ? async (pagamento, dados) => {
+              await registrarPagamentoExterno(pagamento, dados);
+              await carregar();
+            } : undefined}
           />
         ) : (
           <EmptyState title="Nenhum pagamento encontrado." description="Ajuste os filtros ou aguarde novas cobranças serem criadas." />
