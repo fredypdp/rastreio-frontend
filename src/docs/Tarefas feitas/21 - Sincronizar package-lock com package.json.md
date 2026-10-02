@@ -1,6 +1,6 @@
-# Tarefa 21 — Sincronizar `package-lock.json` com `package.json` (corrigir `npm ci`)
+# (feito) Tarefa 21 — Sincronizar `package-lock.json` com `package.json` (corrigir `npm ci`)
 
-**Estado:** pendente
+**Estado:** feito
 
 **Repositório:** https://github.com/fredypdp/rastreio-frontend
 **Branch base:** main (validado contra o commit `214aeeb`, já com a Tarefa 20 integrada)
@@ -128,3 +128,7 @@ Depois que os Passos 1–2 passarem sem problema:
 - [ ] `npx eslint .` sem problemas novos (esperado: 10 = 2 erros + 8 avisos, todos pré-existentes)
 - [ ] Estado trocado para **feito**, título com `(feito)`, secção **Resultado** adicionada
 - [ ] `.md` e `.patch` movidos para `src/docs/Tarefas feitas/` com o mesmo nome
+
+## Resultado
+
+O patch foi aplicado e o `package-lock.json` foi sincronizado com o `package.json`, sem incluir alterações no `package.json` ou no `yarn.lock` no commit. A execução de `npm ci` foi iniciada, mas não pôde ser concluída neste ambiente por bloqueio de rede no registro npm (respostas HTTP 403 e `EADDRNOTAVAIL`); por isso, as verificações de TypeScript e ESLint não foram repetidas localmente.
