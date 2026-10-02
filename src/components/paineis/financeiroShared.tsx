@@ -176,6 +176,17 @@ export function rotuloMetodoCobranca(r: PagamentoResumo): string {
 }
 
 /**
+ * Substantivo (feminino) usado na pergunta "Essa … foi paga fora da
+ * plataforma?" do detalhe da cobrança. "avulsa" aparece como "Outros" na
+ * interface e esse rótulo não cabe numa frase, então vira "cobrança".
+ */
+export function tipoCobrancaNaFrase(origem: FinanceiroOrigemCobranca): string {
+  if (origem === "matricula") return "matrícula";
+  if (origem === "mensalidade") return "mensalidade";
+  return "cobrança";
+}
+
+/**
  * Quando a academia pode marcar o item como pago fora da plataforma:
  * - cobrança real ainda aguardando pagamento (status "aguardando_pagamento"); ou
  * - pendência sintética de UMA mensalidade (status "pendente", sem cobrança
@@ -687,20 +698,17 @@ export function SubtelasMenu({ opcoes }: { opcoes: { id: string; icon: string; l
  * Tabela única de cobranças, com botão "Ver detalhes" explícito por linha
  * e, quando `onCancelar` é fornecido, um botão "Cancelar" independente
  * (na própria linha, não dentro do detalhe — cancelar é uma ação sobre a
- * cobrança, não parte de "ler os detalhes dela").
+ * cobrança, não parte de "ler os detalhes dela"). Já "marcar como paga fora
+ * da plataforma" fica no detalhe (SubtelaDetalheCobranca), não na linha.
  */
-export function CobrancasTable({ rows, onOpen, onCancelar, onPagoExternamente }: {
+export function CobrancasTable({ rows, onOpen, onCancelar }: {
   rows: PagamentoResumo[];
   onOpen: (r: PagamentoResumo) => void;
   onCancelar?: (r: PagamentoResumo, motivo?: string) => Promise<void>;
-  /** Só a academia dona deve receber esta prop: habilita "Pago fora da plataforma" nos itens elegíveis. */
-  onPagoExternamente?: (r: PagamentoResumo, dados: DadosPagamentoExterno) => Promise<void>;
 }) {
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [cobrancaParaCancelar, setCobrancaParaCancelar] = useState<PagamentoResumo | null>(null);
-  const [pagoExternoId, setPagoExternoId] = useState<string | null>(null);
-  const [cobrancaParaPagoExterno, setCobrancaParaPagoExterno] = useState<PagamentoResumo | null>(null);
   // Uma pendência sintética (status="pendente") nunca é cancelável — não
   // existe nenhuma cobrança real por trás dela para cancelar (ver
   // PagamentoResumo em types/api.ts: desde esta tarefa, status="pendente"
@@ -752,16 +760,6 @@ export function CobrancasTable({ rows, onOpen, onCancelar, onPagoExternamente }:
                 <TableCell className="px-3 py-2">
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => onOpen(r)}>Ver detalhes</Button>
-                    {onPagoExternamente && podeMarcarComoPagoExterno(r) && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={pagoExternoId === r.id}
-                        onClick={() => { setErro(null); setCobrancaParaPagoExterno(r); }}
-                      >
-                        Pago fora da plataforma
-                      </Button>
-                    )}
                     {onCancelar && cancelavel(r) && (
                       <Button
                         size="sm"
@@ -797,22 +795,6 @@ export function CobrancasTable({ rows, onOpen, onCancelar, onPagoExternamente }:
             }
           }}
           onClose={() => setCobrancaParaCancelar(null)}
-        />
-      )}
-      {cobrancaParaPagoExterno && onPagoExternamente && (
-        <PagamentoExternoDialog
-          valor={money(cobrancaParaPagoExterno.valor)}
-          onConfirm={async (dados) => {
-            setPagoExternoId(cobrancaParaPagoExterno.id);
-            try {
-              await onPagoExternamente(cobrancaParaPagoExterno, dados);
-            } catch (e) {
-              setErro(formatApiError(e, "Não foi possível marcar o pagamento como feito fora da plataforma."));
-            } finally {
-              setPagoExternoId(null);
-            }
-          }}
-          onClose={() => setCobrancaParaPagoExterno(null)}
         />
       )}
     </div>
@@ -876,21 +858,31 @@ function CampoDetalheCobranca({ label, valor, onCopiar, copiado }: {
  * - Não tem ação de cancelar: cancelar é uma ação sobre a cobrança na
  *   listagem (CobrancasTable, botão "Cancelar" na própria linha), não faz
  *   parte de "ler os detalhes" dela.
+ * - Quando `onPagoExternamente` é fornecido (só a academia dona) e o item
+ *   ainda não foi pago (podeMarcarComoPagoExterno), mostra no fim da tela a
+ *   pergunta "Essa … foi paga fora da plataforma?" e o botão que abre o modal
+ *   de confirmação (PagamentoExternoDialog). Quem chama recarrega os dados e
+ *   fecha o detalhe depois do sucesso.
  * - Quando status="pendente" (pendência sintética, ver PagamentoResumo em
  *   types/api.ts), vários campos que só existem para uma cobrança real
  *   (referência AppyPay, transação, atualizado em) ficam "—": não existe
  *   nenhuma cobrança de verdade por trás desse item, e um aviso explica
  *   isso no lugar da ação de cancelar.
  */
-export function SubtelaDetalheCobranca({ cobranca, onVoltar, mostrarDadosEstudante = false }: {
+export function SubtelaDetalheCobranca({ cobranca, onVoltar, mostrarDadosEstudante = false, onPagoExternamente }: {
   cobranca: PagamentoResumo;
   onVoltar: () => void;
   mostrarDadosEstudante?: boolean;
+  /** Só a academia dona deve receber esta prop: habilita "marcar como paga fora da plataforma" neste detalhe. */
+  onPagoExternamente?: (r: PagamentoResumo, dados: DadosPagamentoExterno) => Promise<void>;
 }) {
   const [estudante, setEstudante] = useState<EstudanteDetalhado | null>(null);
   const [erroEstudante, setErroEstudante] = useState<string | null>(null);
   const [carregandoEstudante, setCarregandoEstudante] = useState(false);
   const [copiado, setCopiado] = useState<"referencia" | "transacao" | null>(null);
+  const [dialogoPagoExterno, setDialogoPagoExterno] = useState(false);
+  const [marcandoPago, setMarcandoPago] = useState(false);
+  const [erroPagoExterno, setErroPagoExterno] = useState<string | null>(null);
 
   const codigoEstudante = cobranca.codigo_estudante;
 
@@ -992,7 +984,45 @@ export function SubtelaDetalheCobranca({ cobranca, onVoltar, mostrarDadosEstudan
             )}
           </div>
         )}
+
+        {onPagoExternamente && podeMarcarComoPagoExterno(cobranca) && (
+          <div className="rounded-lg border border-gray-100 p-4 dark:border-white/[0.05]">
+            <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+              Essa {tipoCobrancaNaFrase(cobranca.origem)} foi paga fora da plataforma?
+            </p>
+            <div className="mt-3">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={marcandoPago}
+                onClick={() => { setErroPagoExterno(null); setDialogoPagoExterno(true); }}
+              >
+                Clique aqui para definir como paga
+              </Button>
+            </div>
+            {erroPagoExterno && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{erroPagoExterno}</p>}
+          </div>
+        )}
       </div>
+      {dialogoPagoExterno && onPagoExternamente && (
+        <PagamentoExternoDialog
+          valor={money(cobranca.valor)}
+          onConfirm={async (dados) => {
+            setMarcandoPago(true);
+            // Sem `finally` de propósito: o catch já engole o erro, então a linha
+            // seguinte sempre roda; com `finally` a regra set-state-in-effect do
+            // useEffect acima deixa de ser avaliada neste componente (medido: o
+            // eslint-disable dela vira "diretiva sem uso" e o lint ganha 1 aviso).
+            try {
+              await onPagoExternamente(cobranca, dados);
+            } catch (e) {
+              setErroPagoExterno(formatApiError(e, "Não foi possível marcar o pagamento como feito fora da plataforma."));
+            }
+            setMarcandoPago(false);
+          }}
+          onClose={() => setDialogoPagoExterno(false)}
+        />
+      )}
     </SubtelaPanel>
   );
 }
