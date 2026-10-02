@@ -50,7 +50,17 @@ export default function CancelarCobrancaPainel() {
   if (isFpp) return <UnauthorizedAccess requiredTypes={["Academia"]} message="A gestão de cobranças pertence a cada academia — indisponível para o administrador FPP." />;
 
   if (selecionada) {
-    return <SubtelaDetalheCobranca cobranca={selecionada} onVoltar={() => setSelecionada(null)} mostrarDadosEstudante={false} />;
+    return (
+      <SubtelaDetalheCobranca
+        cobranca={selecionada}
+        onVoltar={() => setSelecionada(null)}
+        mostrarDadosEstudante={false}
+        onPagoExternamente={async (pagamento, dados) => {
+          await registrarPagamentoExterno(pagamento, dados);
+          await carregar(codigoEstudante); // recarrega a lista e fecha o detalhe
+        }}
+      />
+    );
   }
 
   const pagamentos = cobrancas.data?.pagamentos ?? [];
@@ -81,10 +91,6 @@ export default function CancelarCobrancaPainel() {
             onOpen={setSelecionada}
             onCancelar={async (pagamento, motivo) => {
               await cancelApi.execute(pagamento.id, motivo);
-              await carregar(codigoEstudante);
-            }}
-            onPagoExternamente={async (pagamento, dados) => {
-              await registrarPagamentoExterno(pagamento, dados);
               await carregar(codigoEstudante);
             }}
           />
