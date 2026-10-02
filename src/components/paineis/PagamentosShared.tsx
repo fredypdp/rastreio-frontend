@@ -101,7 +101,18 @@ export function PagamentosCobrancasSubtela({
   }, [carregar]);
 
   if (selecionada) {
-    return <SubtelaDetalheCobranca cobranca={selecionada} onVoltar={() => setSelecionada(null)} mostrarDadosEstudante />;
+    return (
+      <SubtelaDetalheCobranca
+        cobranca={selecionada}
+        onVoltar={() => setSelecionada(null)}
+        mostrarDadosEstudante
+        onPagoExternamente={isAcademia ? async (pagamento, dados) => {
+          await registrarPagamentoExterno(pagamento, dados);
+          await carregar();
+          setSelecionada(null);
+        } : undefined}
+      />
+    );
   }
 
   const totalGeral = list.data?.total_geral ?? 0;
@@ -139,10 +150,6 @@ export function PagamentosCobrancasSubtela({
               await cancelApi.execute(pagamento.id, motivo);
               await carregar();
             }}
-            onPagoExternamente={isAcademia ? async (pagamento, dados) => {
-              await registrarPagamentoExterno(pagamento, dados);
-              await carregar();
-            } : undefined}
           />
         ) : (
           <EmptyState title="Nenhum pagamento encontrado." description="Ajuste os filtros ou aguarde novas cobranças serem criadas." />
