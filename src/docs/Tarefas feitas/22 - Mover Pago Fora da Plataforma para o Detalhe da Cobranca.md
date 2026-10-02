@@ -1,6 +1,6 @@
-# Tarefa 22 — Mover "Pago fora da plataforma" para o Detalhe da cobrança
+# (feito) Tarefa 22 — Mover "Pago fora da plataforma" para o Detalhe da cobrança
 
-**Estado:** pendente
+**Estado:** feito
 
 **Repositório:** https://github.com/fredypdp/rastreio-frontend
 **Branch base:** main (validado contra o commit `214aeeb`, já com a Tarefa 20 integrada)
@@ -130,3 +130,7 @@ Depois que os Passos 1–2 passarem sem problema:
 - [ ] Após confirmar no modal com sucesso, o detalhe fecha e a lista recarregada mostra o selo "Pago fora da plataforma"; em erro, a mensagem aparece abaixo do botão
 - [ ] Estado trocado para **feito**, título com `(feito)`, secção **Resultado** adicionada
 - [ ] `.md` e `.patch` movidos para `src/docs/Tarefas feitas/` com o mesmo nome
+
+## Resultado
+
+O patch foi aplicado sem alterações: a ação de marcar como paga fora da plataforma foi movida da tabela para o detalhe da cobrança, com recarga da lista e fechamento do detalhe após o sucesso. As verificações de TypeScript e ESLint não foram concluídas neste ambiente porque o `npm ci` falhou por rede ao baixar dependências (`403` e `EADDRNOTAVAIL`).
