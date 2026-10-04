@@ -1418,7 +1418,6 @@ export default function NotasAcademia() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Gestão de Notas</h2>
             <Link href="/notas/lancar" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
               <Icon icon="mdi:upload" width={16} /> Lançar Notas
             </Link>

@@ -465,6 +465,30 @@ export interface RegistrarFaltasRequest {
   sumario_id?: string;
 }
 
+/** Configuração de faltas da academia (GET/PUT /academia/faltas/configuracao). */
+export interface ConfiguracaoFaltas {
+  codigo_academia: string;
+  /** null = a academia não definiu limite de faltas por período. */
+  limite_faltas_por_periodo: number | null;
+  /** Só pode ser true quando há limite definido. */
+  reprovacao_por_faltas: boolean;
+  atualizado_em?: string;
+}
+
+export interface DefinirConfiguracaoFaltasRequest {
+  limite_faltas_por_periodo: number | null;
+  reprovacao_por_faltas: boolean;
+}
+
+export interface ConfiguracaoFaltasResponse {
+  data: ConfiguracaoFaltas;
+}
+
+export interface DefinirConfiguracaoFaltasResponse {
+  message: string;
+  data: ConfiguracaoFaltas;
+}
+
 export interface CorrigirFaltaRequest {
   quantidade: number;
   observacao?: string;
@@ -1103,12 +1127,16 @@ export interface CriarTurmaRequest {
   nivel: string;
   turno: Turno;
   curso_id?: string;
+  /** Só para grupos do 4.º ano médio. Omitido = sem tema. */
+  tema_trabalho?: string;
 }
 
 export interface AtualizarTurmaRequest {
   nivel?: string;
   turno?: string;
   curso_id?: string;
+  /** Só para grupos do 4.º ano médio. Omitido = não altera; string vazia = remove o tema. */
+  tema_trabalho?: string;
 }
 
 export interface AdicionarEstudanteTurmaRequest {
@@ -1423,6 +1451,10 @@ export interface Turma {
   nivel: string;
   curso_id?: string;
   turno: Turno;
+  /** 'grupo' no 4.º ano médio (sem turmas, só grupos); 'turma' nos demais níveis. */
+  tipo_agrupamento?: 'turma' | 'grupo';
+  /** Tema do trabalho do grupo (apenas no 4.º ano médio). */
+  tema_trabalho?: string;
   estudantes: string[];
   /**
    * Histórico de estudantes por ano letivo.

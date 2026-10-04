@@ -1141,9 +1141,11 @@ export default function FaltasAcademia() {
       {/* Header */}
       <div>
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Gestão de Faltas</h2>
           <Link href="/faltas/lancar" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
             <Icon icon="mdi:upload" width={16} /> Lançar Faltas
+          </Link>
+          <Link href="/faltas/configuracoes" className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+            <Icon icon="mdi:cog-outline" width={16} /> Configurações
           </Link>
         </div>
         {turmas.length > 0 && (

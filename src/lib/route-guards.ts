@@ -300,6 +300,11 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
     redirectIfUnauthorized: '/faltas',
   },
   {
+    path: '/faltas/configuracoes',
+    allowedTypes: ['academia'],
+    redirectIfUnauthorized: '/faltas',
+  },
+  {
     path: '/notas',
     allowedTypes: 'authenticated',
     redirectIfUnauthorized: '/login',

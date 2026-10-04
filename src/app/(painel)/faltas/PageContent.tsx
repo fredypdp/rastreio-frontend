@@ -22,7 +22,7 @@ export default function FaltasPageContent() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Faltas" />
+      <PageBreadcrumb pageTitle={isAcademia ? "Gestão de Faltas" : "Faltas"} />
       
       {isEstudante && <FaltasEstudante />}
       {isAcademia && <FaltasAcademia />}

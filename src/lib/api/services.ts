@@ -20,6 +20,9 @@ import type {
   EditarRegraAvaliacaoFinalRequest,
   ListarRegrasAvaliacaoFinalResponse,
   RegistrarFaltasRequest,
+  ConfiguracaoFaltasResponse,
+  DefinirConfiguracaoFaltasRequest,
+  DefinirConfiguracaoFaltasResponse,
   CorrigirFaltaRequest,
   CorrigirFaltaResponse,
   CriarAdminRequest,
@@ -1370,6 +1373,18 @@ export const academiaService = {
   corrigirFalta: (id: string, data: CorrigirFaltaRequest, token?: string) =>
     api.patch<CorrigirFaltaResponse, CorrigirFaltaRequest>(
       `/academia/faltas-aluno/${id}`,
+      data,
+      { token: token || tokenStorage.get() || undefined }
+    ),
+
+  /** GET /academia/faltas/configuracao — limite de faltas e reprovação por faltas da academia. */
+  obterConfiguracaoFaltas: (token?: string) =>
+    api.get<ConfiguracaoFaltasResponse>('/academia/faltas/configuracao', { token: token || tokenStorage.get() || undefined }),
+
+  /** PUT /academia/faltas/configuracao — substitui a configuração (limite null = sem limite). */
+  definirConfiguracaoFaltas: (data: DefinirConfiguracaoFaltasRequest, token?: string) =>
+    api.put<DefinirConfiguracaoFaltasResponse, DefinirConfiguracaoFaltasRequest>(
+      '/academia/faltas/configuracao',
       data,
       { token: token || tokenStorage.get() || undefined }
     ),

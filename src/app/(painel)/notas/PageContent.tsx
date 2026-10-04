@@ -22,7 +22,7 @@ export default function NotasPageContent() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Notas" />
+      <PageBreadcrumb pageTitle={isAcademia ? "Gestão de Notas" : "Notas"} />
       
       {isEstudante && <NotasEstudante />}
       {isAcademia && <NotasAcademia />}
