@@ -6,7 +6,8 @@ import type { ConfiguracaoFaltas as ConfiguracaoFaltasDados } from "@/types/api"
 import Alert from "@/components/ui/alert/Alert";
 import Button from "@/components/ui/button/Button";
 import Checkbox from "@/components/form/input/Checkbox";
-import { PERIODO_EXPLICADO, textosReprovacaoPorFaltas, type TipoEnsinoAcademia } from "@/lib/faltasConfiguracaoTextos";
+import { textosReprovacaoPorFaltas } from "@/lib/faltasConfiguracaoTextos";
+import { periodoComTipo, type TipoEnsinoAcademia } from "@/lib/periodo";
 
 const LIMITE_MIN = 1;
 const LIMITE_MAX = 500;
@@ -80,16 +81,16 @@ export default function ConfiguracaoFaltas({ tipoEnsino }: { tipoEnsino: TipoEns
       )}
 
       <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Limite de faltas por {PERIODO_EXPLICADO}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Limite de faltas por {periodoComTipo(tipoEnsino)}</h3>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Número máximo de faltas que um estudante pode ter numa matéria, em cada período. O limite é ultrapassado quando o total de faltas é maior do que este número.
+          Número máximo de faltas que um estudante pode ter numa matéria, em cada {periodoComTipo(tipoEnsino)}. O limite é ultrapassado quando o total de faltas é maior do que este número.
         </p>
         <div className="mt-4 space-y-4">
           <Checkbox id="usar-limite-faltas" checked={usarLimite} onChange={alternarLimite} label="Definir limite de faltas" />
           {usarLimite && (
             <div>
               <label htmlFor="limite-faltas" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Máximo de faltas por matéria e período *
+                Máximo de faltas por matéria e {periodoComTipo(tipoEnsino)} *
               </label>
               <input
                 id="limite-faltas"

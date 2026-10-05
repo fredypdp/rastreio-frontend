@@ -7,7 +7,7 @@ import { useUserCookie } from "@/hooks/useUserCookie";
 import { useUserType } from "@/hooks/useRoutePermission";
 import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
 import ConfiguracaoFaltas from "@/components/faltas/ConfiguracaoFaltas";
-import { tipoEnsinoDaAcademia } from "@/lib/faltasConfiguracaoTextos";
+import { tipoEnsinoDaAcademia } from "@/lib/periodo";
 
 export default function PageContent() {
   const { user, loading } = useUserCookie();

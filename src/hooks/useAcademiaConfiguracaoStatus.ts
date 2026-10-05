@@ -57,7 +57,7 @@ function buildSteps(status: ConfiguracaoStatusResponse | null, nivel?: string, n
     base("ano-letivo", "Definir ano letivo", "Ative o primeiro ciclo letivo da instituição.", "/configuracoes/ano-letivo", anoLetivoCompleted, anoLetivoCompleted ? "Ano letivo ativo encontrado." : "Nenhum ano letivo ativo encontrado."),
   ];
   if (needsCourses) steps.push(base("cursos", "Criar cursos", "Cadastre os cursos da sua instituição", "/gerenciamento/cursos", cursosTotalAtivos > 0, `${cursosTotalAtivos} curso(s) ativo(s).`));
-  steps.push(base("materias", "Criar matérias disciplinares", "Garanta matérias disciplinares para cada ano acadêmico ofertado.", "/gerenciamento/materias-disciplinares", materiasCompleted, "Cobertura exigida para cada ano ofertado e, no superior, para cada período do curso."));
+  steps.push(base("materias", "Criar matérias disciplinares", "Garanta matérias disciplinares para cada ano acadêmico ofertado.", "/gerenciamento/materias-disciplinares", materiasCompleted, "Cobertura exigida para cada ano ofertado e, no superior, para cada período (semestre) do curso."));
   if (nivel === "superior") {
     const categoriasCompleted = Boolean(s?.["categorias-superiores"]?.completed);
     const regrasTotalAtivas = s?.["regras-superiores"]?.total_ativas ?? 0;

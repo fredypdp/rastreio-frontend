@@ -353,7 +353,7 @@ export default function CursosPainel() {
               <div className="rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm text-teal-800 dark:border-teal-900/50 dark:bg-teal-900/10 dark:text-teal-200">
                 <p className="font-semibold">Anos acadêmicos do ensino superior</p>
                 <p className="mt-1">
-                  A organização do curso superior é feita por semestres/períodos, e os anos superiores são calculados a partir deles. Nesta tela não é possível adicionar ou remover anos, períodos ou semestres diretamente. Confira abaixo os períodos cadastrados e altere aqui apenas os dados cadastrais permitidos do curso.
+                  A organização do curso superior é feita por períodos (semestres), e os anos superiores são calculados a partir deles. Nesta tela não é possível adicionar ou remover anos ou períodos (semestres) diretamente. Confira abaixo os períodos (semestres) cadastrados e altere aqui apenas os dados cadastrais permitidos do curso.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1">
                   {(editingCurso.periodos ?? []).map(periodo => (

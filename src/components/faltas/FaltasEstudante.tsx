@@ -5,6 +5,7 @@ import { consultasService, tokenStorage, useApi } from "@/lib/api";
 import type { ApiDate, MeuPerfilResponse, Falta, Turma } from "@/types/api";
 import Icon from "@/components/ui/Icon";
 import { getCookie } from "@/lib/utils/cookies";
+import { periodoComTipo, tipoEnsinoDoNivelTurma } from "@/lib/periodo";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -496,7 +497,7 @@ export default function FaltasEstudante() {
         <Breadcrumb crumbs={crumbs} />
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Turma {layer.turma.codigo_turma}</h2>
-          <p className="text-sm text-gray-500 mt-1">{labelNivel(layer.turma.nivel)} · Selecione o período</p>
+          <p className="text-sm text-gray-500 mt-1">{labelNivel(layer.turma.nivel)} · Selecione o {periodoComTipo(tipoEnsinoDoNivelTurma(layer.turma.nivel))}</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
           {periodosDisponiveis.map(p => (

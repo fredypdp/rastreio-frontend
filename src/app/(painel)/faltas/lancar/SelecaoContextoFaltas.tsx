@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { academiaService, consultasService, tokenStorage } from '@/lib/api';
 import { useUserCookie } from '@/hooks/useUserCookie';
+import { periodoComTipo, tipoEnsinoDaAcademia } from '@/lib/periodo';
 import SearchableSelect from '@/components/form/SearchableSelect';
 import Label from '@/components/form/Label';
 import Button from '@/components/ui/button/Button';
@@ -48,6 +49,7 @@ export default function SelecaoContextoFaltas({ onModeloGerado }: SelecaoContext
   const [loadingSumarios, setLoadingSumarios] = useState(false);
 
   const isSuperior = user?.academia?.nivel === 'superior';
+  const tipoEnsino = tipoEnsinoDaAcademia(user?.academia?.nivel);
   const nivelEscolar = user?.academia?.nivel_escolar ?? 'fundamental';
   const niveisDisponiveis = useMemo<NivelBulk[]>(() => {
     if (isSuperior) return ['superior'];
@@ -217,7 +219,7 @@ export default function SelecaoContextoFaltas({ onModeloGerado }: SelecaoContext
         <div>
           <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">1. Descarregar o modelo</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            Escolha o nível, curso e ano acadêmico até chegar à turma. Em seguida, escolha o período e a matéria — o
+            Escolha o nível, curso e ano acadêmico até chegar à turma. Em seguida, escolha o {periodoComTipo(tipoEnsino)} e a matéria — o
             modelo já vem preparado com os estudantes dessa turma, ordenados pelo nome.
           </p>
         </div>
@@ -291,12 +293,12 @@ export default function SelecaoContextoFaltas({ onModeloGerado }: SelecaoContext
 
         {codigoTurma && (
           <div>
-            <Label>Período *</Label>
+            <Label>{periodoComTipo(tipoEnsino, { maiuscula: true })} *</Label>
             <SearchableSelect
               value={periodo}
               options={periodos}
               onChange={(v) => setPeriodo(v || '')}
-              placeholder="Selecione o período"
+              placeholder={`Selecione o ${periodoComTipo(tipoEnsino)}`}
               isClearable={false}
             />
           </div>
@@ -328,7 +330,7 @@ export default function SelecaoContextoFaltas({ onModeloGerado }: SelecaoContext
                   ? 'A carregar sumários...'
                   : sumarios.length
                     ? 'Nenhum (sem vínculo)'
-                    : 'Nenhum sumário cadastrado para esta matéria/período/ano'
+                    : `Nenhum sumário cadastrado para esta matéria/${periodoComTipo(tipoEnsino)}/ano`
               }
               isClearable
               isDisabled={loadingSumarios || sumarios.length === 0}

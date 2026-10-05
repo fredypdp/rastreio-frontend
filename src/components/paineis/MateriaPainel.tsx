@@ -197,7 +197,7 @@ function MateriaCard({ materia, getCursoNome, onEdit, onToggleStatus, onDelete, 
               {materia.type === "superior" && (materia.periodo ? (
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">{formatarPeriodoLabel(materia.periodo)}</span>
               ) : (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Período não definido</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Período (semestre) não definido</span>
               ))}
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${materia.status === "ativo" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"}`}>
                 {materia.status === "ativo" ? "Ativa" : "Inativa"}
@@ -630,7 +630,7 @@ export default function MateriaPainel() {
                     />
                   </div>
                 )}
-                {formData.type === "superior" && <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"><p className="text-xs text-amber-700 dark:text-amber-300">⚠️ Matérias superiores exigem o período no cadastro; ele deve pertencer aos períodos do curso e não é editado depois.</p></div>}
+                {formData.type === "superior" && <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"><p className="text-xs text-amber-700 dark:text-amber-300">⚠️ Matérias superiores exigem o período (semestre) no cadastro; ele deve pertencer aos períodos (semestres) do curso e não é editado depois.</p></div>}
                 {formData.type !== "fundamental" && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Curso *</label>
@@ -659,12 +659,12 @@ export default function MateriaPainel() {
                 </div>
                 {!editingMateria && formData.type === "superior" && formData.curso_id && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Período/semestre *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Período (semestre) *</label>
                     <SearchableSelect
                       value={formData.periodo ?? ""}
                       onChange={(v) => setFormData({ ...formData, periodo: v || undefined })}
                       isClearable={false}
-                      options={[{ value: "", label: "Selecione o período" }, ...getPeriodosDisponiveis().map(p => ({ value: p, label: formatarPeriodoLabel(p) }))]}
+                      options={[{ value: "", label: "Selecione o período (semestre)" }, ...getPeriodosDisponiveis().map(p => ({ value: p, label: formatarPeriodoLabel(p) }))]}
                     />
                   </div>
                 )}
