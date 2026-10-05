@@ -6,13 +6,14 @@ import type { ConfiguracaoFaltas as ConfiguracaoFaltasDados } from "@/types/api"
 import Alert from "@/components/ui/alert/Alert";
 import Button from "@/components/ui/button/Button";
 import Checkbox from "@/components/form/input/Checkbox";
+import { PERIODO_EXPLICADO, textosReprovacaoPorFaltas, type TipoEnsinoAcademia } from "@/lib/faltasConfiguracaoTextos";
 
 const LIMITE_MIN = 1;
 const LIMITE_MAX = 500;
 
 type Salvo = { limite: number | null; reprovacao: boolean };
 
-export default function ConfiguracaoFaltas() {
+export default function ConfiguracaoFaltas({ tipoEnsino }: { tipoEnsino: TipoEnsinoAcademia }) {
   const { execute: carregar, loading: carregando } = useApi(academiaService.obterConfiguracaoFaltas);
   const { execute: salvar, loading: salvando } = useApi(academiaService.definirConfiguracaoFaltas);
 
@@ -70,6 +71,8 @@ export default function ConfiguracaoFaltas() {
     );
   }
 
+  const textosReprovacao = textosReprovacaoPorFaltas(tipoEnsino);
+
   return (
     <div className="space-y-6">
       {alerta && (
@@ -77,9 +80,9 @@ export default function ConfiguracaoFaltas() {
       )}
 
       <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Limite de faltas por período</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Limite de faltas por {PERIODO_EXPLICADO}</h3>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Número máximo de faltas que um estudante pode ter numa matéria, em cada período (trimestre ou semestre). O limite é ultrapassado quando o total de faltas é maior do que este número.
+          Número máximo de faltas que um estudante pode ter numa matéria, em cada período. O limite é ultrapassado quando o total de faltas é maior do que este número.
         </p>
         <div className="mt-4 space-y-4">
           <Checkbox id="usar-limite-faltas" checked={usarLimite} onChange={alternarLimite} label="Definir limite de faltas" />
@@ -110,16 +113,15 @@ export default function ConfiguracaoFaltas() {
 
       <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Reprovação por faltas</h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Quando o estudante ultrapassa o limite numa matéria e período, a avaliação final automática lê como 0 (zero):
-        </p>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-300">
-          <li>no ensino escolar, a nota do professor dessa matéria nesse período;</li>
-          <li>no ensino superior, o exame final dessa matéria (a categoria de nota com o código <code>exame_final</code>).</li>
-        </ul>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          As outras notas não são afetadas. A regra é aplicada no momento em que a avaliação final é calculada; avaliações já calculadas não são alteradas.
-        </p>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{textosReprovacao.resumo}</p>
+        <details className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          <summary className="cursor-pointer select-none font-medium text-brand-600 dark:text-brand-400">Saber mais</summary>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {textosReprovacao.detalhes.map((detalhe) => (
+              <li key={detalhe}>{detalhe}</li>
+            ))}
+          </ul>
+        </details>
         <div className="mt-4">
           <Checkbox
             id="reprovacao-por-faltas"

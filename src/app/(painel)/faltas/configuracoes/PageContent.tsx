@@ -7,6 +7,7 @@ import { useUserCookie } from "@/hooks/useUserCookie";
 import { useUserType } from "@/hooks/useRoutePermission";
 import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
 import ConfiguracaoFaltas from "@/components/faltas/ConfiguracaoFaltas";
+import { tipoEnsinoDaAcademia } from "@/lib/faltasConfiguracaoTextos";
 
 export default function PageContent() {
   const { user, loading } = useUserCookie();
@@ -38,7 +39,7 @@ export default function PageContent() {
           </Link>
         </div>
 
-        <ConfiguracaoFaltas />
+        <ConfiguracaoFaltas tipoEnsino={tipoEnsinoDaAcademia(user.academia?.nivel)} />
       </div>
     </div>
   );
