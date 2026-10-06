@@ -1,6 +1,6 @@
 # Tarefa 27 — "Período" relativo ao tipo de academia nos textos (frontend)
 
-**Estado:** pendente
+**Estado:** feito
 **Repositório:** https://github.com/fredypdp/rastreio-frontend
 **Gerado sobre:** `main` @ `7fa995f`
 **Entrega:** apenas os arquivos novos ou atualizados, na pasta `rastreio-frontend/`, com os mesmos caminhos do repositório

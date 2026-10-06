@@ -22,6 +22,9 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
+// A ordem deste array é a ordem exibida na barra lateral. Cada tipo de usuário
+// vê um subconjunto (filtrado em `filteredNavItems`), sempre nesta mesma ordem
+// relativa — por isso uma única sequência serve admin, academia e estudante.
 const navItems: NavItem[] = [
   {
     icon: <Icon width="24px" icon="flowbite:grid-outline" />,
@@ -42,6 +45,11 @@ const navItems: NavItem[] = [
       { name: "Gestão de Cobranças", path: "/financas/gestao-cobrancas" },
       { name: "Pagamentos", path: "/financas/pagamentos" },
     ],
+  },
+  {
+    icon: <Icon width="24px" icon="mdi:cash-clock" />,
+    name: "Pagamentos",
+    path: "/pagamentos",
   },
   {
     name: "Gerenciamento",
@@ -72,17 +80,20 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    name: "Notas & Faltas",
+    icon: <Icon width="24px" icon="vaadin:records" />,
+    subItems: [
+      { name: "Notas",  path: "/notas"  },
+      { name: "Faltas", path: "/faltas" },
+    ],
+  },
+  {
     icon: <Icon width="24px" icon="mdi:file-document-edit-outline" />,
     name: "Solicitações",
     path: "/solicitacoes",
   },
   {
-    icon: <Icon width="24px" icon="mdi:cash-clock" />,
-    name: "Pagamentos",
-    path: "/pagamentos",
-  },
-  {
-    name: "Serviços Extras",
+    name: "Serviços",
     icon: <Icon width="24px" icon="mdi:package-variant-closed-plus" />,
     subItems: [
       { name: "Catálogo", path: "/servicos-extras/catalogo" },
@@ -93,12 +104,9 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    name: "Notas & Faltas",
-    icon: <Icon width="24px" icon="vaadin:records" />,
-    subItems: [
-      { name: "Notas",  path: "/notas"  },
-      { name: "Faltas", path: "/faltas" },
-    ],
+    icon: <Icon width="24px" icon="mdi:message-text-outline" />,
+    name: "Comunicação",
+    path: "/comunicacao",
   },
   {
     name: "Avaliações",
@@ -139,11 +147,6 @@ const navItems: NavItem[] = [
     icon: <Icon width="24px" icon="mdi:flask-outline" />,
     name: "Testes",
     path: "/testes",
-  },
-  {
-    icon: <Icon width="24px" icon="mdi:message-text-outline" />,
-    name: "Comunicação",
-    path: "/comunicacao",
   },
 ];
 
@@ -351,9 +354,9 @@ export default function AppSidebar() {
           };
         }
 
-        // Serviços Extras: catálogo/minhas inscrições são do estudante;
+        // Serviços: catálogo/minhas inscrições são do estudante;
         // gerenciar serviços/inscrições são da academia.
-        if (item.name === "Serviços Extras" && item.subItems) {
+        if (item.name === "Serviços" && item.subItems) {
           const estudantePaths = ["/servicos-extras/catalogo", "/servicos-extras/minhas-inscricoes"];
           const academiaPaths = ["/servicos-extras/gerenciar-servicos", "/servicos-extras/inscricoes", "/servicos-extras/categorias-servico"];
           return {
@@ -367,7 +370,10 @@ export default function AppSidebar() {
         }
 
         return item;
-      });
+      })
+      // Grupo sem nenhum subitem visível para este tipo de usuário não aparece
+      // (evita um botão que abre vazio, ex.: "Serviços" para admin).
+      .filter((item) => !item.subItems || item.subItems.length > 0);
   }, [user, loadingUser]);
 
   // Derive which submenu should be open based on current pathname
