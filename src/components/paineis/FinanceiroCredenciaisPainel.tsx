@@ -9,6 +9,8 @@ import type {
   CriarFinanceiroCredencialRequest,
   FinanceiroContextoTipo,
   FinanceiroCredencial,
+  FinanceiroProvedor,
+  FinanceiroProvedorDoContexto,
   ListarFinanceiroCredenciaisParams,
 } from "@/types/api";
 import UnauthorizedAccess from "@/components/guards/UnauthorizedAccess";
@@ -20,43 +22,34 @@ import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { ConfirmDialog } from "./financeiroShared";
+import { ConfirmDialog, METODO_PAGAMENTO_LABEL } from "./financeiroShared";
 
 type AlertState = { variant: "success" | "error" | "warning" | "info"; message: string } | null;
 type ContextFilter = "todas" | "spuri" | "academia";
-type FormErrors = Partial<Record<keyof CredencialFormData | "contexto", string>>;
+type ContextoFinanceiro = { contexto_tipo: FinanceiroContextoTipo; codigo_academia?: string };
 
 /**
- * Campos de credencial que o formulário coleta. NÃO inclui webhook_secret
- * nem webhook_header_name: o backend (finance.CredentialInput) nunca teve
- * esses campos no corpo da requisição — o segredo é gerado automaticamente
- * pelo servidor na primeira configuração da credencial, e o nome do
- * cabeçalho é a constante fixa "X-Spuri-Webhook-Secret"
- * (finance.WebhookHeaderName), nunca configurável. Ver
+ * Valores digitados no formulário, indexados pelas chaves de
+ * `campos_credenciais` do provedor escolhido (GET /financeiro/provedores). O
+ * formulário não conhece os campos de nenhum provedor: eles vêm do catálogo.
+ * NÃO inclui segredo nem cabeçalho de webhook: o backend nunca recebeu esses
+ * campos — para os provedores que autenticam webhooks por segredo, o segredo
+ * é gerado automaticamente na primeira configuração da credencial e o nome do
+ * cabeçalho é a constante fixa "X-Spuri-Webhook-Secret". Ver
  * WebhookSecretPanel abaixo para consultar/rotacionar o segredo depois.
  */
-type CredencialFormData = {
-  client_id: string;
-  client_secret: string;
-  gpo_payment_method: string;
-  ref_payment_method: string;
-};
-
-const EMPTY_FORM: CredencialFormData = {
-  client_id: "",
-  client_secret: "",
-  gpo_payment_method: "",
-  ref_payment_method: "",
-};
+type CredencialFormData = Record<string, string>;
+type FormErrors = Record<string, string>;
 
 const WEBHOOK_HEADER_NAME = "X-Spuri-Webhook-Secret";
+const PROVEDOR_APPYPAY = "APPYPAY";
 
 function LoadingState() {
   return (
     <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
         <span className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500" />
-        Carregando credenciais...
+        Carregando provedores e credenciais...
       </div>
     </div>
   );
@@ -72,7 +65,7 @@ function getErrorMessage(err: unknown) {
   if (err instanceof ApiError) {
     if (err.status === 403) return "Você não tem permissão para configurar credenciais deste contexto.";
     if (err.status === 409) return "Já existe uma operação em andamento para esta credencial, tente novamente em instantes.";
-    if (err.status === 503) return "Não foi possível confirmar com a AppyPay agora. Tente novamente mais tarde.";
+    if (err.status === 503) return "Não foi possível confirmar com o provedor de pagamento agora. Tente novamente mais tarde.";
   }
   return formatApiError(err, "Não foi possível salvar a credencial.");
 }
@@ -81,6 +74,14 @@ function contextParams(filter: ContextFilter, codigoAcademia: string): ListarFin
   if (filter === "spuri") return { contexto_tipo: "spuri" };
   if (filter === "academia" && codigoAcademia) return { contexto_tipo: "academia", codigo_academia: codigoAcademia };
   return undefined;
+}
+
+function emptyForm(provedor: FinanceiroProvedor | undefined): CredencialFormData {
+  return Object.fromEntries((provedor?.campos_credenciais ?? []).map((campo) => [campo.chave, ""]));
+}
+
+function nomeDoProvedor(catalogo: FinanceiroProvedor[], id: string) {
+  return catalogo.find((p) => p.id === id)?.nome ?? id;
 }
 
 export default function FinanceiroCredenciaisPainel() {
@@ -93,30 +94,38 @@ export default function FinanceiroCredenciaisPainel() {
   const [academias, setAcademias] = useState<AcademiaDetalhada[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FinanceiroCredencial | null>(null);
-  const [formData, setFormData] = useState<CredencialFormData>(EMPTY_FORM);
+  const [formProvedor, setFormProvedor] = useState("");
+  const [formData, setFormData] = useState<CredencialFormData>({});
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   // Erro/sucesso do próprio formulário — renderizado DENTRO do card do
   // formulário (não no topo da página), para que o usuário veja o erro
   // exatamente onde ele foi disparado.
   const [formAlert, setFormAlert] = useState<AlertState>(null);
-  const [showClientSecret, setShowClientSecret] = useState(false);
+  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   // Segredo do webhook devolvido UMA VEZ pelo backend, na criação da
-  // credencial (finance.CredencialAppyPayCriada.WebhookSecret). Some
-  // depois de fechado — para vê-lo de novo, use "Consultar segredo" na
-  // linha da tabela (WebhookSecretPanel).
-  const [novoWebhookSecret, setNovoWebhookSecret] = useState<string | null>(null);
+  // credencial (CredencialCriada.WebhookSecret). Some depois de fechado — para
+  // vê-lo de novo, use "Consultar segredo" na linha da tabela
+  // (WebhookSecretPanel).
+  const [novoWebhookSecret, setNovoWebhookSecret] = useState<{ segredo: string; provedor: string } | null>(null);
   // Credencial selecionada para remoção — controla a exibição do
   // ConfirmDialog (ver handleRemover, abaixo).
   const [credencialParaRemover, setCredencialParaRemover] = useState<FinanceiroCredencial | null>(null);
+  // Provedor que o usuário quer tornar ativo — controla o ConfirmDialog de troca.
+  const [provedorParaAtivar, setProvedorParaAtivar] = useState<FinanceiroProvedorDoContexto | null>(null);
 
+  const { execute: listarProvedores, data: catalogoData } = useApi(financeiroService.listarProvedores);
+  const { execute: consultarProvedor, data: estadoProvedor } = useApi(financeiroService.consultarProvedor);
+  const { execute: definirProvedor } = useApi(financeiroService.definirProvedor);
   const { execute: listarCredenciais, data: credenciais, loading: listando } = useApi(financeiroService.listarCredenciais);
   const { execute: criarCredencial, loading: criando } = useApi(financeiroService.criarCredencial);
   const { execute: atualizarCredencial, loading: atualizando } = useApi(financeiroService.atualizarCredencial);
   const { execute: removerCredencial } = useApi(financeiroService.removerCredencial);
   const { execute: listarAcademias, loading: listandoAcademias } = useApi(consultasService.listarAcademias);
   const [removendoId, setRemovendoId] = useState<string | null>(null);
+  const [ativandoId, setAtivandoId] = useState<string | null>(null);
 
   const saving = criando || atualizando;
+  const catalogo = useMemo(() => catalogoData ?? [], [catalogoData]);
 
   const academiaOptions = useMemo(() => academias.map((academia) => ({
     value: academia.codigo_academia,
@@ -128,15 +137,28 @@ export default function FinanceiroCredenciaisPainel() {
     return contextParams(contextFilter, codigoAcademia);
   }, [codigoAcademia, contextFilter, isAcademia]);
 
-  const carregarCredenciais = useCallback(async () => {
+  // Contexto único sobre o qual a tela age (provedor ativo e definição de
+  // provedor só fazem sentido para UM contexto). Com o filtro "Todas" não há.
+  const contextoBase = useMemo((): ContextoFinanceiro | null => {
+    if (isAcademia) return user?.academia?.codigo_academia ? { contexto_tipo: "academia", codigo_academia: user.academia.codigo_academia } : null;
+    if (contextFilter === "spuri") return { contexto_tipo: "spuri" };
+    if (contextFilter === "academia" && codigoAcademia) return { contexto_tipo: "academia", codigo_academia: codigoAcademia };
+    return null;
+  }, [codigoAcademia, contextFilter, isAcademia, user?.academia?.codigo_academia]);
+
+  const carregarTudo = useCallback(async () => {
     if (!isAcademia && !isFpp) return;
     if (isFpp && contextFilter === "academia" && !codigoAcademia) return;
     try {
-      await listarCredenciais(activeParams());
+      await Promise.all([
+        listarProvedores(),
+        listarCredenciais(activeParams()),
+        contextoBase ? consultarProvedor(contextoBase) : Promise.resolve(undefined),
+      ]);
     } catch (err) {
-      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível carregar as credenciais.") });
+      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível carregar os provedores e as credenciais.") });
     }
-  }, [activeParams, codigoAcademia, contextFilter, isAcademia, isFpp, listarCredenciais]);
+  }, [activeParams, codigoAcademia, consultarProvedor, contextFilter, contextoBase, isAcademia, isFpp, listarCredenciais, listarProvedores]);
 
   useEffect(() => {
     if (!isFpp) return;
@@ -146,35 +168,43 @@ export default function FinanceiroCredenciaisPainel() {
   }, [isFpp, listarAcademias]);
 
   useEffect(() => {
-    if (!loading) void carregarCredenciais();
-  }, [carregarCredenciais, loading]);
+    if (!loading) void carregarTudo();
+  }, [carregarTudo, loading]);
 
-  const resetForm = () => {
-    setFormData(EMPTY_FORM);
+  const provedorFormInfo = catalogo.find((p) => p.id === formProvedor);
+  // Estado do contexto só é válido para o contexto atualmente selecionado.
+  const estado = contextoBase && estadoProvedor && estadoProvedor.contexto_tipo === contextoBase.contexto_tipo && (estadoProvedor.codigo_academia ?? "") === (contextoBase.codigo_academia ?? "") ? estadoProvedor : null;
+  const provedorAtivo = estado?.provedor_ativo ? catalogo.find((p) => p.id === estado.provedor_ativo) ?? null : null;
+
+  const resetForm = (provedor: FinanceiroProvedor | undefined) => {
+    setFormProvedor(provedor?.id ?? "");
+    setFormData(emptyForm(provedor));
     setFormErrors({});
     setFormAlert(null);
-    setShowClientSecret(false);
+    setShowSecrets({});
   };
 
   const closeForm = () => {
     setFormOpen(false);
     setEditing(null);
-    resetForm();
+    resetForm(undefined);
   };
 
-  const openCreate = () => {
+  const openCreate = (provedorId?: string) => {
     setEditing(null);
-    resetForm();
+    const inicial = catalogo.find((p) => p.id === provedorId) ?? provedorAtivo ?? catalogo[0];
+    resetForm(inicial);
     setFormOpen(true);
   };
 
   const openEdit = (credencial: FinanceiroCredencial) => {
     setEditing(credencial);
-    resetForm();
+    resetForm(catalogo.find((p) => p.id === credencial.provedor));
+    setFormProvedor(credencial.provedor);
     setFormOpen(true);
   };
 
-  const resolveContext = (): { contexto_tipo: FinanceiroContextoTipo; codigo_academia?: string } | null => {
+  const resolveContext = (): ContextoFinanceiro | null => {
     if (isAcademia) return { contexto_tipo: "academia", codigo_academia: user?.academia?.codigo_academia };
     if (editing) return { contexto_tipo: editing.contexto_tipo, codigo_academia: editing.codigo_academia };
     if (contextFilter === "spuri") return { contexto_tipo: "spuri" };
@@ -184,19 +214,10 @@ export default function FinanceiroCredenciaisPainel() {
 
   const validate = () => {
     const errors: FormErrors = {};
-    const required: (keyof CredencialFormData)[] = ["client_id", "client_secret", "gpo_payment_method", "ref_payment_method"];
-    required.forEach((field) => {
-      if (!formData[field].trim()) errors[field] = "Campo obrigatório.";
+    if (!provedorFormInfo) errors.provedor = "Selecione um provedor de pagamento.";
+    (provedorFormInfo?.campos_credenciais ?? []).forEach((campo) => {
+      if (campo.obrigatorio && !(formData[campo.chave] ?? "").trim()) errors[campo.chave] = "Campo obrigatório.";
     });
-    // A API da AppyPay exige que os identificadores dos métodos de
-    // pagamento comecem com o prefixo do método (validação espelhada de
-    // finance.ConfigureCredential no backend).
-    if (formData.gpo_payment_method.trim() && !formData.gpo_payment_method.trim().startsWith("GPO_")) {
-      errors.gpo_payment_method = 'Deve começar com "GPO_" (ex.: GPO_12345).';
-    }
-    if (formData.ref_payment_method.trim() && !formData.ref_payment_method.trim().startsWith("REF_")) {
-      errors.ref_payment_method = 'Deve começar com "REF_" (ex.: REF_12345).';
-    }
     if (!resolveContext()) errors.contexto = "Selecione um contexto antes de salvar.";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -204,15 +225,13 @@ export default function FinanceiroCredenciaisPainel() {
 
   const handleSubmit = async () => {
     setFormAlert(null);
-    if (!validate()) return;
+    if (!validate() || !provedorFormInfo) return;
     const context = resolveContext();
     if (!context) return;
     const payload: CriarFinanceiroCredencialRequest = {
       ...context,
-      client_id: formData.client_id.trim(),
-      client_secret: formData.client_secret.trim(),
-      gpo_payment_method: formData.gpo_payment_method.trim(),
-      ref_payment_method: formData.ref_payment_method.trim(),
+      provedor: provedorFormInfo.id,
+      credenciais: Object.fromEntries(provedorFormInfo.campos_credenciais.map((campo) => [campo.chave, (formData[campo.chave] ?? "").trim()])),
     };
 
     try {
@@ -224,9 +243,9 @@ export default function FinanceiroCredenciaisPainel() {
         const criada = await criarCredencial(payload);
         setAlert({ variant: "success", message: "Credencial configurada com sucesso." });
         closeForm();
-        if (criada?.webhook_secret) setNovoWebhookSecret(criada.webhook_secret);
+        if (criada?.webhook_secret) setNovoWebhookSecret({ segredo: criada.webhook_secret, provedor: provedorFormInfo.nome });
       }
-      await carregarCredenciais();
+      await carregarTudo();
     } catch (err) {
       // Erro do envio: fica DENTRO do formulário (que continua aberto),
       // e não no topo da página — é ali que o usuário está olhando.
@@ -235,22 +254,21 @@ export default function FinanceiroCredenciaisPainel() {
   };
 
   /**
-   * Remove a credencial vigente do contexto da linha clicada. Ação
-   * destrutiva com consequência imediata (bloqueia novas cobranças nesse
-   * contexto) — por isso passa por confirmação explícita num modal
-   * (ConfirmDialog, aberto via credencialParaRemover), mesmo padrão já
-   * usado em "Rotacionar" (WebhookSecretPanel.handleRotacionar) nesta
-   * mesma tela. O evento de configuração original nunca é apagado no
-   * backend: configurar de novo (via "Configurar credenciais") volta a
-   * habilitar cobranças normalmente a qualquer momento depois.
+   * Remove as credenciais de um provedor do contexto da linha clicada. Ação
+   * destrutiva com consequência imediata — por isso passa por confirmação
+   * explícita num modal (ConfirmDialog, aberto via credencialParaRemover),
+   * mesmo padrão já usado em "Rotacionar" (WebhookSecretPanel) nesta mesma
+   * tela. O backend recusa (409) enquanto o provedor tiver cobranças
+   * pendentes no contexto: elas continuam sendo acompanhadas junto a ele. O
+   * evento de configuração original nunca é apagado no backend.
    */
   const handleRemover = async (credencial: FinanceiroCredencial) => {
     setAlert(null);
     setRemovendoId(credencial.id);
     try {
-      await removerCredencial({ contexto_tipo: credencial.contexto_tipo, codigo_academia: credencial.codigo_academia });
+      await removerCredencial({ contexto_tipo: credencial.contexto_tipo, codigo_academia: credencial.codigo_academia, provedor: credencial.provedor });
       setAlert({ variant: "success", message: "Credencial removida com sucesso." });
-      await carregarCredenciais();
+      await carregarTudo();
     } catch (err) {
       setAlert({ variant: "error", message: formatApiError(err, "Não foi possível remover a credencial.") });
     } finally {
@@ -258,34 +276,69 @@ export default function FinanceiroCredenciaisPainel() {
     }
   };
 
+  /** Define o provedor (único) das cobranças novas do contexto. */
+  const handleDefinirProvedor = async (provedor: FinanceiroProvedorDoContexto) => {
+    if (!contextoBase) return;
+    setAlert(null);
+    setAtivandoId(provedor.id);
+    try {
+      const r = await definirProvedor({ ...contextoBase, provedor: provedor.id });
+      const anterior = r?.provedor_anterior ? nomeDoProvedor(catalogo, r.provedor_anterior) : "";
+      const pendentes = r?.cobrancas_pendentes_no_anterior ?? 0;
+      setAlert({
+        variant: "success",
+        message: pendentes > 0 && anterior
+          ? `${provedor.nome} é agora o provedor de pagamento. ${pendentes} cobrança(s) pendente(s) continuam a ser acompanhadas no ${anterior} até serem resolvidas.`
+          : `${provedor.nome} é agora o provedor de pagamento.`,
+      });
+      await carregarTudo();
+    } catch (err) {
+      setAlert({ variant: "error", message: formatApiError(err, "Não foi possível definir o provedor de pagamento.") });
+    } finally {
+      setAtivandoId(null);
+    }
+  };
+
   if (loading) return <LoadingState />;
   if (!isAcademia && !isFpp) return <UnauthorizedAccess requiredTypes={["Admin FPP", "Academia"]} />;
 
   const rows = credenciais ?? [];
+  const temProvedorAtivo = rows.some((c) => c.ativo);
   // Espelha authorizeFinanceScope no backend (internal/handlers/financeiro_handlers.go):
-  // um admin FPP só tem permissão de ESCRITA (criar/atualizar/remover/rotacionar) no
-  // contexto "spuri" — nunca no contexto de uma academia específica, mesmo que já
-  // esteja filtrando por uma academia nesta tela. A academia sempre pode criar a
-  // própria credencial. Fora isso, o backend responde 403; aqui evitamos oferecer a
-  // ação para não gerar esse erro confuso.
+  // um admin FPP só tem permissão de ESCRITA (configurar/definir provedor/remover/rotacionar)
+  // no contexto "spuri" — nunca no contexto de uma academia específica, mesmo que já
+  // esteja filtrando por uma academia nesta tela. A academia sempre pode gerir o próprio
+  // contexto. Fora isso, o backend responde 403; aqui evitamos oferecer a ação para não
+  // gerar esse erro confuso.
   const canCreate = isAcademia || (isFpp && contextFilter === "spuri");
+  const ativoAtual = estado?.provedores.find((p) => p.ativo) ?? null;
 
   return (
     <div className="space-y-6">
       {credencialParaRemover && (
         <ConfirmDialog
-          title="Remover credenciais AppyPay"
-          message={`Tem certeza que deseja remover as credenciais AppyPay ${credencialParaRemover.contexto_tipo === "spuri" ? "Spuri (Global)" : `da academia ${credencialParaRemover.codigo_academia ?? ""}`}? A partir de agora, nenhuma cobrança nova poderá ser criada nesse contexto até configurar novas credenciais. Cobranças já criadas não são afetadas.`}
+          title={`Remover credenciais ${nomeDoProvedor(catalogo, credencialParaRemover.provedor)}`}
+          message={`Tem certeza que deseja remover as credenciais ${nomeDoProvedor(catalogo, credencialParaRemover.provedor)} ${credencialParaRemover.contexto_tipo === "spuri" ? "Spuri (Global)" : `da academia ${credencialParaRemover.codigo_academia ?? ""}`}? ${credencialParaRemover.ativo ? "Este é o provedor de pagamento atual: nenhuma cobrança nova poderá ser criada nesse contexto até definir outro provedor. " : ""}Se ainda houver cobranças pendentes neste provedor a remoção será recusada — elas continuam a ser acompanhadas junto a ele até serem resolvidas.`}
           confirmLabel="Remover"
           onConfirm={() => handleRemover(credencialParaRemover)}
           onClose={() => setCredencialParaRemover(null)}
+        />
+      )}
+      {provedorParaAtivar && (
+        <ConfirmDialog
+          title={`Definir ${provedorParaAtivar.nome} como provedor`}
+          message={`As cobranças novas passarão a ser geradas pelo ${provedorParaAtivar.nome}, com os métodos de pagamento que ele suporta (${provedorParaAtivar.metodos.map((m) => METODO_PAGAMENTO_LABEL[m] ?? m).join(", ")}). ${ativoAtual ? `As cobranças já criadas no ${ativoAtual.nome}${ativoAtual.cobrancas_pendentes > 0 ? ` (${ativoAtual.cobrancas_pendentes} pendente(s))` : ""} continuam a ser acompanhadas junto a ele até serem resolvidas; as credenciais dele são mantidas.` : ""}`}
+          confirmLabel="Definir provedor"
+          onConfirm={() => handleDefinirProvedor(provedorParaAtivar)}
+          onClose={() => setProvedorParaAtivar(null)}
         />
       )}
       {alert && <Alert variant={alert.variant} title={alert.variant === "success" ? "Sucesso" : "Atenção"} message={alert.message} />}
 
       {novoWebhookSecret && (
         <NovoWebhookSecretAlert
-          segredo={novoWebhookSecret}
+          segredo={novoWebhookSecret.segredo}
+          provedor={novoWebhookSecret.provedor}
           onFechar={() => setNovoWebhookSecret(null)}
         />
       )}
@@ -293,10 +346,10 @@ export default function FinanceiroCredenciaisPainel() {
       <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Credenciais AppyPay</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Utilize as suas credenciais de uso da API da AppyPay para configurar o seu módulo de finanças</p>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Provedor de pagamento</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Escolha o provedor de serviços de pagamento (PSP) que vai receber os pagamentos e configure as suas credenciais para habilitar o seu módulo de finanças</p>
           </div>
-          <Button size="sm" onClick={openCreate} disabled={!canCreate} startIcon={<Icon icon="mdi:plus" width={16} />}>Configurar credenciais</Button>
+          <Button size="sm" onClick={() => openCreate()} disabled={!canCreate || catalogo.length === 0} startIcon={<Icon icon="mdi:plus" width={16} />}>Configurar credenciais</Button>
         </div>
 
         {isFpp && (
@@ -320,7 +373,45 @@ export default function FinanceiroCredenciaisPainel() {
         )}
       </div>
 
-      <AdesaoAppyPayInfo temCredenciais={rows.length > 0} />
+      <AdesaoProvedorInfo temProvedorAtivo={temProvedorAtivo} provedor={formOpen ? provedorFormInfo : provedorAtivo ?? undefined} />
+
+      {!formOpen && estado && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
+          <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">Provedores disponíveis</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {estado.provedor_ativo
+              ? "Apenas o provedor ativo gera cobranças novas. Cobranças já criadas continuam a ser acompanhadas no provedor que as emitiu, mesmo depois de trocar de provedor."
+              : "Ainda não há provedor definido. Configure as credenciais de um provedor e defina-o como o provedor de pagamento."}
+          </p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {estado.provedores.map((provedor) => (
+              <div key={provedor.id} className={`rounded-xl border p-4 ${provedor.ativo ? "border-brand-300 bg-brand-50 dark:border-brand-500/40 dark:bg-brand-500/10" : "border-gray-200 dark:border-white/[0.08]"}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-800 dark:text-white/90">{provedor.nome}</span>
+                  {provedor.ativo && <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Provedor ativo</span>}
+                  <span className={provedor.credenciais_configuradas ? "rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-300" : "rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-white/[0.06] dark:text-gray-300"}>
+                    {provedor.credenciais_configuradas ? "Credenciais configuradas" : "Sem credenciais"}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Métodos suportados: {provedor.metodos.map((m) => METODO_PAGAMENTO_LABEL[m] ?? m).join(", ")}</p>
+                {provedor.cobrancas_pendentes > 0 && (
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{provedor.cobrancas_pendentes} cobrança(s) pendente(s) aguardando resposta deste provedor.</p>
+                )}
+                {canCreate && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {!provedor.credenciais_configuradas && <Button size="sm" variant="outline" onClick={() => openCreate(provedor.id)}>Configurar credenciais</Button>}
+                    {provedor.credenciais_configuradas && !provedor.ativo && (
+                      <Button size="sm" disabled={ativandoId === provedor.id} onClick={() => setProvedorParaAtivar(provedor)}>
+                        {ativandoId === provedor.id ? "Definindo..." : "Definir como provedor"}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {!formOpen && <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
         {listando ? <LoadingState /> : rows.length === 0 ? (
@@ -328,30 +419,42 @@ export default function FinanceiroCredenciaisPainel() {
             <Icon icon="mdi:credit-card-remove-outline" width={44} className="text-gray-400" />
             <div>
               <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">Nenhuma credencial configurada.</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Salve as credenciais para habilitar as próximas operações financeiras.</p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Salve as credenciais de um provedor para habilitar as próximas operações financeiras.</p>
             </div>
-            <Button size="sm" onClick={openCreate} disabled={!canCreate}>Configurar credenciais</Button>
+            <Button size="sm" onClick={() => openCreate()} disabled={!canCreate || catalogo.length === 0}>Configurar credenciais</Button>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <Table className="w-full text-left">
-              <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]"><TableRow>{["Contexto", "Ambiente", "Client ID", "Método GPO", "Método REF", "Segredo do webhook", "Atualizado em", "Ações"].map((h) => <TableCell key={h} isHeader className="px-4 py-3 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">{h}</TableCell>)}</TableRow></TableHeader>
+              <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]"><TableRow>{["Contexto", "Provedor", "Ambiente", "Credenciais", "Segredo do webhook", "Atualizado em", "Ações"].map((h) => <TableCell key={h} isHeader className="px-4 py-3 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">{h}</TableCell>)}</TableRow></TableHeader>
               <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                 {rows.map((credencial) => {
                   // Mesmo critério de canCreate, mas por linha: cada credencial
                   // pertence a um contexto (spuri ou uma academia específica), e é
                   // esse contexto — não o filtro selecionado na tela — que decide se
-                  // o admin FPP pode geri-la (ver seção 19.1-19.13 da documentação
-                  // da API e authorizeFinanceScope no backend).
+                  // o admin FPP pode geri-la (ver authorizeFinanceScope no backend).
                   const podeGerir = isAcademia || (isFpp && credencial.contexto_tipo === "spuri");
+                  const info = catalogo.find((p) => p.id === credencial.provedor);
                   return (
                   <TableRow key={credencial.id}>
                     <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300"><span className="rounded-full bg-brand-50 px-2 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/20 dark:text-brand-300">{credencial.contexto_tipo === "spuri" ? "Spuri" : `Academia ${credencial.codigo_academia ?? ""}`}</span></TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span>{info?.nome ?? credencial.provedor}</span>
+                        {credencial.ativo && <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Ativo</span>}
+                      </div>
+                    </TableCell>
                     <TableCell className="px-4 py-3 text-sm"><span className={credencial.ambiente === "production" ? "rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-300" : "rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"}>{credencial.ambiente}</span></TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{credencial.client_id_mask}</TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{credencial.gpo_payment_method_mask}</TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{credencial.ref_payment_method_mask}</TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300"><WebhookSecretPanel credencialId={credencial.id} podeRotacionar={podeGerir} /></TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                      <ul className="space-y-0.5">
+                        {Object.entries(credencial.credenciais_mascaradas ?? {}).map(([chave, valor]) => (
+                          <li key={chave}><span className="text-xs text-gray-500 dark:text-gray-400">{info?.campos_credenciais.find((c) => c.chave === chave)?.rotulo ?? chave}:</span> {valor}</li>
+                        ))}
+                      </ul>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                      {info?.usa_segredo_webhook === false ? <span className="text-xs text-gray-400 dark:text-gray-500">Não utiliza</span> : <WebhookSecretPanel credencialId={credencial.id} provedor={info?.nome ?? credencial.provedor} podeRotacionar={podeGerir} />}
+                    </TableCell>
                     <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{formatDate(credencial.updated_at)}</TableCell>
                     <TableCell className="px-4 py-3">
                       {podeGerir ? (
@@ -383,24 +486,53 @@ export default function FinanceiroCredenciaisPainel() {
           </div>
           {/* Erro/sucesso do envio deste formulário — visível aqui dentro, não no topo da página. */}
           {formAlert && <Alert variant={formAlert.variant} title={formAlert.variant === "success" ? "Sucesso" : "Não foi possível salvar"} message={formAlert.message} />}
-          {editing && <Alert variant="warning" title="Rotação completa" message="Por segurança, a AppyPay não devolve os valores atuais dos campos sensíveis. Preencha novamente todos os campos abaixo para atualizar esta credencial — os valores mascarados atuais continuam visíveis na tabela até a atualização ser concluída. O segredo do webhook NÃO muda ao editar; use 'Rotacionar' na tabela se precisar de um novo." />}
+          {editing && <Alert variant="warning" title="Rotação completa" message={`Por segurança, o ${provedorFormInfo?.nome ?? "provedor"} não devolve os valores atuais dos campos sensíveis. Preencha novamente todos os campos abaixo para atualizar esta credencial — os valores mascarados atuais continuam visíveis na tabela até a atualização ser concluída.${provedorFormInfo?.usa_segredo_webhook ? " O segredo do webhook NÃO muda ao editar; use 'Rotacionar' na tabela se precisar de um novo." : ""}`} />}
+          {!editing && (
+            <div>
+              <Label>Provedor de pagamento *</Label>
+              <Select
+                key={formProvedor || "sem-provedor"}
+                defaultValue={formProvedor}
+                options={catalogo.map((p) => ({ value: p.id, label: p.nome }))}
+                placeholder="Selecione o provedor"
+                onChange={(value) => resetForm(catalogo.find((p) => p.id === value))}
+              />
+              {formErrors.provedor && <p className="mt-1 text-xs text-error-500 dark:text-error-400">{formErrors.provedor}</p>}
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Client ID *"><Input value={formData.client_id} onChange={(e) => setFormData((p) => ({ ...p, client_id: e.target.value }))} error={!!formErrors.client_id} hint={formErrors.client_id} /></Field>
-            <PasswordField label="Client Secret *" value={formData.client_secret} show={showClientSecret} onToggle={() => setShowClientSecret((v) => !v)} onChange={(value) => setFormData((p) => ({ ...p, client_secret: value }))} error={formErrors.client_secret} />
-            <Field label="ID Método de pagamento GPO *"><Input value={formData.gpo_payment_method} onChange={(e) => setFormData((p) => ({ ...p, gpo_payment_method: e.target.value }))} error={!!formErrors.gpo_payment_method} hint={formErrors.gpo_payment_method ?? 'Identificador do método GPO configurado na AppyPay. Deve começar com "GPO_".'} /></Field>
-            <Field label="ID Método de pagamento REF *"><Input value={formData.ref_payment_method} onChange={(e) => setFormData((p) => ({ ...p, ref_payment_method: e.target.value }))} error={!!formErrors.ref_payment_method} hint={formErrors.ref_payment_method ?? 'Identificador do método REF configurado na AppyPay. Deve começar com "REF_".'} /></Field>
+            {(provedorFormInfo?.campos_credenciais ?? []).map((campo) => campo.secreto ? (
+              <PasswordField
+                key={campo.chave}
+                label={`${campo.rotulo}${campo.obrigatorio ? " *" : ""}`}
+                value={formData[campo.chave] ?? ""}
+                show={!!showSecrets[campo.chave]}
+                onToggle={() => setShowSecrets((v) => ({ ...v, [campo.chave]: !v[campo.chave] }))}
+                onChange={(value) => setFormData((p) => ({ ...p, [campo.chave]: value }))}
+                error={formErrors[campo.chave]}
+              />
+            ) : (
+              <Field key={campo.chave} label={`${campo.rotulo}${campo.obrigatorio ? " *" : ""}`}>
+                <Input value={formData[campo.chave] ?? ""} onChange={(e) => setFormData((p) => ({ ...p, [campo.chave]: e.target.value }))} error={!!formErrors[campo.chave]} hint={formErrors[campo.chave] ?? campo.ajuda} />
+              </Field>
+            ))}
           </div>
-          <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600 dark:bg-white/[0.03] dark:text-gray-300">
-            <p className="font-medium text-gray-800 dark:text-white/90">Sobre o webhook</p>
-            <p className="mt-1">
-              Não é preciso configurar segredo nem cabeçalho de webhook aqui: o Spuri gera automaticamente um segredo
-              único{editing ? "" : ", exibido uma única vez logo após salvar"} e sempre envia o cabeçalho fixo{" "}
-              <code className="rounded bg-gray-200 px-1 py-0.5 text-xs dark:bg-gray-700">{WEBHOOK_HEADER_NAME}</code>.
-              Configure este mesmo nome de cabeçalho no painel da AppyPay. Para ver ou trocar o segredo depois, use as ações
-              na coluna &quot;Segredo do webhook&quot; da tabela.
-            </p>
-          </div>
-          <div className="flex justify-end gap-3"><Button variant="outline" size="sm" onClick={closeForm} disabled={saving}>Cancelar</Button><Button size="sm" onClick={handleSubmit} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button></div>
+          {provedorFormInfo?.usa_segredo_webhook && (
+            <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600 dark:bg-white/[0.03] dark:text-gray-300">
+              <p className="font-medium text-gray-800 dark:text-white/90">Sobre o webhook</p>
+              <p className="mt-1">
+                Não é preciso configurar segredo nem cabeçalho de webhook aqui: o Spuri gera automaticamente um segredo
+                único{editing ? "" : ", exibido uma única vez logo após salvar"} e sempre envia o cabeçalho fixo{" "}
+                <code className="rounded bg-gray-200 px-1 py-0.5 text-xs dark:bg-gray-700">{provedorFormInfo.cabecalho_webhook ?? WEBHOOK_HEADER_NAME}</code>.
+                Configure este mesmo nome de cabeçalho no painel do {provedorFormInfo.nome}. Para ver ou trocar o segredo depois, use as ações
+                na coluna &quot;Segredo do webhook&quot; da tabela.
+              </p>
+            </div>
+          )}
+          {!editing && !temProvedorAtivo && (
+            <p className="text-xs text-gray-500 dark:text-gray-400">Como este contexto ainda não tem provedor de pagamento, o provedor configurado agora passa a ser o provedor ativo.</p>
+          )}
+          <div className="flex justify-end gap-3"><Button variant="outline" size="sm" onClick={closeForm} disabled={saving}>Cancelar</Button><Button size="sm" onClick={handleSubmit} disabled={saving || !provedorFormInfo}>{saving ? "Salvando..." : "Salvar"}</Button></div>
         </div>
       )}
     </div>
@@ -408,7 +540,7 @@ export default function FinanceiroCredenciaisPainel() {
 }
 
 /** Alerta que exibe (uma única vez) o segredo de webhook devolvido pela criação da credencial. */
-function NovoWebhookSecretAlert({ segredo, onFechar }: { segredo: string; onFechar: () => void }) {
+function NovoWebhookSecretAlert({ segredo, provedor, onFechar }: { segredo: string; provedor: string; onFechar: () => void }) {
   const [copiado, setCopiado] = useState(false);
   return (
     <div className="rounded-2xl border border-brand-200 bg-brand-50 p-5 dark:border-brand-500/30 dark:bg-brand-500/10">
@@ -417,7 +549,7 @@ function NovoWebhookSecretAlert({ segredo, onFechar }: { segredo: string; onFech
         <div className="flex-1">
           <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">Segredo do webhook gerado</h3>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-            Copie e configure isto no painel da AppyPay agora — por segurança, este valor não será mostrado por
+            Copie e configure isto no painel do {provedor} agora — por segurança, este valor não será mostrado por
             inteiro novamente (só via &quot;Consultar segredo&quot;, que exige confirmação).
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -445,7 +577,7 @@ function NovoWebhookSecretAlert({ segredo, onFechar }: { segredo: string; onFech
  * existente (GET/POST .../webhook-secret). O erro de cada ação aparece
  * aqui mesmo, dentro da célula da tabela — não no topo da página.
  */
-function WebhookSecretPanel({ credencialId, podeRotacionar }: { credencialId: string; podeRotacionar: boolean }) {
+function WebhookSecretPanel({ credencialId, provedor, podeRotacionar }: { credencialId: string; provedor: string; podeRotacionar: boolean }) {
   const consultar = useApi(financeiroService.consultarSegredoWebhook);
   const rotacionar = useApi(financeiroService.rotacionarSegredoWebhook);
   const [segredo, setSegredo] = useState<string | null>(null);
@@ -488,7 +620,7 @@ function WebhookSecretPanel({ credencialId, podeRotacionar }: { credencialId: st
       {confirmandoRotacao && (
         <ConfirmDialog
           title="Rotacionar segredo do webhook"
-          message="Isto invalida o segredo atual imediatamente. A AppyPay precisará ser reconfigurada com o novo valor."
+          message={`Isto invalida o segredo atual imediatamente. O ${provedor} precisará ser reconfigurado com o novo valor.`}
           confirmLabel="Continuar"
           onConfirm={handleRotacionar}
           onClose={() => setConfirmandoRotacao(false)}
@@ -506,18 +638,21 @@ function WebhookSecretPanel({ credencialId, podeRotacionar }: { credencialId: st
 }
 
 /**
- * "Antes de configurar as credenciais": quando a academia AINDA NÃO tem
- * nenhuma credencial gravada, a nota de adesão fica sempre em destaque e
+ * "Antes de configurar as credenciais": quando o contexto AINDA NÃO tem
+ * provedor de pagamento ativo, a nota de adesão fica sempre em destaque e
  * visível por inteiro (não pode ficar escondida atrás de um clique nesse
- * momento — é a informação mais importante da tela). Depois que já existe
- * pelo menos uma credencial, a nota passa a vir recolhida por padrão, com
- * um botão para expandir/ocultar (em vez do `<details>`/`<summary>` nativo
- * do navegador, que tem uma UX pobre e visualmente inconsistente com o
- * resto do painel).
+ * momento — é a informação mais importante da tela). Depois que já existe um
+ * provedor ativo, a nota passa a vir recolhida por padrão, com um botão para
+ * expandir/ocultar (em vez do `<details>`/`<summary>` nativo do navegador,
+ * que tem uma UX pobre e visualmente inconsistente com o resto do painel).
+ *
+ * O texto geral vale para qualquer provedor; as orientações específicas de um
+ * provedor (hoje, só as da AppyPay) aparecem apenas quando esse provedor é o
+ * que está em foco (o do formulário aberto ou o provedor ativo).
  */
-function AdesaoAppyPayInfo({ temCredenciais }: { temCredenciais: boolean }) {
+function AdesaoProvedorInfo({ temProvedorAtivo, provedor }: { temProvedorAtivo: boolean; provedor?: FinanceiroProvedor }) {
   const [aberta, setAberta] = useState(false);
-  const destaque = !temCredenciais;
+  const destaque = !temProvedorAtivo;
   const mostrarConteudo = destaque || aberta;
 
   return (
@@ -533,7 +668,7 @@ function AdesaoAppyPayInfo({ temCredenciais }: { temCredenciais: boolean }) {
         <div className="flex-1">
           <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">Antes de configurar as credenciais</h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Para ter acesso ao módulo de finanças e fazer cobranças e receber pagamentos dos estudantes, é necessário aderir aos serviços de Gateway de Pagamento Online junto ao seu banco.
+            Para ter acesso ao módulo de finanças e fazer cobranças e receber pagamentos dos estudantes, é necessário aderir aos serviços de um provedor de pagamento (PSP) e escolher esse provedor aqui. Os estudantes pagam pelos métodos de pagamento que o provedor escolhido suporta e que a sua instituição habilitou.
           </p>
         </div>
         {!destaque && (
@@ -552,9 +687,15 @@ function AdesaoAppyPayInfo({ temCredenciais }: { temCredenciais: boolean }) {
           <p className={`flex items-center gap-2 text-sm font-bold ${destaque ? "text-brand-800 dark:text-brand-100" : "text-gray-700 dark:text-gray-300"}`}><Icon icon="mdi:information-outline" width={18} /> Nota para Adesão ao Serviço</p>
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-gray-500 dark:text-gray-400">
             <li>É necessário ter uma conta bancária empresarial em um dos bancos angolanos.</li>
-            <li>O processo de adesão começa no seu banco comercial: dirija-se ao seu banco e solicite os formulários de adesão aos métodos de pagamento que deseja utilizar (Multicaixa Express e/ou Referência).</li>
-            <li>Informe ao banco que vai trabalhar com a AppyPay como seu facilitador tecnológico.</li>
-            <li>A AppyPay tem parceria com o BAI (GPO), BCS e Standard Bank (GPO e REF) — se selecionar um destes bancos, não terá de pagar as comissões da AppyPay (0,4% por cobrança, com comissão mínima de 50 Kz por cobrança), nem assinar o contrato com a AppyPay.</li>
+            <li>O processo de adesão começa junto ao provedor de pagamento escolhido e/ou ao seu banco comercial: solicite a adesão aos métodos de pagamento que deseja utilizar (Multicaixa Express e/ou Referência).</li>
+            {provedor?.id === PROVEDOR_APPYPAY ? (
+              <>
+                <li>Informe ao banco que vai trabalhar com a AppyPay como seu facilitador tecnológico.</li>
+                <li>A AppyPay tem parceria com o BAI (GPO), BCS e Standard Bank (GPO e REF) — se selecionar um destes bancos, não terá de pagar as comissões da AppyPay (0,4% por cobrança, com comissão mínima de 50 Kz por cobrança), nem assinar o contrato com a AppyPay.</li>
+              </>
+            ) : (
+              <li>Depois da adesão, o provedor entrega as credenciais de acesso à API dele: informe-as aqui para habilitar as cobranças.</li>
+            )}
           </ol>
         </div>
       )}

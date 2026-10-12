@@ -27,7 +27,7 @@ export default function GestaoCobrancasPainel() {
           <li>Aqui você atua sobre <b>cobranças pontuais</b> de um estudante específico — diferente das configurações de valor em Finanças &gt; Configurações, que valem para todos.</li>
           <li><b>Anular obrigação</b> torna uma mensalidade sem efeito (ex.: bolsa concedida, erro de lançamento) — o estudante deixa de precisar pagá-la, mesmo que nenhuma cobrança real tenha sido gerada ainda.</li>
           <li><b>Reativar obrigação</b> volta uma obrigação anulada a valer novamente.</li>
-          <li><b>Cancelar cobrança</b> cancela uma cobrança já gerada/tentada junto à AppyPay (referência, QR code, etc.) — use quando já existe uma tentativa de pagamento em aberto que não deve mais valer.</li>
+          <li><b>Cancelar cobrança</b> cancela uma cobrança já gerada/tentada junto ao provedor de pagamento (referência, QR code, etc.) — use quando já existe uma tentativa de pagamento em aberto que não deve mais valer.</li>
         </ul>
       </ManualDeFuncionamento>
       <SubtelasMenu

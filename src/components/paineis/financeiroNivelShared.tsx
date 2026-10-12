@@ -112,7 +112,9 @@ export function useFinanceiroNivelContext() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAcademia, codigoAcademia]);
 
-  const temCredenciais = (credenciaisApi.data?.length ?? 0) > 0;
+  // Cobrança só funciona com um provedor ATIVO (com credenciais) — ter credenciais
+  // guardadas de um provedor que não é o ativo não habilita nada.
+  const temCredenciais = (credenciaisApi.data ?? []).some((c) => c.ativo);
   const bloquear = credenciaisApi.loading || !temCredenciais;
 
   return { user, isAdmin, isAcademia, isFpp, loading, codigoAcademia, anosAcademicosAcademia, niveisDisponiveis, cursos, mensalidadesApi, matriculasApi, reload, bloquear };
@@ -148,11 +150,11 @@ export function FinanceiroAcessoGuard({ ctx, children }: { ctx: FinanceiroNivelC
   return <>{children}</>;
 }
 
-/** Aviso + atalho para aderir ao Gateway de Pagamento Online, exibido sempre que a academia ainda não tem credenciais AppyPay configuradas. */
+/** Aviso + atalho para aderir ao Gateway de Pagamento Online, exibido sempre que a academia ainda não tem um provedor de pagamento ativo (com credenciais). */
 export function AvisoCredenciais() {
   return (
     <div className="space-y-3">
-      <Alert variant="warning" title="Adesão ao Gateway de Pagamento Online" message="A sua instituição precisa aderir ao Gateway de Pagamento Online." />
+      <Alert variant="warning" title="Adesão ao Gateway de Pagamento Online" message="A sua instituição precisa aderir ao Gateway de Pagamento Online e escolher o provedor de pagamento." />
       <Link href="/financas/credenciais" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600">
         Siga as instruções aqui <Icon icon="mdi:arrow-right" width={16} />
       </Link>

@@ -1470,45 +1470,80 @@ export interface Turma {
   version: number;
 }
 
-// =====================
-// FINANCEIRO / APPYPAY
-// =====================
+// =====================================
+// FINANCEIRO / PROVEDORES DE PAGAMENTO (PSP)
+// =====================================
 
 export type FinanceiroContextoTipo = 'spuri' | 'academia';
 export type FinanceiroAmbiente = 'test' | 'production';
 
-/** Credencial AppyPay mascarada — retornada por criação, atualização e listagem. */
+/**
+ * Campo de credencial exigido por um provedor (GET /financeiro/provedores).
+ * O formulário de credenciais é montado a partir destes campos — o
+ * frontend não conhece os campos de nenhum provedor em particular. `secreto`
+ * indica que o valor nunca volta da API (nem mascarado).
+ */
+export interface FinanceiroCampoCredencial {
+  chave: string;
+  rotulo: string;
+  obrigatorio: boolean;
+  secreto: boolean;
+  ajuda?: string;
+}
+
+/**
+ * Provedor de serviços de pagamento (PSP) implementado no backend. `id` é o
+ * identificador gravado nas cobranças e credenciais (ex.: "APPYPAY");
+ * `metodos` são os métodos de pagamento que ele suporta.
+ */
+export interface FinanceiroProvedor {
+  id: string;
+  nome: string;
+  slug: string;
+  metodos: FinanceiroMetodoPagamento[];
+  campos_credenciais: FinanceiroCampoCredencial[];
+  usa_segredo_webhook: boolean;
+  cabecalho_webhook?: string;
+  webhooks?: string[];
+}
+
+export type ListarFinanceiroProvedoresResponse = FinanceiroProvedor[];
+
+/**
+ * Credenciais mascaradas de um provedor num contexto — retornadas por
+ * criação, atualização e listagem. `credenciais_mascaradas` é indexado pelas
+ * chaves de `FinanceiroCampoCredencial` (campos secretos nunca aparecem).
+ * `ativo` indica que este é o provedor definido para o contexto.
+ */
 export interface FinanceiroCredencial {
   id: string;
   contexto_tipo: FinanceiroContextoTipo;
   codigo_academia?: string;
   ambiente: FinanceiroAmbiente;
-  client_id_mask: string;
-  gpo_payment_method_mask: string;
-  ref_payment_method_mask: string;
+  provedor: string;
+  credenciais_mascaradas: Record<string, string>;
+  ativo: boolean;
   webhook_header_name?: string;
   updated_at: string;
 }
 
 /**
- * Corpo de POST /financeiro/appypay/credenciais e PUT
- * /financeiro/appypay/credenciais/:id.
+ * Corpo de POST /financeiro/credenciais e PUT /financeiro/credenciais/:id.
  *
- * O backend (finance.CredentialInput) NÃO tem — e nunca teve — campos de
- * webhook aqui: o segredo é gerado automaticamente pelo servidor
- * (crypto/rand, 15 caracteres) na primeira configuração da credencial, e o
- * nome do cabeçalho é uma constante fixa (X-Spuri-Webhook-Secret,
- * finance.WebhookHeaderName) — nunca configurável. Ver
- * FinanceiroCredencialCriada, ConsultarSegredoWebhookResponse e
- * RotacionarSegredoWebhookResponse abaixo para como o segredo é obtido.
+ * `credenciais` é indexado pelas chaves que o provedor declara em
+ * `campos_credenciais`. O backend NÃO recebe campos de webhook aqui: para os
+ * provedores que autenticam webhooks por segredo, o segredo é gerado pelo
+ * servidor (crypto/rand, 15 caracteres) na primeira configuração da
+ * credencial, e o nome do cabeçalho é uma constante fixa
+ * (X-Spuri-Webhook-Secret, finance.WebhookHeaderName). Configurar
+ * credenciais de um provedor NÃO o torna ativo, exceto quando o contexto
+ * ainda não tem nenhum provedor definido.
  */
 export interface CriarFinanceiroCredencialRequest {
   contexto_tipo: FinanceiroContextoTipo;
   codigo_academia?: string;
-  client_id: string;
-  client_secret: string;
-  gpo_payment_method: string;
-  ref_payment_method: string;
+  provedor: string;
+  credenciais: Record<string, string>;
 }
 
 /** PUT é substituição completa — mesmo formato do POST. */
@@ -1517,27 +1552,30 @@ export type AtualizarFinanceiroCredencialRequest = CriarFinanceiroCredencialRequ
 export interface ListarFinanceiroCredenciaisParams {
   contexto_tipo?: FinanceiroContextoTipo;
   codigo_academia?: string;
+  provedor?: string;
 }
 
 export type ListarFinanceiroCredenciaisResponse = FinanceiroCredencial[];
 
 /**
- * Corpo de DELETE /financeiro/appypay/credenciais (finance.RemoveCredential
- * no backend). Remove a credencial vigente do contexto informado — não
+ * Corpo de DELETE /financeiro/credenciais (finance.RemoveCredential no
+ * backend). Remove as credenciais de UM provedor do contexto informado — não
  * apaga o evento original do ledger, apenas registra um novo evento de
- * remoção; a partir daí, novas cobranças nesse contexto voltam a ser
- * bloqueadas por falta de credenciais até uma nova configuração.
+ * remoção. É recusada com 409 enquanto o provedor tiver cobranças pendentes
+ * no contexto (elas continuam sendo acompanhadas junto a ele). Se o provedor
+ * removido era o ativo, novas cobranças ficam bloqueadas até definir outro.
  */
 export interface RemoverFinanceiroCredencialRequest {
   contexto_tipo: FinanceiroContextoTipo;
   codigo_academia?: string;
+  provedor: string;
 }
 
 /**
- * Resposta exclusiva de POST /financeiro/appypay/credenciais
- * (CredencialAppyPayCriada no backend). webhook_secret só vem preenchido
- * quando esta é a PRIMEIRA vez que a credencial recebe um segredo de
- * webhook — é a única oportunidade em que o valor em texto plano aparece
+ * Resposta exclusiva de POST /financeiro/credenciais (CredencialCriada no
+ * backend). webhook_secret só vem preenchido quando esta é a PRIMEIRA vez que
+ * a credencial recebe um segredo de webhook (e só para provedores que usam
+ * segredo) — é a única oportunidade em que o valor em texto plano aparece
  * "de graça" numa resposta, fora do GET .../webhook-secret dedicado. Numa
  * atualização (PUT) de credencial já existente, webhook_secret nunca vem
  * preenchido; use ConsultarSegredoWebhookResponse para recuperá-lo depois.
@@ -1557,6 +1595,47 @@ export interface ConsultarSegredoWebhookResponse {
 }
 
 export type RotacionarSegredoWebhookResponse = ConsultarSegredoWebhookResponse;
+
+/** Um provedor implementado, visto a partir de um contexto (GET /financeiro/provedor). */
+export interface FinanceiroProvedorDoContexto extends FinanceiroProvedor {
+  /** É o provedor usado para cobranças NOVAS neste contexto. */
+  ativo: boolean;
+  credenciais_configuradas: boolean;
+  credencial_id?: string;
+  /**
+   * Cobranças deste provedor ainda em andamento neste contexto. Enquanto
+   * houver, o provedor continua sendo consultado mesmo que deixe de ser o
+   * ativo (mecanismo retroativo).
+   */
+  cobrancas_pendentes: number;
+}
+
+/** Estado de provedores de um contexto: um único provedor ativo (ou nenhum). */
+export interface FinanceiroProvedorContexto {
+  contexto_tipo: FinanceiroContextoTipo;
+  codigo_academia?: string;
+  provedor_ativo: string | null;
+  definido_em?: string;
+  provedores: FinanceiroProvedorDoContexto[];
+}
+
+export interface ConsultarFinanceiroProvedorParams {
+  contexto_tipo: FinanceiroContextoTipo;
+  codigo_academia?: string;
+}
+
+/** Corpo de PUT /financeiro/provedor. As credenciais do provedor já têm de estar configuradas. */
+export interface DefinirFinanceiroProvedorRequest {
+  contexto_tipo: FinanceiroContextoTipo;
+  codigo_academia?: string;
+  provedor: string;
+}
+
+export interface DefinirFinanceiroProvedorResponse extends FinanceiroProvedorContexto {
+  provedor_anterior?: string;
+  /** Cobranças ainda em andamento no provedor anterior — continuam sendo acompanhadas junto a ele. */
+  cobrancas_pendentes_no_anterior: number;
+}
 
 // ---- Mensalidade (propina) ----
 
@@ -1677,6 +1756,8 @@ export interface MensalidadePagamentoInput {
 
 export interface ChargeResult {
   id: string;
+  /** PSP que emitiu a cobrança (ex.: "APPYPAY"). */
+  provedor?: string;
   provider_charge_id?: string;
   merchant_transaction_id: string;
   status: string;
@@ -1713,6 +1794,8 @@ export type FinanceiroOrigemCobranca = 'matricula' | 'mensalidade' | 'avulsa';
 
 export interface CobrancaResumo {
   id: string;
+  /** PSP que emitiu a cobrança ("EXTERNO" para pagamentos registrados fora da plataforma). */
+  provedor?: string;
   provider_charge_id?: string;
   merchant_transaction_id: string;
   contexto_tipo: FinanceiroContextoTipo;

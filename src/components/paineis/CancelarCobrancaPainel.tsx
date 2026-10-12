@@ -17,7 +17,7 @@ import type { PagamentoResumo } from "@/types/api";
  * /financas/gestao-cobrancas/cancelar-cobranca (Tarefa 11) — página nova.
  * Diferente de "Anular obrigação" (que anula uma mensalidade pontual,
  * mesmo que nenhuma cobrança real tenha sido gerada ainda), esta tela
- * cancela uma cobrança REAL já gerada/tentada junto à AppyPay (referência,
+ * cancela uma cobrança REAL já gerada/tentada junto ao provedor de pagamento (referência,
  * QR code, etc.) — a mesma ação já disponível em Finanças &gt; Pagamentos,
  * aqui isolada por estudante para um acesso mais direto a partir da gestão
  * de cobranças.

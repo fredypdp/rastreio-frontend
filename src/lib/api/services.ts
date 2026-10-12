@@ -163,6 +163,11 @@ import type {
   ListarAnosAcademicosResponse,
   FinanceiroCredencial,
   FinanceiroCredencialCriada,
+  FinanceiroProvedorContexto,
+  ListarFinanceiroProvedoresResponse,
+  ConsultarFinanceiroProvedorParams,
+  DefinirFinanceiroProvedorRequest,
+  DefinirFinanceiroProvedorResponse,
   CriarFinanceiroCredencialRequest,
   AtualizarFinanceiroCredencialRequest,
   ConsultarSegredoWebhookResponse,
@@ -895,16 +900,37 @@ export const consultasService = {
 };
 
 // TODO(finanças): criarCobranca, criarQrCode, consultarCobranca — próximas etapas
-// ── Financeiro / AppyPay ────────────────────────────────────────────
+// ── Financeiro / Provedores de pagamento (PSP) ──────────────────────
 
 export const financeiroService = {
+  /** GET /financeiro/provedores — catálogo dos provedores implementados (campos de credencial, métodos suportados). */
+  listarProvedores: (token?: string) =>
+    api.get<ListarFinanceiroProvedoresResponse>('/financeiro/provedores', { token: token || tokenStorage.get() || undefined }),
+
+  /** GET /financeiro/provedor — provedor ativo do contexto e estado de cada provedor (credenciais, cobranças pendentes). */
+  consultarProvedor: (params: ConsultarFinanceiroProvedorParams & { token?: string }) => {
+    const qs = new URLSearchParams();
+    qs.set('contexto_tipo', params.contexto_tipo);
+    if (params.codigo_academia) qs.set('codigo_academia', params.codigo_academia);
+    return api.get<FinanceiroProvedorContexto>(`/financeiro/provedor?${qs.toString()}`, { token: params.token || tokenStorage.get() || undefined });
+  },
+
+  /**
+   * PUT /financeiro/provedor — define o provedor (único) das cobranças NOVAS do contexto.
+   * As credenciais do provedor já têm de estar configuradas. Cobranças já emitidas continuam
+   * sendo acompanhadas junto ao provedor que as emitiu.
+   */
+  definirProvedor: (data: DefinirFinanceiroProvedorRequest, token?: string) =>
+    api.put<DefinirFinanceiroProvedorResponse, DefinirFinanceiroProvedorRequest>('/financeiro/provedor', data, { token: token || tokenStorage.get() || undefined }),
+
   listarCredenciais: (params?: ListarFinanceiroCredenciaisParams & { token?: string }) => {
     const qs = new URLSearchParams();
     if (params?.contexto_tipo) qs.set('contexto_tipo', params.contexto_tipo);
     if (params?.codigo_academia) qs.set('codigo_academia', params.codigo_academia);
+    if (params?.provedor) qs.set('provedor', params.provedor);
     const query = qs.toString() ? `?${qs.toString()}` : '';
     return api.get<ListarFinanceiroCredenciaisResponse>(
-      `/financeiro/appypay/credenciais${query}`,
+      `/financeiro/credenciais${query}`,
       { token: params?.token || tokenStorage.get() || undefined }
     );
   },
@@ -912,28 +938,27 @@ export const financeiroService = {
   /** Resposta traz webhook_secret preenchido só na primeira configuração da credencial — ver FinanceiroCredencialCriada. */
   criarCredencial: (data: CriarFinanceiroCredencialRequest, token?: string) =>
     api.post<FinanceiroCredencialCriada, CriarFinanceiroCredencialRequest>(
-      '/financeiro/appypay/credenciais',
+      '/financeiro/credenciais',
       data,
       { token: token || tokenStorage.get() || undefined }
     ),
 
   atualizarCredencial: (id: string, data: AtualizarFinanceiroCredencialRequest, token?: string) =>
     api.put<FinanceiroCredencial, AtualizarFinanceiroCredencialRequest>(
-      `/financeiro/appypay/credenciais/${id}`,
+      `/financeiro/credenciais/${id}`,
       data,
       { token: token || tokenStorage.get() || undefined }
     ),
 
   /**
-   * DELETE /financeiro/appypay/credenciais — remove a credencial vigente
-   * do contexto informado (evento imutável no backend; o histórico de
-   * configuração nunca é apagado). A partir desta chamada, novas
-   * cobranças nesse contexto voltam a ser bloqueadas por falta de
-   * credenciais até uma nova configuração.
+   * DELETE /financeiro/credenciais — remove as credenciais de um provedor do
+   * contexto informado (evento imutável no backend; o histórico de configuração
+   * nunca é apagado). Recusada com 409 enquanto o provedor tiver cobranças
+   * pendentes no contexto.
    */
   removerCredencial: (data: RemoverFinanceiroCredencialRequest, token?: string) =>
     api.delete<void, RemoverFinanceiroCredencialRequest>(
-      '/financeiro/appypay/credenciais',
+      '/financeiro/credenciais',
       data,
       { token: token || tokenStorage.get() || undefined }
     ),
@@ -941,14 +966,14 @@ export const financeiroService = {
   /** GET .../webhook-secret — devolve o segredo de webhook atual em texto plano (só dono do contexto). */
   consultarSegredoWebhook: (id: string, token?: string) =>
     api.get<ConsultarSegredoWebhookResponse>(
-      `/financeiro/appypay/credenciais/${encodeURIComponent(id)}/webhook-secret`,
+      `/financeiro/credenciais/${encodeURIComponent(id)}/webhook-secret`,
       { token: token || tokenStorage.get() || undefined }
     ),
 
   /** POST .../webhook-secret/rotacionar — gera um novo segredo, invalidando o anterior imediatamente. */
   rotacionarSegredoWebhook: (id: string, token?: string) =>
     api.post<RotacionarSegredoWebhookResponse, undefined>(
-      `/financeiro/appypay/credenciais/${encodeURIComponent(id)}/webhook-secret/rotacionar`,
+      `/financeiro/credenciais/${encodeURIComponent(id)}/webhook-secret/rotacionar`,
       undefined,
       { token: token || tokenStorage.get() || undefined }
     ),
@@ -997,7 +1022,7 @@ export const financeiroService = {
     const qs = new URLSearchParams();
     if (params?.contexto_tipo) qs.set('contexto_tipo', params.contexto_tipo);
     if (params?.codigo_academia) qs.set('codigo_academia', params.codigo_academia);
-    return api.get<ChargeResult>(`/financeiro/appypay/cobrancas/${encodeURIComponent(id)}${qs.toString() ? `?${qs.toString()}` : ''}`, { token: token || tokenStorage.get() || undefined });
+    return api.get<ChargeResult>(`/financeiro/cobrancas/${encodeURIComponent(id)}${qs.toString() ? `?${qs.toString()}` : ''}`, { token: token || tokenStorage.get() || undefined });
   },
   consultarCobrancasEstudante: (codigoEstudante: string, params?: ListarCobrancasEstudanteParams, token?: string) => {
     const qs = new URLSearchParams();
@@ -1007,9 +1032,9 @@ export const financeiroService = {
     if (params?.offset != null) qs.set('offset', String(params.offset));
     return api.get<ListarCobrancasResponse>(`/financeiro/cobrancas/estudante/${encodeURIComponent(codigoEstudante)}${qs.toString() ? `?${qs.toString()}` : ''}`, { token: token || tokenStorage.get() || undefined });
   },
-  cancelarCobranca: (id: string, motivo?: string, token?: string) => api.post<ChargeResult, { motivo?: string }>(`/financeiro/appypay/cobrancas/${encodeURIComponent(id)}/cancelar`, { motivo }, { token: token || tokenStorage.get() || undefined }),
+  cancelarCobranca: (id: string, motivo?: string, token?: string) => api.post<ChargeResult, { motivo?: string }>(`/financeiro/cobrancas/${encodeURIComponent(id)}/cancelar`, { motivo }, { token: token || tokenStorage.get() || undefined }),
   /** Academia: marca uma cobrança real aguardando pagamento como paga fora da plataforma. */
-  registrarPagamentoExternoCobranca: (id: string, data?: PagamentoExternoInput, token?: string) => api.post<PagamentoExternoResultado, PagamentoExternoInput>(`/financeiro/appypay/cobrancas/${encodeURIComponent(id)}/pago-externamente`, data ?? {}, { token: token || tokenStorage.get() || undefined }),
+  registrarPagamentoExternoCobranca: (id: string, data?: PagamentoExternoInput, token?: string) => api.post<PagamentoExternoResultado, PagamentoExternoInput>(`/financeiro/cobrancas/${encodeURIComponent(id)}/pago-externamente`, data ?? {}, { token: token || tokenStorage.get() || undefined }),
   /** Academia: marca mensalidades pendentes (sem cobrança gerada) como pagas fora da plataforma. */
   registrarPagamentoExternoMensalidades: (data: PagamentoExternoMensalidadesInput, token?: string) => api.post<PagamentoExternoResultado, PagamentoExternoMensalidadesInput>('/financeiro/mensalidades/obrigacoes/pago-externamente', data, { token: token || tokenStorage.get() || undefined }),
 };

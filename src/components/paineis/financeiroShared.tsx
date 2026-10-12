@@ -113,8 +113,8 @@ export const origemLabel: Record<FinanceiroOrigemCobranca, string> = {
  * O valor "aguardando_pagamento" substitui o antigo "Pending" (rotulado
  * "Pendente") — ver PagamentoResumo em types/api.ts para o porquê: o back
  * end agora usa esse nome para qualquer cobrança real já gerada/tentada
- * junto à AppyPay mas ainda sem resolução. "Expirado" foi adicionado nesta
- * mesma tarefa: cobre referências REF que a AppyPay expira sem pagamento,
+ * junto ao provedor de pagamento mas ainda sem resolução. "Expirado" foi adicionado nesta
+ * mesma tarefa: cobre referências REF que o provedor expira sem pagamento,
  * estado que antes não tinha nenhuma opção de filtro correspondente.
  *
  * "pendente" (bug relatado por Fredy, tarefa 69): reservado para o outro
@@ -153,7 +153,7 @@ export const ESTADOS_COBRANCA_REAL = ESTADO_PAGAMENTO_OPCOES
   .filter((v) => v !== "pendente");
 
 /**
- * Texto de exibição de cada método de pagamento AppyPay — usado em toda
+ * Texto de exibição de cada método de pagamento canônico da plataforma — usado em toda
  * parte de /financas/* e /pagamentos onde um método aparece para o
  * usuário (nunca mostrar "GPO"/"REF"/"GPO_QR" cru).
  */
@@ -161,6 +161,17 @@ export const METODO_PAGAMENTO_LABEL: Record<FinanceiroMetodoPagamento, string> =
   GPO: "MCX Express",
   REF: "Pagamento por referência",
   GPO_QR: "QR Code",
+};
+
+/**
+ * Nome de exibição dos provedores de pagamento conhecidos, indexado pelo id gravado
+ * na cobrança (CobrancaResumo.provedor). Um provedor ainda não listado aqui aparece
+ * pelo próprio id — nunca quebra a tela.
+ */
+export const NOME_PROVEDOR: Record<string, string> = {
+  APPYPAY: "AppyPay",
+  INTELIZE: "Intelize",
+  PAYPAY: "PayPay",
 };
 
 /**
@@ -715,8 +726,8 @@ export function CobrancasTable({ rows, onOpen, onCancelar }: {
   // é o único sinal necessário para saber isso, sem precisar de nenhum
   // campo adicional). "expired"/"expirado" foi adicionado à lista de
   // estados terminais nesta mesma tarefa — faltava antes, o que deixava o
-  // botão "Cancelar" aparecer para uma referência REF já expirada na
-  // AppyPay.
+  // botão "Cancelar" aparecer para uma referência REF já expirada no
+  // provedor.
   const cancelavel = (r: PagamentoResumo) =>
     !r.pagamento_externo &&
     r.status.toLowerCase() !== "pendente" &&
@@ -804,8 +815,8 @@ export function CobrancasTable({ rows, onOpen, onCancelar }: {
 /**
  * Um campo label/valor da grade de metadados de SubtelaDetalheCobranca,
  * com botão de copiar opcional — usado para os dois identificadores que a
- * academia/admin mais precisa colar em outro lugar (painel da AppyPay,
- * ticket de suporte): Referência AppyPay e Transação. `break-all` evita
+ * academia/admin mais precisa colar em outro lugar (painel do provedor,
+ * ticket de suporte): Referência do provedor e Transação. `break-all` evita
  * que um id longo (uuid/merchant transaction id) quebre o layout da grade.
  */
 function CampoDetalheCobranca({ label, valor, onCopiar, copiado }: {
@@ -841,9 +852,9 @@ function CampoDetalheCobranca({ label, valor, onCopiar, copiado }: {
  * era uma lista plana de `<p><b>Label:</b> valor</p>`: um cabeçalho com o
  * valor em destaque + o StatusBadge (as duas informações que a academia
  * escaneia primeiro), seguido de uma grade de metadados de dois campos por
- * linha, com botão de copiar em Referência AppyPay/Transação — os dois
+ * linha, com botão de copiar em Referência do provedor/Transação — os dois
  * identificadores que a academia/admin mais precisa colar em outro lugar
- * (painel da AppyPay, ticket de suporte) ao investigar uma cobrança. Nenhum
+ * (painel do provedor, ticket de suporte) ao investigar uma cobrança. Nenhum
  * dado novo foi adicionado: os mesmos campos de antes, só reorganizados.
  *
  * - Usa os dados já carregados na linha da tabela (PagamentoResumo) em vez
@@ -865,7 +876,7 @@ function CampoDetalheCobranca({ label, valor, onCopiar, copiado }: {
  *   fecha o detalhe depois do sucesso.
  * - Quando status="pendente" (pendência sintética, ver PagamentoResumo em
  *   types/api.ts), vários campos que só existem para uma cobrança real
- *   (referência AppyPay, transação, atualizado em) ficam "—": não existe
+ *   (referência do provedor, transação, atualizado em) ficam "—": não existe
  *   nenhuma cobrança de verdade por trás desse item, e um aviso explica
  *   isso no lugar da ação de cancelar.
  */
@@ -940,7 +951,7 @@ export function SubtelaDetalheCobranca({ cobranca, onVoltar, mostrarDadosEstudan
           <CampoDetalheCobranca label="Método de pagamento" valor={rotuloMetodoCobranca(cobranca)} />
           <CampoDetalheCobranca label="Atualizado em" valor={dt(cobranca.atualizado_em)} />
           <CampoDetalheCobranca
-            label="Referência AppyPay"
+            label={cobranca.provedor && cobranca.provedor !== "EXTERNO" ? `Referência ${NOME_PROVEDOR[cobranca.provedor] ?? cobranca.provedor}` : "Referência do provedor"}
             valor={cobranca.provider_charge_id || "—"}
             onCopiar={cobranca.provider_charge_id ? () => copiar(cobranca.provider_charge_id!, "referencia") : undefined}
             copiado={copiado === "referencia"}

@@ -185,7 +185,8 @@ export function usePagamentosAcesso() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAcademia, codigoAcademia]);
 
-  const temCredenciais = (credenciaisApi.data?.length ?? 0) > 0;
+  // Cobrança só funciona com um provedor ATIVO (com credenciais).
+  const temCredenciais = (credenciaisApi.data ?? []).some((c) => c.ativo);
   const bloqueado = credenciaisApi.loading || !temCredenciais;
 
   return { user, isAdmin, isAcademia, isFpp, loading, codigoAcademia, bloqueado };
@@ -195,7 +196,7 @@ export function usePagamentosAcesso() {
 export function AvisoCredenciaisPagamentos() {
   return (
     <div className="space-y-3">
-      <Alert variant="warning" title="Adesão ao Gateway de Pagamento Online" message="A sua instituição precisa aderir ao Gateway de Pagamento Online." />
+      <Alert variant="warning" title="Adesão ao Gateway de Pagamento Online" message="A sua instituição precisa aderir ao Gateway de Pagamento Online e escolher o provedor de pagamento." />
       <Link href="/financas/credenciais" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600">
         Siga as instruções aqui <Icon icon="mdi:arrow-right" width={16} />
       </Link>
