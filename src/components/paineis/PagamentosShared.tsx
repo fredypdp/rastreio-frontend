@@ -197,7 +197,7 @@ export function AvisoCredenciaisPagamentos() {
   return (
     <div className="space-y-3">
       <Alert variant="warning" title="Adesão ao Gateway de Pagamento Online" message="A sua instituição precisa aderir ao Gateway de Pagamento Online e escolher o provedor de pagamento." />
-      <Link href="/financas/credenciais" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600">
+      <Link href="/financas/configuracoes/provedor" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600">
         Siga as instruções aqui <Icon icon="mdi:arrow-right" width={16} />
       </Link>
     </div>

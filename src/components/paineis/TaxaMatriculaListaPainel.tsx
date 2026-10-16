@@ -57,6 +57,7 @@ export default function TaxaMatriculaListaPainel() {
               codigoAcademia={ctx.codigoAcademia}
               reload={ctx.reload}
               onAlert={setAlert}
+              suportados={ctx.metodosSuportados}
             />
           </div>
         )}

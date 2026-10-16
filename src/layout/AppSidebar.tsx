@@ -40,7 +40,6 @@ const navItems: NavItem[] = [
     icon: <Icon width="24px" icon="mdi:credit-card-outline" />,
     name: "Finanças",
     subItems: [
-      { name: "Credenciais", path: "/financas/credenciais" },
       { name: "Configurações", path: "/financas/configuracoes" },
       { name: "Gestão de Cobranças", path: "/financas/gestao-cobrancas" },
       { name: "Pagamentos", path: "/financas/pagamentos" },

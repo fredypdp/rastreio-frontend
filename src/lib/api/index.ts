@@ -172,6 +172,7 @@ export type {
   FinanceiroProvedorDoContexto,
   DefinirFinanceiroProvedorRequest,
   DefinirFinanceiroProvedorResponse,
+  RemoverFinanceiroCredencialResponse,
   CriarFinanceiroCredencialRequest,
   AtualizarFinanceiroCredencialRequest,
   ListarFinanceiroCredenciaisParams,

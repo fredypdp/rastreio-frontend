@@ -11,7 +11,7 @@ import { financeiroService, useApi } from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
 import { SubtelaPanel } from "@/components/paineis/financeiroShared";
 import {
-  FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, NivelCamposFields, MetodosPagamentoCheckboxes,
+  FinanceiroAcessoGuard, AvisoCredenciais, ManualDeFuncionamento, NivelCamposFields, MetodosPagamentoCheckboxes, metodosValidos,
   validarValorEAno, existeConfiguracaoParaEscopo, useFinanceiroNivelContext, type NivelFormState, type FormFieldErrors,
 } from "@/components/paineis/financeiroNivelShared";
 import type { FinanceiroModoVigencia, FinanceiroNivel, MatriculaConfiguracaoInput } from "@/types/api";
@@ -91,7 +91,8 @@ export default function TaxaMatriculaCriarPainel() {
         ano_academico: form.ano_academico,
         curso_id: form.nivel === "fundamental" ? undefined : form.curso_id,
         valor: Number(form.valor),
-        metodos_pagamento: form.metodos_pagamento,
+        // só o que o provedor ativo suporta (o backend recusa o resto)
+        metodos_pagamento: metodosValidos(form.metodos_pagamento, ctx.metodosSuportados),
         modo_vigencia: form.modo_vigencia ? (form.modo_vigencia as FinanceiroModoVigencia) : undefined,
       };
       const resultado = await (existe ? atualizar.execute(p) : salvar.execute(p));
@@ -133,7 +134,7 @@ export default function TaxaMatriculaCriarPainel() {
             existeConfiguracaoParaEscopo={existe}
           />
           <Label>Métodos de pagamento aceites</Label>
-          <MetodosPagamentoCheckboxes kind="matricula" selected={form.metodos_pagamento} onToggle={(m) => setForm((prev) => ({ ...prev, metodos_pagamento: prev.metodos_pagamento.includes(m) ? prev.metodos_pagamento.filter((x) => x !== m) : [...prev.metodos_pagamento, m] }))} />
+          <MetodosPagamentoCheckboxes kind="matricula" suportados={ctx.metodosSuportados} provedorNome={ctx.provedorAtivoNome} selected={form.metodos_pagamento} onToggle={(m) => setForm((prev) => ({ ...prev, metodos_pagamento: prev.metodos_pagamento.includes(m) ? prev.metodos_pagamento.filter((x) => x !== m) : [...prev.metodos_pagamento, m] }))} />
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={submit} disabled={ctx.bloquear || (existe && !form.modo_vigencia) || salvar.loading || atualizar.loading} startIcon={<Icon icon="mdi:content-save-outline" width={16} />}>
               {existe ? "Salvar alterações" : "Salvar nova versão"}

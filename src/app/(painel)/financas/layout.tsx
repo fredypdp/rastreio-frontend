@@ -5,7 +5,6 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 
 const PAGE_TITLES: Record<string, string> = {
   "/financas/configuracoes": "Finanças - Configurações",
-  "/financas/credenciais": "Finanças - Credenciais",
   "/financas/pagamentos": "Finanças - Pagamentos",
 };
 

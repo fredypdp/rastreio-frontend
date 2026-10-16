@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { ApiError, consultasService, financeiroService, useApi } from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
 import { useUserType } from "@/hooks/useRoutePermission";
@@ -23,6 +24,7 @@ import Select from "@/components/form/Select";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { ConfirmDialog, METODO_PAGAMENTO_LABEL } from "./financeiroShared";
+import { ManualDeFuncionamento } from "./financeiroNivelShared";
 
 type AlertState = { variant: "success" | "error" | "warning" | "info"; message: string } | null;
 type ContextFilter = "todas" | "spuri" | "academia";
@@ -84,7 +86,13 @@ function nomeDoProvedor(catalogo: FinanceiroProvedor[], id: string) {
   return catalogo.find((p) => p.id === id)?.nome ?? id;
 }
 
-export default function FinanceiroCredenciaisPainel() {
+/**
+ * Página /financas/configuracoes/provedor (Tarefa 30): escolha do provedor de
+ * pagamento (PSP) e credenciais por provedor. Vive dentro de Configurações,
+ * como as páginas de Mensalidade e Taxa de Matrícula. Serve a academia (o seu
+ * próprio contexto) e o admin FPP (contexto "Spuri (Global)"; nos demais, só consulta).
+ */
+export default function ProvedorPagamentoPainel() {
   const { user, isAdmin, isAcademia, loading } = useUserType();
   const isFpp = isAdmin && user?.admin?.role === "fpp";
 
@@ -258,16 +266,26 @@ export default function FinanceiroCredenciaisPainel() {
    * destrutiva com consequência imediata — por isso passa por confirmação
    * explícita num modal (ConfirmDialog, aberto via credencialParaRemover),
    * mesmo padrão já usado em "Rotacionar" (WebhookSecretPanel) nesta mesma
-   * tela. O backend recusa (409) enquanto o provedor tiver cobranças
-   * pendentes no contexto: elas continuam sendo acompanhadas junto a ele. O
+   * tela. A remoção nunca é recusada: havendo cobranças pendentes, o backend
+   * arquiva as credenciais (snapshot) para concluí-las e avisa na resposta. O
    * evento de configuração original nunca é apagado no backend.
    */
   const handleRemover = async (credencial: FinanceiroCredencial) => {
     setAlert(null);
     setRemovendoId(credencial.id);
     try {
-      await removerCredencial({ contexto_tipo: credencial.contexto_tipo, codigo_academia: credencial.codigo_academia, provedor: credencial.provedor });
-      setAlert({ variant: "success", message: "Credencial removida com sucesso." });
+      const r = await removerCredencial({ contexto_tipo: credencial.contexto_tipo, codigo_academia: credencial.codigo_academia, provedor: credencial.provedor });
+      const nome = nomeDoProvedor(catalogo, credencial.provedor);
+      if (r?.credenciais_arquivadas) {
+        // Havia cobranças pendentes: a remoção foi feita, mas as credenciais ficam
+        // arquivadas só para concluí-las (aviso, não erro).
+        setAlert({
+          variant: "warning",
+          message: `Credenciais ${nome} removidas. ${r.cobrancas_pendentes} cobrança(s) pendente(s) ainda dependem delas: ficam arquivadas, só para concluir essas cobranças, e são descartadas assim que forem resolvidas.${credencial.ativo ? " Este era o provedor de pagamento: nenhuma cobrança nova poderá ser criada até definir outro." : ""}`,
+        });
+      } else {
+        setAlert({ variant: "success", message: `Credenciais ${nome} removidas com sucesso.${credencial.ativo ? " Este era o provedor de pagamento: defina outro para voltar a criar cobranças." : ""}` });
+      }
       await carregarTudo();
     } catch (err) {
       setAlert({ variant: "error", message: formatApiError(err, "Não foi possível remover a credencial.") });
@@ -312,13 +330,16 @@ export default function FinanceiroCredenciaisPainel() {
   // gerar esse erro confuso.
   const canCreate = isAcademia || (isFpp && contextFilter === "spuri");
   const ativoAtual = estado?.provedores.find((p) => p.ativo) ?? null;
+  // Cobranças pendentes do provedor da credencial em foco (só conhecidas com um contexto único selecionado).
+  const pendentesDaRemocao = credencialParaRemover ? estado?.provedores.find((p) => p.id === credencialParaRemover.provedor)?.cobrancas_pendentes ?? 0 : 0;
+  const pendentesDaEdicao = editing ? estado?.provedores.find((p) => p.id === editing.provedor)?.cobrancas_pendentes ?? 0 : 0;
 
   return (
     <div className="space-y-6">
       {credencialParaRemover && (
         <ConfirmDialog
           title={`Remover credenciais ${nomeDoProvedor(catalogo, credencialParaRemover.provedor)}`}
-          message={`Tem certeza que deseja remover as credenciais ${nomeDoProvedor(catalogo, credencialParaRemover.provedor)} ${credencialParaRemover.contexto_tipo === "spuri" ? "Spuri (Global)" : `da academia ${credencialParaRemover.codigo_academia ?? ""}`}? ${credencialParaRemover.ativo ? "Este é o provedor de pagamento atual: nenhuma cobrança nova poderá ser criada nesse contexto até definir outro provedor. " : ""}Se ainda houver cobranças pendentes neste provedor a remoção será recusada — elas continuam a ser acompanhadas junto a ele até serem resolvidas.`}
+          message={`Tem certeza que deseja remover as credenciais ${nomeDoProvedor(catalogo, credencialParaRemover.provedor)} ${credencialParaRemover.contexto_tipo === "spuri" ? "Spuri (Global)" : `da academia ${credencialParaRemover.codigo_academia ?? ""}`}? ${credencialParaRemover.ativo ? "Este é o provedor de pagamento atual: nenhuma cobrança nova poderá ser criada nesse contexto até definir outro provedor. " : ""}${pendentesDaRemocao > 0 ? `Há ${pendentesDaRemocao} cobrança(s) pendente(s) neste provedor: as credenciais ficam arquivadas, só para concluí-las, e são descartadas quando forem resolvidas.` : "Se houver cobranças pendentes neste provedor, as credenciais ficam arquivadas, só para concluí-las, e são descartadas quando forem resolvidas."}`}
           confirmLabel="Remover"
           onConfirm={() => handleRemover(credencialParaRemover)}
           onClose={() => setCredencialParaRemover(null)}
@@ -333,6 +354,18 @@ export default function FinanceiroCredenciaisPainel() {
           onClose={() => setProvedorParaAtivar(null)}
         />
       )}
+      <Link href="/financas/configuracoes" className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-300">
+        <Icon icon="mdi:arrow-left" width={16} /> Voltar
+      </Link>
+      <ManualDeFuncionamento>
+        <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+          <li>Cada contexto (cada academia, e o Spuri) usa <b>um único provedor de pagamento</b> de cada vez — não há provedor padrão nem reserva. As <b>cobranças novas</b> são sempre geradas pelo provedor definido.</li>
+          <li>Configure as <b>credenciais</b> do provedor e depois use <b>Definir como provedor</b>. Se o contexto ainda não tem nenhum provedor, o primeiro que você configurar passa a ser o ativo.</li>
+          <li>Os estudantes só veem, ao pagar, os <b>métodos de pagamento</b> que a sua instituição habilitou <b>e</b> que o provedor ativo suporta.</li>
+          <li>Ao <b>trocar de provedor</b>, as cobranças já criadas continuam a ser acompanhadas no provedor que as emitiu até serem resolvidas; as credenciais do provedor anterior são mantidas.</li>
+          <li>Ao <b>remover credenciais</b> de um provedor com cobranças pendentes, a remoção é feita e as credenciais ficam <b>arquivadas</b>, só para concluir essas cobranças — são descartadas quando a última for resolvida.</li>
+        </ul>
+      </ManualDeFuncionamento>
       {alert && <Alert variant={alert.variant} title={alert.variant === "success" ? "Sucesso" : "Atenção"} message={alert.message} />}
 
       {novoWebhookSecret && (
@@ -397,6 +430,9 @@ export default function FinanceiroCredenciaisPainel() {
                 {provedor.cobrancas_pendentes > 0 && (
                   <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{provedor.cobrancas_pendentes} cobrança(s) pendente(s) aguardando resposta deste provedor.</p>
                 )}
+                {provedor.credenciais_arquivadas && (
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Credenciais removidas e arquivadas: continuam a ser usadas só para concluir as cobranças pendentes e são descartadas quando forem resolvidas.</p>
+                )}
                 {canCreate && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {!provedor.credenciais_configuradas && <Button size="sm" variant="outline" onClick={() => openCreate(provedor.id)}>Configurar credenciais</Button>}
@@ -444,7 +480,7 @@ export default function FinanceiroCredenciaisPainel() {
                         {credencial.ativo && <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Ativo</span>}
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-sm"><span className={credencial.ambiente === "production" ? "rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-300" : "rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"}>{credencial.ambiente}</span></TableCell>
+                    <TableCell className="px-4 py-3 text-sm"><span className={credencial.ambiente === "prod" ? "rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-300" : "rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"}>{credencial.ambiente}</span></TableCell>
                     <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                       <ul className="space-y-0.5">
                         {Object.entries(credencial.credenciais_mascaradas ?? {}).map(([chave, valor]) => (
@@ -486,7 +522,7 @@ export default function FinanceiroCredenciaisPainel() {
           </div>
           {/* Erro/sucesso do envio deste formulário — visível aqui dentro, não no topo da página. */}
           {formAlert && <Alert variant={formAlert.variant} title={formAlert.variant === "success" ? "Sucesso" : "Não foi possível salvar"} message={formAlert.message} />}
-          {editing && <Alert variant="warning" title="Rotação completa" message={`Por segurança, o ${provedorFormInfo?.nome ?? "provedor"} não devolve os valores atuais dos campos sensíveis. Preencha novamente todos os campos abaixo para atualizar esta credencial — os valores mascarados atuais continuam visíveis na tabela até a atualização ser concluída.${provedorFormInfo?.usa_segredo_webhook ? " O segredo do webhook NÃO muda ao editar; use 'Rotacionar' na tabela se precisar de um novo." : ""}`} />}
+          {editing && <Alert variant="warning" title="Rotação completa" message={`Por segurança, o ${provedorFormInfo?.nome ?? "provedor"} não devolve os valores atuais dos campos sensíveis. Preencha novamente todos os campos abaixo para atualizar esta credencial — os valores mascarados atuais continuam visíveis na tabela até a atualização ser concluída.${provedorFormInfo?.usa_segredo_webhook ? " O segredo do webhook NÃO muda ao editar; use 'Rotacionar' na tabela se precisar de um novo." : ""}${pendentesDaEdicao > 0 ? ` Atenção: há ${pendentesDaEdicao} cobrança(s) pendente(s) deste provedor emitidas com as credenciais atuais. Se for trocar para OUTRA conta do provedor, remova estas credenciais e cadastre as novas em vez de editar — assim as pendentes continuam a ser concluídas com as credenciais antigas.` : ""}`} />}
           {!editing && (
             <div>
               <Label>Provedor de pagamento *</Label>

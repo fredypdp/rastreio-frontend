@@ -1475,7 +1475,8 @@ export interface Turma {
 // =====================================
 
 export type FinanceiroContextoTipo = 'spuri' | 'academia';
-export type FinanceiroAmbiente = 'test' | 'production';
+/** Ambiente do backend (finance.AmbienteAtual): "test" ou "prod". */
+export type FinanceiroAmbiente = 'test' | 'prod';
 
 /**
  * Campo de credencial exigido por um provedor (GET /financeiro/provedores).
@@ -1561,14 +1562,27 @@ export type ListarFinanceiroCredenciaisResponse = FinanceiroCredencial[];
  * Corpo de DELETE /financeiro/credenciais (finance.RemoveCredential no
  * backend). Remove as credenciais de UM provedor do contexto informado — não
  * apaga o evento original do ledger, apenas registra um novo evento de
- * remoção. É recusada com 409 enquanto o provedor tiver cobranças pendentes
- * no contexto (elas continuam sendo acompanhadas junto a ele). Se o provedor
- * removido era o ativo, novas cobranças ficam bloqueadas até definir outro.
+ * remoção. Nunca é recusada: se o provedor tiver cobranças pendentes no
+ * contexto, as credenciais ficam ARQUIVADAS (snapshot) só para concluir essas
+ * cobranças e são descartadas quando a última for resolvida (ver
+ * RemoverFinanceiroCredencialResponse). Se o provedor removido era o ativo,
+ * novas cobranças ficam bloqueadas até definir outro.
  */
 export interface RemoverFinanceiroCredencialRequest {
   contexto_tipo: FinanceiroContextoTipo;
   codigo_academia?: string;
   provedor: string;
+}
+
+/**
+ * Resposta (200) de DELETE /financeiro/credenciais: avisa quantas cobranças
+ * pendentes o provedor tinha no contexto e se as credenciais ficaram arquivadas
+ * (`credenciais_arquivadas`) ou foram apagadas por completo.
+ */
+export interface RemoverFinanceiroCredencialResponse {
+  provedor: string;
+  cobrancas_pendentes: number;
+  credenciais_arquivadas: boolean;
 }
 
 /**
@@ -1608,6 +1622,12 @@ export interface FinanceiroProvedorDoContexto extends FinanceiroProvedor {
    * ativo (mecanismo retroativo).
    */
   cobrancas_pendentes: number;
+  /**
+   * As credenciais deste provedor foram removidas com cobranças pendentes e
+   * continuam arquivadas (snapshot) só para concluí-las; nesse caso
+   * `credenciais_configuradas` é false.
+   */
+  credenciais_arquivadas: boolean;
 }
 
 /** Estado de provedores de um contexto: um único provedor ativo (ou nenhum). */

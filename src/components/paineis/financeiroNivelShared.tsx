@@ -85,6 +85,7 @@ export function useFinanceiroNivelContext() {
   const mensalidadesApi = useApi(financeiroService.listarConfiguracoesMensalidade);
   const matriculasApi = useApi(financeiroService.listarConfiguracoesMatricula);
   const credenciaisApi = useApi(financeiroService.listarCredenciais);
+  const provedorApi = useApi(financeiroService.consultarProvedor);
 
   const reload = async () => {
     if (!codigoAcademia) return;
@@ -109,6 +110,7 @@ export function useFinanceiroNivelContext() {
   useEffect(() => {
     if (!isAcademia || !codigoAcademia) return;
     void credenciaisApi.execute({ contexto_tipo: "academia", codigo_academia: codigoAcademia });
+    void provedorApi.execute({ contexto_tipo: "academia", codigo_academia: codigoAcademia }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAcademia, codigoAcademia]);
 
@@ -117,7 +119,15 @@ export function useFinanceiroNivelContext() {
   const temCredenciais = (credenciaisApi.data ?? []).some((c) => c.ativo);
   const bloquear = credenciaisApi.loading || !temCredenciais;
 
-  return { user, isAdmin, isAcademia, isFpp, loading, codigoAcademia, anosAcademicosAcademia, niveisDisponiveis, cursos, mensalidadesApi, matriculasApi, reload, bloquear };
+  // Métodos de pagamento que o provedor ATIVO da academia suporta: é só entre eles
+  // que a academia pode escolher ao configurar propina e matrícula. `null` enquanto
+  // o estado do provedor ainda não carregou (não filtra nada); lista vazia quando
+  // a academia não tem provedor ativo.
+  const provedorAtivo = provedorApi.data?.provedores.find((p) => p.ativo) ?? null;
+  const metodosSuportados: FinanceiroMetodoPagamento[] | null = provedorApi.data ? (provedorAtivo?.metodos ?? []) : null;
+  const provedorAtivoNome = provedorAtivo?.nome ?? null;
+
+  return { user, isAdmin, isAcademia, isFpp, loading, codigoAcademia, anosAcademicosAcademia, niveisDisponiveis, cursos, mensalidadesApi, matriculasApi, reload, bloquear, metodosSuportados, provedorAtivoNome };
 }
 
 export type FinanceiroNivelContext = ReturnType<typeof useFinanceiroNivelContext>;
@@ -155,7 +165,7 @@ export function AvisoCredenciais() {
   return (
     <div className="space-y-3">
       <Alert variant="warning" title="Adesão ao Gateway de Pagamento Online" message="A sua instituição precisa aderir ao Gateway de Pagamento Online e escolher o provedor de pagamento." />
-      <Link href="/financas/credenciais" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600">
+      <Link href="/financas/configuracoes/provedor" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600">
         Siga as instruções aqui <Icon icon="mdi:arrow-right" width={16} />
       </Link>
     </div>
@@ -189,12 +199,46 @@ export function ManualDeFuncionamento({ children }: { children: ReactNode }) {
   );
 }
 
-export function MetodosPagamentoCheckboxes({ kind, selected, onToggle }: { kind: "mensalidade" | "matricula"; selected: FinanceiroMetodoPagamento[]; onToggle: (metodo: FinanceiroMetodoPagamento) => void }) {
+/**
+ * Mantém só os métodos que o provedor ativo suporta. `suportados` null = ainda
+ * desconhecido (não filtra); o backend recusa de qualquer forma o que o
+ * provedor não suporta.
+ */
+export function metodosValidos(selecionados: FinanceiroMetodoPagamento[], suportados: FinanceiroMetodoPagamento[] | null): FinanceiroMetodoPagamento[] {
+  return suportados ? selecionados.filter((m) => suportados.includes(m)) : selecionados;
+}
+
+/**
+ * Seletor de métodos de pagamento das configurações de propina e matrícula.
+ * Mostra SÓ os métodos que o provedor de pagamento ativo da academia suporta
+ * (`suportados`); métodos já marcados que o provedor atual não suporta são
+ * sinalizados e não são enviados ao guardar.
+ */
+export function MetodosPagamentoCheckboxes({ kind, selected, onToggle, suportados, provedorNome }: { kind: "mensalidade" | "matricula"; selected: FinanceiroMetodoPagamento[]; onToggle: (metodo: FinanceiroMetodoPagamento) => void; suportados?: FinanceiroMetodoPagamento[] | null; provedorNome?: string | null }) {
+  const visiveis = METODOS.filter((m) => !suportados || suportados.includes(m));
+  const indisponiveis = suportados ? selected.filter((m) => !suportados.includes(m)) : [];
   return (
-    <div className="flex flex-wrap gap-4">
-      {METODOS.map((m) => (
-        <Checkbox key={m} id={`${kind}-metodo-${m}`} label={METODO_PAGAMENTO_LABEL[m]} checked={selected.includes(m)} onChange={() => onToggle(m)} />
-      ))}
+    <div className="space-y-2">
+      {suportados && suportados.length === 0 ? (
+        <p className="text-sm text-amber-700 dark:text-amber-300">
+          Nenhum método disponível: a academia ainda não tem um provedor de pagamento ativo.{" "}
+          <Link href="/financas/configuracoes/provedor" className="font-medium underline">Configurar o provedor</Link>
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-4">
+          {visiveis.map((m) => (
+            <Checkbox key={m} id={`${kind}-metodo-${m}`} label={METODO_PAGAMENTO_LABEL[m]} checked={selected.includes(m)} onChange={() => onToggle(m)} />
+          ))}
+        </div>
+      )}
+      {suportados && suportados.length > 0 && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">Métodos disponíveis no provedor {provedorNome ?? "de pagamento"} da sua academia.</p>
+      )}
+      {indisponiveis.length > 0 && (
+        <p className="text-xs text-amber-700 dark:text-amber-300">
+          {indisponiveis.map((m) => METODO_PAGAMENTO_LABEL[m]).join(", ")} {indisponiveis.length > 1 ? "não são suportados" : "não é suportado"} pelo provedor atual e {indisponiveis.length > 1 ? "serão removidos" : "será removido"} ao salvar.
+        </p>
+      )}
     </div>
   );
 }
@@ -498,7 +542,7 @@ function agruparEmSecoes(linhas: ConfigRow[], cursos: Curso[]): { titulo: string
  * "Remover" (mesmo fluxo de confirmação que já existia na tabela).
  */
 export function ConfiguracoesDefinidasCards({
-  linhas, comMesFim, kind, cursos, codigoAcademia, reload, onAlert,
+  linhas, comMesFim, kind, cursos, codigoAcademia, reload, onAlert, suportados,
 }: {
   linhas: ConfigRow[];
   comMesFim: boolean;
@@ -507,6 +551,8 @@ export function ConfiguracoesDefinidasCards({
   codigoAcademia: string;
   reload: () => Promise<void>;
   onAlert: (a: { variant: "success" | "error"; message: string } | null) => void;
+  /** Métodos que o provedor ativo suporta (null = ainda desconhecido); os salvos que ficarem de fora aparecem sinalizados. */
+  suportados?: FinanceiroMetodoPagamento[] | null;
 }) {
   const removerMensalidade = useApi(financeiroService.removerConfiguracaoMensalidade);
   const removerMatricula = useApi(financeiroService.removerConfiguracaoMatricula);
@@ -575,7 +621,7 @@ export function ConfiguracoesDefinidasCards({
             {comMesFim && "mes_fim_cobranca" in selecionada && (
               <div><dt className="text-gray-500 dark:text-gray-400">Mês de encerramento da cobrança</dt><dd className="font-medium text-gray-800 dark:text-white/90">{selecionada.mes_fim_cobranca === 6 ? "Junho" : "Julho"}</dd></div>
             )}
-            <div><dt className="text-gray-500 dark:text-gray-400">Métodos de pagamento</dt><dd className="font-medium text-gray-800 dark:text-white/90">{selecionada.metodos_pagamento.map((m) => METODO_PAGAMENTO_LABEL[m]).join(", ") || "Nenhum"}</dd></div>
+            <div><dt className="text-gray-500 dark:text-gray-400">Métodos de pagamento</dt><dd className="font-medium text-gray-800 dark:text-white/90">{selecionada.metodos_pagamento.map((m) => (suportados && !suportados.includes(m) ? `${METODO_PAGAMENTO_LABEL[m]} (indisponível no provedor atual)` : METODO_PAGAMENTO_LABEL[m])).join(", ") || "Nenhum"}</dd></div>
             <div><dt className="text-gray-500 dark:text-gray-400">Vigente desde</dt><dd className="font-medium text-gray-800 dark:text-white/90">{formatarDataHora(selecionada.vigente_em)}</dd></div>
           </dl>
           <div className="flex gap-2 pt-2">

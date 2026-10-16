@@ -58,6 +58,7 @@ export default function MensalidadeListaPainel() {
               codigoAcademia={ctx.codigoAcademia}
               reload={ctx.reload}
               onAlert={setAlert}
+              suportados={ctx.metodosSuportados}
             />
           </div>
         )}

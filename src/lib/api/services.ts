@@ -175,6 +175,7 @@ import type {
   ListarFinanceiroCredenciaisParams,
   ListarFinanceiroCredenciaisResponse,
   RemoverFinanceiroCredencialRequest,
+  RemoverFinanceiroCredencialResponse,
   MensalidadeConfiguracaoInput,
   MensalidadeConfiguracaoView,
   ListarConfiguracoesMensalidadeResponse,
@@ -953,11 +954,12 @@ export const financeiroService = {
   /**
    * DELETE /financeiro/credenciais — remove as credenciais de um provedor do
    * contexto informado (evento imutável no backend; o histórico de configuração
-   * nunca é apagado). Recusada com 409 enquanto o provedor tiver cobranças
-   * pendentes no contexto.
+   * nunca é apagado). Nunca é recusada: havendo cobranças pendentes, as
+   * credenciais ficam arquivadas (snapshot) só para concluí-las — a resposta
+   * diz quantas são e se ficaram arquivadas.
    */
   removerCredencial: (data: RemoverFinanceiroCredencialRequest, token?: string) =>
-    api.delete<void, RemoverFinanceiroCredencialRequest>(
+    api.delete<RemoverFinanceiroCredencialResponse, RemoverFinanceiroCredencialRequest>(
       '/financeiro/credenciais',
       data,
       { token: token || tokenStorage.get() || undefined }
