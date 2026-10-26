@@ -200,6 +200,26 @@ export function ManualDeFuncionamento({ children }: { children: ReactNode }) {
 }
 
 /**
+ * Métodos de pagamento que o provedor ATIVO de uma academia suporta, para os
+ * formulários que não passam por useFinanceiroNivelContext (ex.: serviços
+ * extras). Mesma semântica de `metodosSuportados` do contexto: `null` enquanto
+ * o estado do provedor não carregou (não filtra nada; o backend recusa de
+ * qualquer forma o que o provedor não suporta) e lista vazia quando a academia
+ * não tem provedor ativo.
+ */
+export function useMetodosDoProvedor(codigoAcademia?: string | null) {
+  const provedorApi = useApi(financeiroService.consultarProvedor);
+  useEffect(() => {
+    if (!codigoAcademia) return;
+    void provedorApi.execute({ contexto_tipo: "academia", codigo_academia: codigoAcademia }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codigoAcademia]);
+  const provedorAtivo = provedorApi.data?.provedores.find((p) => p.ativo) ?? null;
+  const metodosSuportados: FinanceiroMetodoPagamento[] | null = provedorApi.data ? (provedorAtivo?.metodos ?? []) : null;
+  return { metodosSuportados, provedorAtivoNome: provedorAtivo?.nome ?? null };
+}
+
+/**
  * Mantém só os métodos que o provedor ativo suporta. `suportados` null = ainda
  * desconhecido (não filtra); o backend recusa de qualquer forma o que o
  * provedor não suporta.
@@ -214,7 +234,7 @@ export function metodosValidos(selecionados: FinanceiroMetodoPagamento[], suport
  * (`suportados`); métodos já marcados que o provedor atual não suporta são
  * sinalizados e não são enviados ao guardar.
  */
-export function MetodosPagamentoCheckboxes({ kind, selected, onToggle, suportados, provedorNome }: { kind: "mensalidade" | "matricula"; selected: FinanceiroMetodoPagamento[]; onToggle: (metodo: FinanceiroMetodoPagamento) => void; suportados?: FinanceiroMetodoPagamento[] | null; provedorNome?: string | null }) {
+export function MetodosPagamentoCheckboxes({ kind, selected, onToggle, suportados, provedorNome }: { kind: "mensalidade" | "matricula" | "servico" | "taxa_inscricao"; selected: FinanceiroMetodoPagamento[]; onToggle: (metodo: FinanceiroMetodoPagamento) => void; suportados?: FinanceiroMetodoPagamento[] | null; provedorNome?: string | null }) {
   const visiveis = METODOS.filter((m) => !suportados || suportados.includes(m));
   const indisponiveis = suportados ? selected.filter((m) => !suportados.includes(m)) : [];
   return (

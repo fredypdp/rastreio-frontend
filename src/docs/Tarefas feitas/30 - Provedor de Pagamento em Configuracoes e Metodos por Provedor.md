@@ -1,6 +1,6 @@
 # Tarefa 30 — Provedor de pagamento em Configurações e métodos por provedor (frontend)
 
-**Estado:** pendente
+**Estado:** feito
 **Repositório:** https://github.com/fredypdp/rastreio-frontend
 **Gerado sobre:** `main` @ `b1ca690` (commit completo `b1ca690b79ea2827972b186ab0c0ac2b54050c0a`, "feat(financeiro): provedor de pagamento e credenciais por provedor - tarefa 29"). Conferi que o `main` aplicado contém exatamente os arquivos entregues na Tarefa 29 (0 divergências).
 **Entrega:** arquivos completos e atualizados na pasta `rastreio-frontend/`, com os mesmos caminhos do repositório

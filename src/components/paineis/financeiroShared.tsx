@@ -9,7 +9,7 @@ import Icon from "@/components/ui/Icon";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import type { AcademiaNivel, EstudanteDetalhado, FinanceiroMetodoPagamento, FinanceiroNivel, FinanceiroOrigemCobranca, MensalidadeMesView, NivelEscolar, PagamentoResumo } from "@/types/api";
+import type { AcademiaNivel, EstudanteDetalhado, FinanceiroAvisoMetodos, FinanceiroMetodoPagamento, FinanceiroNivel, FinanceiroOrigemCobranca, MensalidadeMesView, NivelEscolar, PagamentoResumo } from "@/types/api";
 
 /**
  * Utilitários e componentes partilhados pelas telas de pagamentos e de
@@ -367,6 +367,25 @@ export function MetodoPagamentoSelector({ value, disponiveis, onChange }: {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Explica ao PAGADOR por que não há como pagar online agora: a lista de métodos
+ * chegou vazia (provedor não configurado, métodos não suportados pelo provedor
+ * ou nenhum método habilitado). Usa a mensagem do backend (`aviso`) e, na falta
+ * dela (backend mais antigo), um texto genérico — nunca deixa o pagador diante
+ * de botões desabilitados sem explicação.
+ */
+export function AvisoMetodosIndisponiveis({ aviso, className = "" }: { aviso?: FinanceiroAvisoMetodos | null; className?: string }) {
+  return (
+    <div role="status" className={`flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200 ${className}`}>
+      <Icon icon="mdi:credit-card-off-outline" width={20} className="mt-0.5 shrink-0" />
+      <div>
+        <p className="font-medium">Pagamento online indisponível</p>
+        <p className="mt-0.5">{aviso?.mensagem ?? "Não há métodos de pagamento disponíveis neste momento. Contacte a secretaria da instituição."}</p>
+      </div>
     </div>
   );
 }

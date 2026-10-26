@@ -10,7 +10,8 @@ import Alert from "@/components/ui/alert/Alert";
 import Badge from "@/components/ui/badge/Badge";
 import { PageHeading, PageDescription } from "@/components/ui/typography/Typography";
 import { METODO_PAGAMENTO_LABEL, ConfirmDialog } from "@/components/paineis/financeiroShared";
-import { formatarDataHora } from "@/components/paineis/financeiroNivelShared";
+import { formatarDataHora, useMetodosDoProvedor } from "@/components/paineis/financeiroNivelShared";
+import { useUserCookie } from "@/hooks/useUserCookie";
 
 const formatarAnoLabel = (ano: string) =>
   ano.replace(/^(\d+)_ano_(.+)$/, (_, n, tipo) =>
@@ -64,6 +65,11 @@ export default function ServicosExtrasPainel() {
   const [alert, setAlert] = useState<string | null>(null);
   const [servicoParaExcluir, setServicoParaExcluir] = useState<ServicoExtra | null>(null);
   const [selecionado, setSelecionado] = useState<ServicoExtra | null>(null);
+  // Esta visão mostra o que a academia configurou (sem filtrar); os estudantes só
+  // veem os métodos que o provedor ativo suporta — daí o aviso abaixo, para ela corrigir.
+  const { user } = useUserCookie();
+  const { metodosSuportados, provedorAtivoNome } = useMetodosDoProvedor(user?.academia?.codigo_academia);
+  const naoSuportados = (lista: ServicoExtra["metodos_pagamento"]) => (metodosSuportados ? lista.filter((m) => !metodosSuportados.includes(m)) : []);
 
   const recarregar = () => Promise.all([lista.execute(), cats.execute(), cursosApi.execute()]);
   useEffect(() => { recarregar(); }, []);
@@ -126,6 +132,22 @@ export default function ServicosExtrasPainel() {
             </div>
             <div><dt className="text-gray-500 dark:text-gray-400">Exige documento na inscrição</dt><dd className="font-medium text-gray-800 dark:text-white/90">{selecionado.documento_obrigatorio ? "Sim" : "Não"}</dd></div>
           </dl>
+          {(() => {
+            const fora = [
+              ...(selecionado.pago ? naoSuportados(selecionado.metodos_pagamento) : []),
+              ...(selecionado.tem_taxa_inscricao ? naoSuportados(selecionado.metodos_pagamento_taxa_inscricao) : []),
+            ].filter((m, i, todos) => todos.indexOf(m) === i);
+            if (fora.length === 0) return null;
+            return (
+              <Alert
+                variant="warning"
+                title="Métodos não suportados pelo provedor"
+                message={provedorAtivoNome
+                  ? `O provedor de pagamento atual (${provedorAtivoNome}) não suporta: ${fora.map((m) => METODO_PAGAMENTO_LABEL[m] ?? m).join(", ")}. Os estudantes não veem estes métodos ao pagar. Edite o serviço para escolher métodos suportados.`
+                  : `A academia ainda não tem um provedor de pagamento ativo, por isso os estudantes não conseguem pagar este serviço (${fora.map((m) => METODO_PAGAMENTO_LABEL[m] ?? m).join(", ")}). Configure um provedor em Finanças › Configurações › Provedor de pagamento.`}
+              />
+            );
+          })()}
           <div>
             <dt className="text-sm text-gray-500 dark:text-gray-400">Disponibilidade</dt>
             {(selecionado.anos_academicos_disponiveis?.length || selecionado.cursos_disponiveis?.length) ? (

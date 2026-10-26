@@ -1360,6 +1360,13 @@ export interface ServicoExtra {
   pago: boolean; preco: number | null; tipo_cobranca: TipoCobrancaServico | null;
   metodos_pagamento: MetodoPagamentoServico[]; tem_taxa_inscricao: boolean;
   valor_taxa_inscricao: number | null; metodos_pagamento_taxa_inscricao: MetodoPagamentoServico[];
+  /**
+   * Só nas visões do PAGADOR (lista pública e catálogo do estudante), onde as
+   * listas de métodos já vêm filtradas pelo provedor ativo da academia: explicam
+   * por que a lista de um serviço pago / da taxa de inscrição veio vazia.
+   */
+  metodos_pagamento_aviso?: FinanceiroAvisoMetodos;
+  metodos_pagamento_taxa_inscricao_aviso?: FinanceiroAvisoMetodos;
   anos_academicos_disponiveis: string[]; cursos_disponiveis: string[]; documento_obrigatorio: boolean;
   documento_instrucoes?: string; detalhes_personalizados: Record<string, DetalhePersonalizado>;
   ativo: boolean; created_at: string; updated_at: string;
@@ -1404,6 +1411,8 @@ export interface SolicitacaoServicoExtra {
   status: StatusSolicitacaoServicoExtra; motivo_reprovacao?: string; motivo_cancelamento?: string;
   cancelada_por?: 'academia' | 'estudante'; documento_path?: string; documento_url?: string;
   valor_taxa_inscricao: number; metodos_pagamento_taxa_inscricao: MetodoPagamentoServico[];
+  /** Na visão do estudante: por que a lista de métodos da taxa veio vazia. */
+  metodos_pagamento_taxa_inscricao_aviso?: FinanceiroAvisoMetodos;
   aprovada_por?: string; reprovada_por?: string; vinculada_em?: string; created_at: string; updated_at: string;
 }
 export type TipoLancamentoServicoExtra = 'mensalidade' | 'preco_unico';
@@ -1526,6 +1535,34 @@ export interface FinanceiroCredencial {
   ativo: boolean;
   webhook_header_name?: string;
   updated_at: string;
+  /**
+   * Só na resposta de uma EDIÇÃO (PUT, ou POST sobre credencial existente).
+   * `cobrancas_pendentes`: pendentes do provedor no contexto. `snapshot_criado`:
+   * a edição alterou valores enquanto havia pendentes que dependiam da credencial
+   * editada, então as credenciais ANTERIORES ficaram arquivadas só para
+   * concluí-las (consulta, cancelamento e webhook) e são descartadas quando a
+   * última for resolvida. Omitidos quando valem 0/false.
+   */
+  snapshot_criado?: boolean;
+  cobrancas_pendentes?: number;
+}
+
+/**
+ * Códigos estáveis de FinanceiroAvisoMetodos: por que a lista de métodos de
+ * pagamento chegou vazia ao pagador.
+ */
+export type FinanceiroAvisoMetodosCodigo =
+  | 'PROVEDOR_NAO_CONFIGURADO'
+  | 'METODOS_NAO_SUPORTADOS_PELO_PROVEDOR'
+  | 'NENHUM_METODO_HABILITADO';
+
+/**
+ * Explicação devolvida pelo backend (campos aditivos `*_aviso`) quando a lista
+ * de métodos que o pagador pode usar veio vazia. Só existe nesse caso.
+ */
+export interface FinanceiroAvisoMetodos {
+  codigo: FinanceiroAvisoMetodosCodigo | (string & {});
+  mensagem: string;
 }
 
 /**
@@ -1765,6 +1802,11 @@ export interface ConsultarMensalidadesEstudanteResponse {
   codigo_estudante: string;
   mensalidades: MensalidadeMesView[];
   metodos_pagamento_por_academia: Record<string, FinanceiroMetodoPagamento[]>;
+  /**
+   * Por academia, por que a lista de métodos veio vazia (só aparece a academia
+   * que tem algo a explicar). Sempre presente no backend ≥ 2.9.0.
+   */
+  metodos_pagamento_avisos_por_academia?: Record<string, FinanceiroAvisoMetodos>;
 }
 
 export interface MensalidadePagamentoInput {
@@ -1973,6 +2015,8 @@ export interface SolicitacaoMatriculaStatusResponse {
   codigo_academia: string;
   valor_matricula?: number;
   metodos_pagamento?: FinanceiroMetodoPagamento[];
+  /** Só quando `metodos_pagamento` veio vazio: o motivo (backend ≥ 2.9.0). */
+  metodos_pagamento_aviso?: FinanceiroAvisoMetodos;
 }
 
 export interface PagamentoMatriculaInput {

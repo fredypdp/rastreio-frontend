@@ -1,6 +1,6 @@
 # Tarefa 29 — Provedor de pagamento e credenciais por provedor (frontend)
 
-**Estado:** pendente
+**Estado:** feito
 **Repositório:** https://github.com/fredypdp/rastreio-frontend
 **Gerado sobre:** `main` @ `33a215f` (commit completo `33a215f5d8dbc9cdfeda7864c82ea2d60ed860ad`)
 **Entrega:** arquivos completos e atualizados na pasta `rastreio-frontend/`, com os mesmos caminhos do repositório

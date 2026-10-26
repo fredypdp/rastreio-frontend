@@ -20,8 +20,8 @@ import TextArea from "@/components/form/input/TextArea";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import { Modal } from "@/components/ui/modal";
 import { PageHeading, Section, SectionTitle, SectionDescription } from "@/components/ui/typography/Typography";
-import { METODO_PAGAMENTO_LABEL } from "@/components/paineis/financeiroShared";
 import { LoadingState } from "@/components/paineis/financeiroShared";
+import { MetodosPagamentoCheckboxes, metodosValidos, useMetodosDoProvedor } from "@/components/paineis/financeiroNivelShared";
 
 const tipos: [TipoDetalhePersonalizado, string][] = [
   ["texto", "Texto"],
@@ -31,7 +31,6 @@ const tipos: [TipoDetalhePersonalizado, string][] = [
   ["hora", "Hora"],
   ["lista_texto", "Lista de textos"],
 ];
-const pay: MetodoPagamentoServico[] = ["GPO", "REF", "GPO_QR"];
 
 // Mesma lista/rótulos de src/components/paineis/MateriaPainel.tsx — mantenha
 // os dois em sincronia se a numeração de anos do fundamental mudar.
@@ -91,17 +90,17 @@ const paraForm = (s: ServicoExtra): Form => ({
   instrucoes: s.documento_instrucoes ?? "",
   detalhesPersonalizados: s.detalhes_personalizados ?? {},
 });
-const valor = (f: Form): ServicoExtraPayload => ({
+const valor = (f: Form, suportados: MetodoPagamentoServico[] | null): ServicoExtraPayload => ({
   nome: f.nome.trim(),
   descricao: f.descricao || undefined,
   categoria_servico_id: f.categoriaServicoId,
   pago: f.pago,
   preco: f.pago ? Number(f.preco) : undefined,
   tipo_cobranca: f.pago ? f.tipo : undefined,
-  metodos_pagamento: f.pago ? f.metodos : [],
+  metodos_pagamento: f.pago ? metodosValidos(f.metodos, suportados) : [],
   tem_taxa_inscricao: f.taxa,
   valor_taxa_inscricao: f.taxa ? Number(f.valorTaxa) : undefined,
-  metodos_pagamento_taxa_inscricao: f.taxa ? f.metodosTaxa : [],
+  metodos_pagamento_taxa_inscricao: f.taxa ? metodosValidos(f.metodosTaxa, suportados) : [],
   // Sempre presentes (mesmo []): o backend só atualiza o que vier no JSON da
   // requisição (partial update). Se estes campos forem omitidos ao editar,
   // uma restrição de anos/cursos já salva nunca poderia ser removida pela
@@ -202,6 +201,9 @@ export default function ServicoExtraFormPainel({ servicoId }: { servicoId?: stri
   const atualizar = useApi(academiaService.atualizarServicoExtra);
   const nova = useApi(academiaService.criarCategoriaServico);
   const { user } = useUserCookie();
+  // Só os métodos que o provedor de pagamento ATIVO da academia suporta podem ser
+  // escolhidos (o backend recusa os outros ao salvar). `null` = ainda a carregar.
+  const { metodosSuportados, provedorAtivoNome } = useMetodosDoProvedor(user?.academia?.codigo_academia);
 
   const [form, setForm] = useState(vazio);
   const [carregandoServico, setCarregandoServico] = useState(!!servicoId);
@@ -238,14 +240,14 @@ export default function ServicoExtraFormPainel({ servicoId }: { servicoId?: stri
     if (!form.nome.trim() || !Object.values(form.detalhesPersonalizados).every(d => d.rotulo.trim())) {
       return setAlert("Informe o nome e o rótulo de todas as personalizações.");
     }
-    if (form.pago && form.metodos.length === 0) {
-      return setAlert("Selecione ao menos um método de pagamento aceite para o serviço.");
+    if (form.pago && metodosValidos(form.metodos, metodosSuportados).length === 0) {
+      return setAlert("Selecione ao menos um método de pagamento aceite para o serviço, entre os que o provedor de pagamento da academia suporta.");
     }
-    if (form.taxa && form.metodosTaxa.length === 0) {
-      return setAlert("Selecione ao menos um método de pagamento aceite para a taxa de inscrição.");
+    if (form.taxa && metodosValidos(form.metodosTaxa, metodosSuportados).length === 0) {
+      return setAlert("Selecione ao menos um método de pagamento aceite para a taxa de inscrição, entre os que o provedor de pagamento da academia suporta.");
     }
     try {
-      servicoId ? await atualizar.execute(servicoId, valor(form)) : await criar.execute(valor(form));
+      servicoId ? await atualizar.execute(servicoId, valor(form, metodosSuportados)) : await criar.execute(valor(form, metodosSuportados));
       router.push("/servicos-extras/gerenciar-servicos");
     } catch (e) {
       setAlert(formatApiError(e, "Não foi possível salvar."));
@@ -308,16 +310,13 @@ export default function ServicoExtraFormPainel({ servicoId }: { servicoId?: stri
                 isSearchable={false}
               />
               <SectionDescription>Métodos de pagamento aceites para este serviço</SectionDescription>
-              <div className="flex flex-wrap gap-4">
-                {pay.map(m => (
-                  <Checkbox
-                    key={m}
-                    label={METODO_PAGAMENTO_LABEL[m]}
-                    checked={form.metodos.includes(m)}
-                    onChange={() => set({ metodos: form.metodos.includes(m) ? form.metodos.filter(x => x !== m) : [...form.metodos, m] })}
-                  />
-                ))}
-              </div>
+              <MetodosPagamentoCheckboxes
+                kind="servico"
+                selected={form.metodos}
+                onToggle={m => set({ metodos: form.metodos.includes(m) ? form.metodos.filter(x => x !== m) : [...form.metodos, m] })}
+                suportados={metodosSuportados}
+                provedorNome={provedorAtivoNome}
+              />
             </>
           )}
         </Section>
@@ -328,16 +327,13 @@ export default function ServicoExtraFormPainel({ servicoId }: { servicoId?: stri
             <>
               <Input type="number" value={form.valorTaxa} onChange={e => set({ valorTaxa: e.target.value })} placeholder="Valor da taxa" />
               <SectionDescription>Métodos de pagamento aceites para a taxa de inscrição</SectionDescription>
-              <div className="flex flex-wrap gap-4">
-                {pay.map(m => (
-                  <Checkbox
-                    key={m}
-                    label={METODO_PAGAMENTO_LABEL[m]}
-                    checked={form.metodosTaxa.includes(m)}
-                    onChange={() => set({ metodosTaxa: form.metodosTaxa.includes(m) ? form.metodosTaxa.filter(x => x !== m) : [...form.metodosTaxa, m] })}
-                  />
-                ))}
-              </div>
+              <MetodosPagamentoCheckboxes
+                kind="taxa_inscricao"
+                selected={form.metodosTaxa}
+                onToggle={m => set({ metodosTaxa: form.metodosTaxa.includes(m) ? form.metodosTaxa.filter(x => x !== m) : [...form.metodosTaxa, m] })}
+                suportados={metodosSuportados}
+                provedorNome={provedorAtivoNome}
+              />
             </>
           )}
         </Section>

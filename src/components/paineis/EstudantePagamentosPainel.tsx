@@ -11,6 +11,7 @@ import SearchableSelect from "@/components/form/SearchableSelect";
 import Checkbox from "@/components/form/input/Checkbox";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import {
+  AvisoMetodosIndisponiveis,
   CobrancasTable,
   EmptyState,
   ESTADOS_COBRANCA_REAL,
@@ -400,6 +401,9 @@ export default function EstudantePagamentosPainel() {
   if (tela.nome === "checkout") {
     const total = tela.itens.reduce((s, i) => s + i.valor, 0);
     const disponiveis: FinanceiroMetodoPagamento[] = metodosPagamentoPorAcademia[tela.codigoAcademia] ?? ["GPO"];
+    // Sem nenhum método utilizável (provedor não configurado, métodos não
+    // suportados...): em vez de botões desabilitados, explica o motivo.
+    const avisoMetodos = mensalidadesApi.data?.metodos_pagamento_avisos_por_academia?.[tela.codigoAcademia];
     const resultado = pagar.data?.cobranca;
     return (
       <SubtelaPanel title="Pagamento" icon="mdi:credit-card-outline" onVoltar={fecharCheckout}>
@@ -436,6 +440,9 @@ export default function EstudantePagamentosPainel() {
             </div>
           </div>
         ) : (
+          disponiveis.length === 0 ? (
+            <AvisoMetodosIndisponiveis aviso={avisoMetodos} className="mt-4" />
+          ) : (
           <div className="mt-4 space-y-4">
             <MetodoPagamentoSelector value={metodoCheckout} disponiveis={disponiveis} onChange={setMetodoCheckout} />
             {metodoCheckout === "GPO" && (
@@ -445,6 +452,7 @@ export default function EstudantePagamentosPainel() {
               {pagar.loading ? "Aguarde..." : "Confirmar pagamento"}
             </Button>
           </div>
+          )
         )}
       </SubtelaPanel>
     );

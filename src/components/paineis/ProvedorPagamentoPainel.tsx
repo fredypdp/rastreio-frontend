@@ -92,6 +92,29 @@ function nomeDoProvedor(catalogo: FinanceiroProvedor[], id: string) {
  * como as páginas de Mensalidade e Taxa de Matrícula. Serve a academia (o seu
  * próprio contexto) e o admin FPP (contexto "Spuri (Global)"; nos demais, só consulta).
  */
+/**
+ * Resultado de uma EDIÇÃO de credenciais, descrito a partir do que o backend
+ * fez com as cobranças pendentes (campos snapshot_criado / cobrancas_pendentes
+ * da resposta). Editar nunca deixa pendentes sem credenciais: se os valores
+ * mudaram, as anteriores ficam arquivadas só para concluí-las.
+ */
+function alertaDaEdicao(r: FinanceiroCredencial | null | undefined, nomeProvedor: string): { variant: "success" | "warning"; message: string } {
+  const pendentes = r?.cobrancas_pendentes ?? 0;
+  if (r?.snapshot_criado) {
+    return {
+      variant: "warning",
+      message: `Credencial ${nomeProvedor} atualizada. ${pendentes} cobrança(s) pendente(s) foram emitidas com as credenciais anteriores: elas ficam arquivadas e continuam a ser usadas só para concluir essas cobranças (consulta, cancelamento e confirmação por webhook), até a última ser resolvida. As cobranças novas já usam as credenciais que acabou de guardar.`,
+    };
+  }
+  if (pendentes > 0) {
+    return {
+      variant: "success",
+      message: `Credencial ${nomeProvedor} atualizada. Nada novo foi arquivado: os valores não mudaram, ou as ${pendentes} cobrança(s) pendente(s) já dependem de credenciais arquivadas anteriormente.`,
+    };
+  }
+  return { variant: "success", message: "Credencial atualizada com sucesso." };
+}
+
 export default function ProvedorPagamentoPainel() {
   const { user, isAdmin, isAcademia, loading } = useUserType();
   const isFpp = isAdmin && user?.admin?.role === "fpp";
@@ -244,8 +267,8 @@ export default function ProvedorPagamentoPainel() {
 
     try {
       if (editing) {
-        await atualizarCredencial(editing.id, payload);
-        setAlert({ variant: "success", message: "Credencial atualizada com sucesso." });
+        const atualizada = await atualizarCredencial(editing.id, payload);
+        setAlert(alertaDaEdicao(atualizada, provedorFormInfo.nome));
         closeForm();
       } else {
         const criada = await criarCredencial(payload);
@@ -363,6 +386,7 @@ export default function ProvedorPagamentoPainel() {
           <li>Configure as <b>credenciais</b> do provedor e depois use <b>Definir como provedor</b>. Se o contexto ainda não tem nenhum provedor, o primeiro que você configurar passa a ser o ativo.</li>
           <li>Os estudantes só veem, ao pagar, os <b>métodos de pagamento</b> que a sua instituição habilitou <b>e</b> que o provedor ativo suporta.</li>
           <li>Ao <b>trocar de provedor</b>, as cobranças já criadas continuam a ser acompanhadas no provedor que as emitiu até serem resolvidas; as credenciais do provedor anterior são mantidas.</li>
+          <li>Ao <b>editar credenciais</b> (inclusive para <b>trocar de conta</b> no mesmo provedor) com cobranças pendentes, não é preciso remover antes: as credenciais anteriores ficam <b>arquivadas</b> só para concluir essas cobranças, e as novas valem para as cobranças novas. Se nada mudou, ou não há pendentes, nada é arquivado.</li>
           <li>Ao <b>remover credenciais</b> de um provedor com cobranças pendentes, a remoção é feita e as credenciais ficam <b>arquivadas</b>, só para concluir essas cobranças — são descartadas quando a última for resolvida.</li>
         </ul>
       </ManualDeFuncionamento>
@@ -431,7 +455,7 @@ export default function ProvedorPagamentoPainel() {
                   <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{provedor.cobrancas_pendentes} cobrança(s) pendente(s) aguardando resposta deste provedor.</p>
                 )}
                 {provedor.credenciais_arquivadas && (
-                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Credenciais removidas e arquivadas: continuam a ser usadas só para concluir as cobranças pendentes e são descartadas quando forem resolvidas.</p>
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Credenciais anteriores arquivadas (por remoção ou edição): continuam a ser usadas só para concluir as cobranças pendentes e são descartadas quando a última for resolvida.</p>
                 )}
                 {canCreate && (
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -522,7 +546,12 @@ export default function ProvedorPagamentoPainel() {
           </div>
           {/* Erro/sucesso do envio deste formulário — visível aqui dentro, não no topo da página. */}
           {formAlert && <Alert variant={formAlert.variant} title={formAlert.variant === "success" ? "Sucesso" : "Não foi possível salvar"} message={formAlert.message} />}
-          {editing && <Alert variant="warning" title="Rotação completa" message={`Por segurança, o ${provedorFormInfo?.nome ?? "provedor"} não devolve os valores atuais dos campos sensíveis. Preencha novamente todos os campos abaixo para atualizar esta credencial — os valores mascarados atuais continuam visíveis na tabela até a atualização ser concluída.${provedorFormInfo?.usa_segredo_webhook ? " O segredo do webhook NÃO muda ao editar; use 'Rotacionar' na tabela se precisar de um novo." : ""}${pendentesDaEdicao > 0 ? ` Atenção: há ${pendentesDaEdicao} cobrança(s) pendente(s) deste provedor emitidas com as credenciais atuais. Se for trocar para OUTRA conta do provedor, remova estas credenciais e cadastre as novas em vez de editar — assim as pendentes continuam a ser concluídas com as credenciais antigas.` : ""}`} />}
+          {editing && <Alert variant="warning" title="Rotação completa" message={`Por segurança, o ${provedorFormInfo?.nome ?? "provedor"} não devolve os valores atuais dos campos sensíveis. Preencha novamente todos os campos abaixo para atualizar esta credencial — os valores mascarados atuais continuam visíveis na tabela até a atualização ser concluída.${provedorFormInfo?.usa_segredo_webhook ? " O segredo do webhook NÃO muda ao editar; use 'Rotacionar' na tabela se precisar de um novo." : ""}`} />}
+          {editing && (pendentesDaEdicao > 0 ? (
+            <Alert variant="info" title="Cobranças pendentes protegidas" message={`Há ${pendentesDaEdicao} cobrança(s) pendente(s) deste provedor, emitidas com as credenciais atuais. Pode atualizar ou trocar de conta aqui mesmo, sem remover nada: se os valores forem diferentes, as credenciais atuais ficam arquivadas e continuam a ser usadas só para concluir essas cobranças (consulta, cancelamento e confirmação por webhook) até a última ser resolvida; depois são descartadas. As cobranças novas passam a usar as credenciais que preencher agora.${provedorFormInfo?.usa_segredo_webhook ? " O segredo do webhook continua o mesmo." : ""}`} />
+          ) : (
+            <Alert variant="info" title="Sem cobranças pendentes" message="Este provedor não tem cobranças pendentes: as credenciais atuais serão simplesmente substituídas pelas que preencher." />
+          ))}
           {!editing && (
             <div>
               <Label>Provedor de pagamento *</Label>
