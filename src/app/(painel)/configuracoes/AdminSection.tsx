@@ -9,6 +9,7 @@ import Icon from "@/components/ui/Icon";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import { descreverJanelaFinalizacao, formatAnoLetivo, formatPeriodoAnoLetivo, type AnoLetivoTipo } from "@/types/api";
 import PasswordSettingsCard from "./PasswordSettingsCard";
+import DoisFatoresSettingsCard from "./DoisFatoresSettingsCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -838,8 +839,9 @@ export default function AdminSection({ section = "all" }: { section?: AdminSetti
     <div>
       {showAnoLetivo && <GlobalAcademicYearCard isFPP={isFPP} />}
       {showSeguranca && (
-        <div className="mb-6">
+        <div className="mb-6 space-y-6">
           <PasswordSettingsCard />
+          <DoisFatoresSettingsCard />
         </div>
       )}
 

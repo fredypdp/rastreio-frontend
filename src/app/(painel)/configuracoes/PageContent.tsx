@@ -7,6 +7,7 @@ import Icon from "@/components/ui/Icon";
 import AcademiaSection, { type AcademiaSettingsSection } from "./AcademiaSection";
 import AdminSection from "./AdminSection";
 import PasswordSettingsCard from "./PasswordSettingsCard";
+import DoisFatoresSettingsCard from "./DoisFatoresSettingsCard";
 import AvaliacaoFinalRulesSection from "./AvaliacaoFinalRulesSection";
 
 type SettingsSection =
@@ -32,7 +33,14 @@ export default function PageContent({ section }: { section: SettingsSection }) {
     return (
       <div>
         <PageBreadcrumb pageTitle={pageTitle} />
-        {isAdmin ? <AdminSection section="seguranca" /> : <PasswordSettingsCard />}
+        {isAdmin ? (
+          <AdminSection section="seguranca" />
+        ) : (
+          <div className="space-y-6">
+            <PasswordSettingsCard />
+            <DoisFatoresSettingsCard />
+          </div>
+        )}
       </div>
     );
   }

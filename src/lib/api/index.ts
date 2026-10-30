@@ -7,6 +7,7 @@ export type { ApiErrorCode, ApiErrorDetail, ApiErrorEnvelope, FetchOptions, Deco
 // Serviços
 export {
   authService,
+  doisFatoresService,
   emailService,
   perfilService,
   consultasService,

@@ -4,6 +4,17 @@
 import { api, fetchApiBlob, tokenStorage } from './client';
 import type { AsyncBatchResponse } from '@/lib/api/job-service';
 import type {
+  ConfirmarDesativacaoDoisFatoresRequest,
+  ConfirmarDoisFatoresRequest,
+  DoisFatoresConfirmacaoResponse,
+  DoisFatoresDesafio,
+  DoisFatoresEstado,
+  LoginResponse,
+  ReenviarLoginDoisFatoresRequest,
+  SolicitarDesativacaoDoisFatoresRequest,
+  VerificarLoginDoisFatoresRequest,
+} from '@/types/dois-fatores';
+import type {
   AuthResponse,
   CriarEscolaRequest,
   CriarUniversidadeRequest,
@@ -565,8 +576,28 @@ export const academiaPublicaService = {
 // =====================
 
 export const authService = {
+  /**
+   * POST /login
+   * Sem 2FA devolve o token. Com 2FA ativo devolve `requer_dois_fatores: true`
+   * e o `desafio_id` (SEM token): o código de 6 dígitos foi enviado ao e-mail.
+   * Use `exigeDoisFatores(resposta)` para distinguir.
+   */
   login: (data: LoginRequest) =>
-    api.post<AuthResponse>('/login', data),
+    api.post<LoginResponse>('/login', data),
+
+  /**
+   * POST /login/dois-fatores/verificar
+   * Confere o código e devolve a mesma resposta de um login normal (com token).
+   */
+  verificarDoisFatores: (data: VerificarLoginDoisFatoresRequest) =>
+    api.post<AuthResponse>('/login/dois-fatores/verificar', data),
+
+  /**
+   * POST /login/dois-fatores/reenviar
+   * Envia um código novo (o anterior deixa de valer) e devolve um novo desafio.
+   */
+  reenviarDoisFatores: (data: ReenviarLoginDoisFatoresRequest) =>
+    api.post<DoisFatoresDesafio & { requer_dois_fatores: true }>('/login/dois-fatores/reenviar', data),
 
   /**
    * POST /logout
@@ -585,6 +616,31 @@ export const authService = {
 // =====================
 // EMAIL
 // =====================
+
+// =====================
+// VERIFICAÇÃO EM DUAS ETAPAS (rotas autenticadas)
+// =====================
+
+export const doisFatoresService = {
+  /** GET /dois-fatores — estado do 2FA do usuário autenticado. */
+  obter: () => api.get<DoisFatoresEstado>('/dois-fatores'),
+
+  /** POST /dois-fatores/ativacao/solicitar — envia o código ao e-mail verificado. */
+  solicitarAtivacao: () =>
+    api.post<DoisFatoresDesafio>('/dois-fatores/ativacao/solicitar', {}),
+
+  /** POST /dois-fatores/ativacao/confirmar */
+  confirmarAtivacao: (data: ConfirmarDoisFatoresRequest) =>
+    api.post<DoisFatoresConfirmacaoResponse>('/dois-fatores/ativacao/confirmar', data),
+
+  /** POST /dois-fatores/desativacao/solicitar — exige a senha atual. */
+  solicitarDesativacao: (data: SolicitarDesativacaoDoisFatoresRequest) =>
+    api.post<DoisFatoresDesafio>('/dois-fatores/desativacao/solicitar', data),
+
+  /** POST /dois-fatores/desativacao/confirmar — exige senha atual e código. */
+  confirmarDesativacao: (data: ConfirmarDesativacaoDoisFatoresRequest) =>
+    api.post<DoisFatoresConfirmacaoResponse>('/dois-fatores/desativacao/confirmar', data),
+};
 
 export const emailService = {
   verificarEmail: (token: string) =>
