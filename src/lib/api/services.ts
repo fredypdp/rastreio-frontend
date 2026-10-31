@@ -622,24 +622,47 @@ export const authService = {
 // =====================
 
 export const doisFatoresService = {
+  // Todas as rotas abaixo exigem login. O cliente HTTP só envia `Authorization`
+  // quando recebe `token`; por isso cada método aceita o token (opcional) e, sem
+  // ele, usa o do cookie de sessão — o mesmo padrão de `perfilService`.
+
   /** GET /dois-fatores — estado do 2FA do usuário autenticado. */
-  obter: () => api.get<DoisFatoresEstado>('/dois-fatores'),
+  obter: (token?: string) =>
+    api.get<DoisFatoresEstado>('/dois-fatores', {
+      token: token || tokenStorage.get() || undefined,
+    }),
 
   /** POST /dois-fatores/ativacao/solicitar — envia o código ao e-mail verificado. */
-  solicitarAtivacao: () =>
-    api.post<DoisFatoresDesafio>('/dois-fatores/ativacao/solicitar', {}),
+  solicitarAtivacao: (token?: string) =>
+    api.post<DoisFatoresDesafio>(
+      '/dois-fatores/ativacao/solicitar',
+      {},
+      { token: token || tokenStorage.get() || undefined }
+    ),
 
   /** POST /dois-fatores/ativacao/confirmar */
-  confirmarAtivacao: (data: ConfirmarDoisFatoresRequest) =>
-    api.post<DoisFatoresConfirmacaoResponse>('/dois-fatores/ativacao/confirmar', data),
+  confirmarAtivacao: (data: ConfirmarDoisFatoresRequest, token?: string) =>
+    api.post<DoisFatoresConfirmacaoResponse>(
+      '/dois-fatores/ativacao/confirmar',
+      data,
+      { token: token || tokenStorage.get() || undefined }
+    ),
 
   /** POST /dois-fatores/desativacao/solicitar — exige a senha atual. */
-  solicitarDesativacao: (data: SolicitarDesativacaoDoisFatoresRequest) =>
-    api.post<DoisFatoresDesafio>('/dois-fatores/desativacao/solicitar', data),
+  solicitarDesativacao: (data: SolicitarDesativacaoDoisFatoresRequest, token?: string) =>
+    api.post<DoisFatoresDesafio>(
+      '/dois-fatores/desativacao/solicitar',
+      data,
+      { token: token || tokenStorage.get() || undefined }
+    ),
 
   /** POST /dois-fatores/desativacao/confirmar — exige senha atual e código. */
-  confirmarDesativacao: (data: ConfirmarDesativacaoDoisFatoresRequest) =>
-    api.post<DoisFatoresConfirmacaoResponse>('/dois-fatores/desativacao/confirmar', data),
+  confirmarDesativacao: (data: ConfirmarDesativacaoDoisFatoresRequest, token?: string) =>
+    api.post<DoisFatoresConfirmacaoResponse>(
+      '/dois-fatores/desativacao/confirmar',
+      data,
+      { token: token || tokenStorage.get() || undefined }
+    ),
 };
 
 export const emailService = {
