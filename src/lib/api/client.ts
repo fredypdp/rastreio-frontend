@@ -70,7 +70,20 @@ export interface ApiErrorEnvelope {
   message: string;
   request_id: string;
   details?: ApiErrorDetail[];
+  /**
+   * Código de negócio opcional. 'SENHA_TEMPORARIA' (403): a conta ainda usa a
+   * senha temporária e só pode ler o perfil, trocar a senha e sair.
+   */
+  code?: string;
+  /** 429 do reenvio de credenciais: segundos até poder tentar de novo. */
+  retry_after_segundos?: number;
 }
+
+/** Código devolvido pelo backend enquanto a senha temporária não foi trocada. */
+export const CODIGO_SENHA_TEMPORARIA = 'SENHA_TEMPORARIA';
+
+/** Página da troca obrigatória da senha temporária. */
+export const ROTA_TROCAR_SENHA = '/trocar-senha';
 
 export interface FetchOptions extends RequestInit {
   token?: string;
@@ -129,6 +142,9 @@ export const asApiErrorEnvelope = (value: unknown): ApiErrorEnvelope | undefined
     message: value.message,
     request_id: value.request_id,
     details,
+    code: typeof value.code === 'string' ? value.code : undefined,
+    retry_after_segundos:
+      typeof value.retry_after_segundos === 'number' ? value.retry_after_segundos : undefined,
   };
 };
 
@@ -243,6 +259,16 @@ async function fetchApi<T>(
       });
     }
     
+    // SEC-04: o servidor recusa tudo (403 SENHA_TEMPORARIA) enquanto a senha
+    // temporária não for trocada. Marca o estado e leva o titular à troca
+    // obrigatória, seja qual for a tela que fez a chamada.
+    if (response.status === 403 && errorData?.code === CODIGO_SENHA_TEMPORARIA && typeof window !== 'undefined') {
+      tokenStorage.setDeveAlterarSenha(true);
+      if (window.location.pathname !== ROTA_TROCAR_SENHA) {
+        window.location.assign(ROTA_TROCAR_SENHA);
+      }
+    }
+
     // ✅ SpuriApiError já extrai a mensagem no construtor
     throw new SpuriApiError(response.status, response.statusText, errorData);
   }
@@ -359,6 +385,7 @@ export const tokenStorage = {
     removeCookie('auth_token');
     removeCookie('user_type');
     removeCookie('user');
+    removeCookie('deve_alterar_senha');
   },
 
   getWithType: () => {
@@ -373,6 +400,25 @@ export const tokenStorage = {
     const expirationHours = getLoginTokenCookieExpirationHours();
     setCookieHours('auth_token', token, expirationHours);
     setCookieHours('user_type', type, expirationHours);
+  },
+
+  /**
+   * True enquanto a conta usa a senha temporária (login devolveu
+   * deve_alterar_senha, ou o servidor respondeu 403 SENHA_TEMPORARIA). É só
+   * conveniência de navegação: quem impõe a regra é o servidor.
+   */
+  deveAlterarSenha: () => {
+    if (typeof window === 'undefined') return false;
+    return getCookie('deve_alterar_senha') === '1';
+  },
+
+  setDeveAlterarSenha: (deve: boolean) => {
+    if (typeof window === 'undefined') return;
+    if (deve) {
+      setCookieHours('deve_alterar_senha', '1', getLoginTokenCookieExpirationHours());
+    } else {
+      removeCookie('deve_alterar_senha');
+    }
   },
 
   isRestrictedFinance: () => {

@@ -2,7 +2,8 @@
 
 import { api } from '../client';
 import type {
-  GerarTokenRecuperacaoRequest,
+  RecuperarSenhaRequest,
+  ResetarSenhaRequest,
   VerificarEmailResponse,
   SolicitarEmailResponse,
 } from '@/types/email-auth';
@@ -33,14 +34,23 @@ class EmailAuthService {
   /**
    * Pública. 'tipo' é opcional — se omitido, o backend tenta identificar o
    * usuário como estudante, depois academia, depois admin, nessa ordem.
-   * Reseta a senha imediatamente e envia a nova senha temporária por email
-   * (com o HTML de marca da plataforma) — não há mais token/link envolvido.
+   * NÃO altera a senha: envia ao e-mail verificado um LINK de uso único
+   * (1 hora) para /recuperar-senha/<token>. A resposta é sempre a mesma (200),
+   * exista a conta ou não — não permite enumerar contas.
    */
-  async solicitarRecuperacaoSenha(identificador: string, tipo?: GerarTokenRecuperacaoRequest['tipo']): Promise<SolicitarEmailResponse> {
+  async solicitarRecuperacaoSenha(identificador: string, tipo?: RecuperarSenhaRequest['tipo']): Promise<SolicitarEmailResponse> {
     return api.post<SolicitarEmailResponse>('/email/recuperar-senha/solicitar', {
       identificador,
       ...(tipo ? { tipo } : {}),
     });
+  }
+
+  /**
+   * Pública. Define a nova senha com o token do link recebido por e-mail
+   * (uso único). Só aqui a senha muda.
+   */
+  async resetarSenha(token: string, nova_senha: ResetarSenhaRequest['nova_senha']): Promise<{ message: string; email?: string }> {
+    return api.post<{ message: string; email?: string }>(`/email/recuperar-senha/${token}`, { nova_senha });
   }
 }
 

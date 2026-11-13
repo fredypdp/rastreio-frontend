@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
-import { useApi, consultasService, tokenStorage, academiaService, documentosService } from '@/lib/api';
+import { useApi, consultasService, tokenStorage, academiaService, documentosService, estudanteService } from '@/lib/api';
 import { formatApiError } from '@/lib/api/client';
 import Button from "@/components/ui/button/Button";
 import { Modal } from "@/components/ui/modal";
@@ -471,6 +471,25 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
   const [motivoDelecao, setMotivoDelecao] = useState('');
   const [erroDelecao, setErroDelecao] = useState('');
 
+  // Tarefa 123 (SEC-04): reenvio das credenciais temporárias por SMS.
+  const { loading: reenviandoCredenciais, execute: executarReenvioCredenciais } = useApi(estudanteService.reenviarCredenciais);
+  const [credenciaisPendentes, setCredenciaisPendentes] = useState<boolean>(estudante.deve_alterar_senha === true);
+  const [feedbackCredenciais, setFeedbackCredenciais] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
+
+  const handleReenviarCredenciais = async () => {
+    if (!window.confirm('Gerar uma nova senha temporária e enviá-la por SMS? A senha atual e as sessões abertas deste estudante deixam de valer.')) return;
+    setFeedbackCredenciais(null);
+    try {
+      const res = await executarReenvioCredenciais(estudante.codigo_estudante);
+      setCredenciaisPendentes(true);
+      setFeedbackCredenciais(res?.credenciais?.enviada
+        ? { tipo: 'ok', texto: 'Credenciais reenviadas por SMS.' }
+        : { tipo: 'erro', texto: 'A senha foi redefinida, mas o SMS não foi enviado. Tente reenviar mais tarde.' });
+    } catch (err) {
+      setFeedbackCredenciais({ tipo: 'erro', texto: formatApiError(err, 'Não foi possível reenviar as credenciais.') });
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -609,6 +628,16 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
         <DetailItem label="Telefone do estudante" value={estudanteConsultado.telefone || '-'} />
         <DetailItem label="Telefone do encarregado de educação" value={estudanteConsultado.telefone_encarregado || '-'} />
       </div></section>
+      <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+        <h4 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Credenciais de acesso</h4>
+        <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+          {credenciaisPendentes
+            ? 'O estudante ainda não trocou a senha temporária recebida por SMS. Se o SMS não chegou, reenvie as credenciais.'
+            : 'O estudante já definiu a sua própria senha. Reenviar gera uma nova senha temporária e encerra as sessões abertas.'}
+        </p>
+        {feedbackCredenciais && <p className={`mb-3 rounded-lg border px-3 py-2 text-sm ${feedbackCredenciais.tipo === 'ok' ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200'}`}>{feedbackCredenciais.texto}</p>}
+        <Button size="sm" variant="outline" disabled={reenviandoCredenciais} onClick={handleReenviarCredenciais}>{reenviandoCredenciais ? 'A reenviar...' : 'Reenviar credenciais'}</Button>
+      </section>
       <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90">Documentos disponíveis</h4>

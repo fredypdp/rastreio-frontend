@@ -415,6 +415,8 @@ export interface AprovarSolicitacaoMatriculaResponse {
   message: string;
   codigo_solicitacao: string;
   codigo_estudante_gerado: string;
+  /** Envio da senha temporária por SMS (aprovação sem taxa; com taxa, segue após o pagamento). */
+  credenciais?: CredenciaisEnvio;
 }
 
 export interface ReprovarSolicitacaoMatriculaRequest {
@@ -505,8 +507,9 @@ export interface CorrigirFaltaResponse {
 export interface CriarAdminRequest {
   nome: string;
   email: string;
+  /** Obrigatório no backend para qualquer role: 9 dígitos, sem DDI. */
+  telefone: string;
   role: AdminType;
-  senha?: string;
 }
 
 export interface DesativarRequest {
@@ -776,7 +779,8 @@ export interface AlterarSenhaRequest {
 
 export interface SolicitarRecuperacaoRequest {
   identificador: string;
-  tipo: UserType;
+  /** Opcional: omitido, o backend tenta estudante, academia e admin, nessa ordem. */
+  tipo?: UserType;
 }
 
 export interface SolicitarVerificacaoRequest {
@@ -1183,6 +1187,34 @@ export interface AuthResponse {
   codigo?: string;
   email?: string;
   role?: AdminType;
+  /**
+   * true enquanto a conta usa a senha temporária: o único passo permitido é a
+   * troca obrigatória em /trocar-senha (o servidor recusa o resto com 403).
+   */
+  deve_alterar_senha?: boolean;
+}
+
+/**
+ * Resultado do envio das credenciais temporárias, devolvido nas respostas de
+ * criação de estudante, academia e administrador e no reenvio de credenciais.
+ * Falha de envio nunca desfaz a criação: a conta passa a ser elegível ao reenvio.
+ */
+export interface CredenciaisEnvio {
+  canal: 'sms' | 'email';
+  enviada: boolean;
+  motivo?:
+    | 'ambiente_nao_producao'
+    | 'provedor_nao_configurado'
+    | 'falha_envio'
+    | 'em_fila'
+    | 'telefone_invalido'
+    | 'canal_indisponivel';
+}
+
+/** POST /estudantes/:codigo/credenciais/reenviar e equivalentes de academia/admin. */
+export interface ReenviarCredenciaisResponse {
+  message: string;
+  credenciais: CredenciaisEnvio;
 }
 
 export interface ApiResponse<T> {
@@ -2070,6 +2102,8 @@ export interface EstudanteDetalhado {
   id: string;
   nome: string;
   codigo_estudante: string;
+  /** true enquanto o estudante ainda usa a senha temporária (credenciais por confirmar). */
+  deve_alterar_senha?: boolean;
   email?: string;
   telefone?: string;
   telefone_encarregado?: string;
@@ -2101,6 +2135,8 @@ export interface EstudanteDetalhado {
 
 export interface AcademiaDetalhada {
   id: string;
+  /** Só vem para admin: true enquanto a academia ainda usa a senha temporária. */
+  deve_alterar_senha?: boolean;
   /**
    * Nível da academia: 'escola' | 'superior'.
    * Antes este papel era do campo type.
@@ -2148,6 +2184,8 @@ export interface AdminDetalhado {
   email_verificado: boolean;
   telefone?: string;
   telefone_verificado: boolean;
+  /** true enquanto o admin ainda usa a senha temporária (credenciais por confirmar). */
+  deve_alterar_senha?: boolean;
   created_by?: string;
   total_acoes_realizadas?: number;
   created_at: string;
@@ -2503,6 +2541,8 @@ export interface TurmasEstudanteResponse {
  */
 export interface MeuPerfilResponse {
   tipo: UserType;
+  /** true enquanto a conta usa a senha temporária (troca obrigatória pendente). */
+  deve_alterar_senha?: boolean;
   estudante?: EstudanteDetalhado & {
     /**
      * Informações da academia vinculada ao estudante.

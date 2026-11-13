@@ -43,6 +43,12 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
     allowedTypes: 'public',
   },
   {
+    // Link do e-mail de recuperação: /recuperar-senha/<token>. Pública e, ao
+    // contrário de /login, não redireciona quem já está autenticado.
+    path: '/recuperar-senha/[token]',
+    allowedTypes: 'public',
+  },
+  {
     path: '/error-404',
     allowedTypes: 'public',
   },
@@ -333,6 +339,12 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
   // ROTAS PARA USUÁRIOS AUTENTICADOS
   // ==========================================
   {
+    // Troca obrigatória da senha temporária (SEC-04).
+    path: '/trocar-senha',
+    allowedTypes: 'authenticated',
+    redirectIfUnauthorized: '/login',
+  },
+  {
     path: '/perfil',
     allowedTypes: 'authenticated',
     redirectIfUnauthorized: '/login',
@@ -353,7 +365,8 @@ export function checkRoutePermission(
   pathname: string,
   userType: UserType | null,
   isAuthenticated: boolean,
-  isRestrictedFinance = false
+  isRestrictedFinance = false,
+  deveAlterarSenha = false
 ): {
   allowed: boolean;
   redirectTo?: string;
@@ -361,6 +374,13 @@ export function checkRoutePermission(
   const normalizedPath = pathname.endsWith('/') && pathname !== '/'
     ? pathname.slice(0, -1)
     : pathname;
+
+  // SEC-04: com a senha temporária ainda ativa, a única tela permitida é a da
+  // troca obrigatória (o servidor recusa o resto com 403 SENHA_TEMPORARIA).
+  // Vem antes da sessão restrita: o estudante inativo também troca primeiro.
+  if (isAuthenticated && deveAlterarSenha && normalizedPath !== '/trocar-senha') {
+    return { allowed: false, redirectTo: '/trocar-senha' };
+  }
 
   if (isRestrictedFinance && normalizedPath !== '/pagamentos') {
     return { allowed: false, redirectTo: '/pagamentos' };

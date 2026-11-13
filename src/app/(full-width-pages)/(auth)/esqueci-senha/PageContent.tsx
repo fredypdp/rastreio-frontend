@@ -15,8 +15,9 @@ export default function EsqueciSenha() {
   const [EnviandoEmailRecurepacao, setEnviandoEmailRecurepacao] = useState(false);
   const [EmailEnviado, setEmailEnviado] = useState(false);
   const [EmailErro, setEmailErro] = useState(false);
-  const [EmailNaoVerificado, setEmailNaoVerificado] = useState(false);
   const [MensagemErro, setMensagemErro] = useState<string>('');
+  // SEC-06: a resposta do servidor é sempre a mesma, exista a conta ou não.
+  const [MensagemSucesso, setMensagemSucesso] = useState<string>('');
 
   const validarFormulario = (): boolean => {
     const erros: string[] = [];
@@ -33,7 +34,7 @@ export default function EsqueciSenha() {
         <div>
           <div className="mb-5 sm:mb-8">
             <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">Recuperar senha</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Enviar e-mail de recuperação de senha</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Enviaremos um link para definir uma nova senha</p>
           </div>
           <div>
             <form onSubmit={e => e.preventDefault()}>
@@ -64,20 +65,9 @@ export default function EsqueciSenha() {
                     </ul>
                   </div>
                 )}
-
-                {/* Alert para email não verificado */}
-                {EmailNaoVerificado && (
-                  <Alert 
-                    title="Email não verificado!" 
-                    message="O e-mail precisa estar verificado para recuperar a senha." 
-                    variant="warning" 
-                  />
-                )}
-
                 <div className="flex flex-col gap-2">
                   <Button onClick={async () => {
                     setValidationErrors([]);
-                    setEmailNaoVerificado(false);
                     setMensagemErro('');
                     
                     if (!validarFormulario()) return;
@@ -88,22 +78,13 @@ export default function EsqueciSenha() {
 
                     try {
                       const res = await RecuperarSenhaComFrontend(identificador.trim());
+                      setMensagemSucesso(res.message);
                       setEmailEnviado(res.success);
-                    } catch (error: any) {
-                      const errorMessage = error?.message || '';
-                      
-                      if (errorMessage.includes('Email não verificado') || 
-                          errorMessage.includes('email não verificado') ||
-                          errorMessage.includes('verifique seu email')) {
-                        setEmailNaoVerificado(true);
-                        setMensagemErro(errorMessage);
-                      } else if (errorMessage.includes('não encontrado')) {
-                        setEmailErro(true);
-                        setMensagemErro('Usuário não encontrado. Verifique o código ou e-mail digitado.');
-                      } else {
-                        setEmailErro(true);
-                        setMensagemErro(errorMessage || 'Erro ao processar solicitação');
-                      }
+                    } catch (error: unknown) {
+                      // Só chegam aqui falhas do serviço (ex.: e-mail indisponível) ou de
+                      // rede — nunca "usuário não encontrado" nem "e-mail não verificado".
+                      setEmailErro(true);
+                      setMensagemErro(error instanceof Error && error.message ? error.message : 'Erro ao processar solicitação');
                     } finally {
                       setEnviandoEmailRecurepacao(false);
                     }
@@ -117,13 +98,13 @@ export default function EsqueciSenha() {
                         Enviando e-mail
                       </>
                     ) : (
-                      'Enviar e-mail de recuperação'
+                      'Enviar link de recuperação'
                     )}
                   </Button>
                   {EmailEnviado && (
-                    <Alert title="E-mail enviado com sucesso!" message="Verifique sua caixa de e-mails" variant="success" />
+                    <Alert title="Pedido recebido" message={MensagemSucesso || "Se existir uma conta elegível, enviámos as instruções para o e-mail cadastrado."} variant="success" />
                   )}
-                  {EmailErro && !EmailNaoVerificado && (
+                  {EmailErro && (
                     <Alert 
                       title="Erro ao enviar e-mail!" 
                       message={MensagemErro || "Tente novamente mais tarde"} 

@@ -104,7 +104,7 @@ export default function AcademiaCadastroForm({ onSubmit, submitting, apiError, s
     if (!provinciaCodigo) erros.push('Selecione a província');
     if (!endereco.trim()) erros.push('Informe o endereço');
     if (!numeroTelefone.trim()) erros.push('Número de telefone é obrigatório');
-    else if (onlyDigits(numeroTelefone).length !== 9) erros.push('Informe um telefone válido com exatamente 9 números locais');
+    else if (!/^9\d{8}$/.test(onlyDigits(numeroTelefone))) erros.push('Informe um telefone móvel com 9 dígitos, começando por 9 (ele recebe as credenciais por SMS)');
     if (!email.trim()) erros.push('E-mail é obrigatório');
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) erros.push('Informe um e-mail válido');
     if (website.trim()) { try { new URL(website.trim()); } catch { erros.push('Informe o site completo, começando com http:// ou https://'); } }

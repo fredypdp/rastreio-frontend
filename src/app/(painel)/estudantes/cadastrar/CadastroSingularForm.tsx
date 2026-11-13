@@ -10,7 +10,8 @@ import Input from "@/components/form/input/InputField";
 import BirthDatePicker from "@/components/form/BirthDatePicker";
 import DocumentUpload from "@/components/form/DocumentUpload";
 import SearchableSelect from "@/components/form/SearchableSelect";
-import type { Genero, Curso, Turma, DocumentoExtra, AnoAcademico } from '@/types/api';
+import type { Genero, Curso, Turma, DocumentoExtra, AnoAcademico, CredenciaisEnvio } from '@/types/api';
+import CredenciaisEnvioAviso from "@/components/common/CredenciaisEnvioAviso";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ interface ResultadoCadastro {
   nome: string;
   codigo_turma?: string;
   turma_aviso?: string;
+  credenciais?: CredenciaisEnvio;
 }
 
 type FileKey = "bi_estudante" | "bi_encarregado" | "cedula_estudante" | "declaracao" | "certificado_6_ano_fundamental" | "certificado_9_ano_fundamental" | "certificado_ensino_medio";
@@ -136,21 +138,13 @@ function SuccessState({
               <span className="text-sm font-bold text-gray-900 dark:text-white font-mono">{resultado.codigo_turma}</span>
             </div>
           )}
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Senha padrão</span>
-            <span className="text-sm font-bold text-gray-900 dark:text-white font-mono">
-              {resultado.codigo_estudante}
-            </span>
-          </div>
         </div>
 
         {resultado.turma_aviso && (
           <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">{resultado.turma_aviso}</p>
         )}
 
-        <p className="text-xs text-green-700 dark:text-green-400">
-          A senha padrão é o próprio código do estudante. O estudante deverá alterá-la no primeiro acesso.
-        </p>
+        <CredenciaisEnvioAviso credenciais={resultado.credenciais} destino="ao telefone cadastrado (encarregado no ensino escolar; estudante no superior)" />
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <button
@@ -544,6 +538,7 @@ export default function CadastroSingularForm() {
           nome: nome.trim(),
           codigo_turma: res.data.codigo_turma,
           turma_aviso: res.data.turma_aviso,
+          credenciais: res.data.credenciais,
         });
       }
     } catch (err) {
@@ -833,7 +828,7 @@ export default function CadastroSingularForm() {
         {/* Nota informativa */}
         <div className="mt-5 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <p className="text-xs text-blue-700 dark:text-blue-300">
-            <strong>Informação:</strong> A senha padrão será o <strong>código do estudante</strong> gerado no cadastro.
+            <strong>Informação:</strong> Uma <strong>senha temporária</strong> será gerada e enviada por SMS ao telefone do encarregado (ensino escolar) ou do estudante (ensino superior). O estudante deverá trocá-la no primeiro acesso.
           </p>
         </div>
 

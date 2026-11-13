@@ -16,7 +16,13 @@ export function useRoutePermission() {
   const isAuthenticated = !!token;
   const userType = user?.tipo || null;
 
-  const permission = checkRoutePermission(pathname, userType, isAuthenticated, tokenStorage.isRestrictedFinance());
+  const permission = checkRoutePermission(
+    pathname,
+    userType,
+    isAuthenticated,
+    tokenStorage.isRestrictedFinance(),
+    tokenStorage.deveAlterarSenha()
+  );
   const routeInfo = getRouteInfo(pathname);
 
   return {

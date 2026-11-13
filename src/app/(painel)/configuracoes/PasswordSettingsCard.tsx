@@ -17,7 +17,7 @@ export default function PasswordSettingsCard() {
     execute: alterarSenha,
   } = useApi(perfilService.alterarSenha);
 
-  const podeGuardar = !alterando && senhaAtual.trim().length > 0 && novaSenha.length >= 6;
+  const podeGuardar = !alterando && senhaAtual.trim().length > 0 && novaSenha.length >= 8;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

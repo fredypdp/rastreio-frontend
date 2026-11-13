@@ -2,13 +2,21 @@
 import { UserType } from "./api";
 
 /**
- * Request para recuperação de senha (identificador obrigatório, tipo
- * opcional — quando omitido, o backend tenta estudante/academia/admin
- * nessa ordem).
+ * Request para pedir a recuperação de senha por LINK (identificador
+ * obrigatório, tipo opcional — quando omitido, o backend tenta
+ * estudante/academia/admin nessa ordem).
  */
-export interface GerarTokenRecuperacaoRequest {
-  identificador: string; // codigo_estudante, codigo_academia ou email (admin)
+export interface RecuperarSenhaRequest {
+  identificador: string; // codigo_estudante, codigo_academia ou email
   tipo: UserType; // 'estudante' | 'academia' | 'admin'
+}
+
+/**
+ * Request da página /recuperar-senha/<token>: a nova senha escolhida pelo
+ * titular depois de abrir o link do e-mail.
+ */
+export interface ResetarSenhaRequest {
+  nova_senha: string;
 }
 
 /**
@@ -22,8 +30,9 @@ export interface VerificarEmailResponse {
 /**
  * Response dos endpoints /email/verificar-email/solicitar e
  * /email/recuperar-senha/solicitar — o backend controla o envio completo
- * (token + email), por isso a resposta não traz token nem senha, só a
- * confirmação de que o email foi enviado.
+ * (token + email), por isso a resposta não traz token nem senha. No pedido
+ * de recuperação a resposta é SEMPRE a mesma, exista a conta ou não
+ * (não permite enumerar contas): não conclua nada a partir dela.
  */
 export interface SolicitarEmailResponse {
   success: boolean;
@@ -41,7 +50,8 @@ export interface EmailNaoVerificadoError {
 }
 
 /**
- * Request para alterar senha (usuário logado)
+ * Request para alterar senha (usuário logado). Também é a troca obrigatória
+ * da senha temporária: 8 a 128 caracteres e diferente da senha atual.
  */
 export interface AlterarSenhaRequest {
   senha_atual: string;
@@ -53,47 +63,6 @@ export interface AlterarSenhaRequest {
  */
 export interface AlterarSenhaResponse {
   message: string;
-}
-
-/**
- * Senhas padrão por tipo de usuário
- * Baseado em: internal/services/email_service.go -> GetDefaultPassword()
- */
-export const SenhasPadrao = {
-  estudante: (codigo: string) => codigo,           // codigo_estudante
-  academia: (codigo: string) => codigo,            // codigo_academia
-  admin: "spuriadm",
-  gerente: "spurigerente",
-  fpp: "spurifpp",
-  default: "spuri123"
-} as const;
-
-/**
- * Tipo para as senhas padrão
- */
-export type SenhaPadrao = 
-  | string                    // Para estudante/academia (dinâmico)
-  | "spuriadm"               // Admin
-  | "spurigerente"           // Gerente
-  | "spurifpp"               // FPP
-  | "spuri123";              // Default
-
-/**
- * Helper para obter senha padrão
- */
-export function getSenhaPadrao(userType: UserType, codigo?: string, role?: string): string {
-  switch (userType) {
-    case "estudante":
-      return codigo || SenhasPadrao.default;
-    case "academia":
-      return codigo || SenhasPadrao.default;
-    case "admin":
-      if (role === "fpp") return SenhasPadrao.fpp;
-      if (role === "gerente") return SenhasPadrao.gerente;
-      return SenhasPadrao.admin; // "adm" e default
-    default:
-      return SenhasPadrao.default;
-  }
 }
 
 /**

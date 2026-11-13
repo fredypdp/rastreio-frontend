@@ -46,6 +46,10 @@ export default function LoginForm() {
   // Guarda o token e entra no painel (mesmo caminho do login com e sem 2FA).
   const concluirLogin = (result: AuthResponse) => {
     tokenStorage.setWithType(result.token, result.type);
+    // SEC-04: conta com senha temporária — antes de qualquer outra coisa, a
+    // troca obrigatória. Depois dela, /trocar-senha segue para o destino normal.
+    const deveAlterarSenha = result.deve_alterar_senha === true;
+    tokenStorage.setDeveAlterarSenha(deveAlterarSenha);
     if (tokenStorage.isRestrictedFinance()) {
       const userMinimo = {
         tipo: "estudante",
@@ -56,10 +60,10 @@ export default function LoginForm() {
         },
       };
       setCookieHours("user", JSON.stringify(userMinimo), getLoginTokenCookieExpirationHours());
-      router.push("/pagamentos");
+      router.push(deveAlterarSenha ? "/trocar-senha" : "/pagamentos");
       return;
     }
-    router.push("/painel");
+    router.push(deveAlterarSenha ? "/trocar-senha" : "/painel");
   };
 
   // Mostra a tela do código para um desafio novo (login ou reenvio).

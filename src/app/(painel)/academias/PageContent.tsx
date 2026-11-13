@@ -134,6 +134,25 @@ function SubtelaDetalhesAcademia({ academia, onVoltar }: { academia: AcademiaDet
   const [carregandoDocumento, setCarregandoDocumento] = useState(false);
   const [erroDocumento, setErroDocumento] = useState('');
 
+  // Tarefa 123 (SEC-04): reenvio das credenciais temporárias por SMS (admin fpp).
+  const { loading: reenviandoCredenciais, execute: executarReenvioCredenciais } = useApi(adminService.reenviarCredenciaisAcademia);
+  const [credenciaisPendentes, setCredenciaisPendentes] = useState<boolean>(academia.deve_alterar_senha === true);
+  const [feedbackCredenciais, setFeedbackCredenciais] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
+
+  const handleReenviarCredenciais = async () => {
+    if (!window.confirm('Gerar uma nova senha temporária e enviá-la por SMS ao telefone da academia? A senha atual e as sessões abertas deixam de valer.')) return;
+    setFeedbackCredenciais(null);
+    try {
+      const res = await executarReenvioCredenciais(academia.codigo_academia);
+      setCredenciaisPendentes(true);
+      setFeedbackCredenciais(res?.credenciais?.enviada
+        ? { tipo: 'ok', texto: 'Credenciais reenviadas por SMS.' }
+        : { tipo: 'erro', texto: 'A senha foi redefinida, mas o SMS não foi enviado. Tente reenviar mais tarde.' });
+    } catch (err) {
+      setFeedbackCredenciais({ tipo: 'erro', texto: formatApiError(err, 'Não foi possível reenviar as credenciais.') });
+    }
+  };
+
   useEffect(() => () => { if (documentoAberto) URL.revokeObjectURL(documentoAberto); }, [documentoAberto]);
 
   const fecharAlvara = () => {
@@ -163,6 +182,16 @@ function SubtelaDetalhesAcademia({ academia, onVoltar }: { academia: AcademiaDet
 
   return <div className="space-y-5">
     <Button variant="outline" size="sm" onClick={onVoltar} startIcon={<Icon icon="mdi:arrow-left" width={16} />}>Voltar para academias</Button>
+    <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+      <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Credenciais de acesso</h3>
+      <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+        {credenciaisPendentes
+          ? 'A academia ainda não trocou a senha temporária recebida por SMS. Se o SMS não chegou, reenvie as credenciais.'
+          : 'A academia já definiu a sua própria senha. Reenviar gera uma nova senha temporária e encerra as sessões abertas.'}
+      </p>
+      {feedbackCredenciais && <p className={`mb-3 rounded-lg border px-3 py-2 text-sm ${feedbackCredenciais.tipo === 'ok' ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200'}`}>{feedbackCredenciais.texto}</p>}
+      <Button size="sm" variant="outline" disabled={reenviandoCredenciais} onClick={handleReenviarCredenciais}>{reenviandoCredenciais ? 'A reenviar...' : 'Reenviar credenciais'}</Button>
+    </section>
     <section className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]"><div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-xl font-semibold capitalize text-gray-900 dark:text-white">{academia.nome}</h2><div className="mt-2 flex flex-wrap gap-2"><span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-200">{academia.codigo_academia}</span><span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium capitalize ${getStatusBadgeClass(academia.status)}`}>{academia.status}</span></div></div><Icon icon="mdi:school-outline" width={34} className="text-brand-500" /></div></section>
     <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]"><h3 className="mb-4 text-sm font-semibold text-gray-800 dark:text-white">Dados da academia</h3><div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"><DetailItem label="NIF" value={academia.nif} /><DetailItem label="Nível" value={labelNivel(academia.nivel)} /><DetailItem label="Natureza" value={labelNatureza(academia.type)} /><DetailItem label="Nível escolar" value={academia.nivel_escolar || '-'} /><DetailItem label="Província" value={academia.provincia} /><DetailItem label="Endereço" value={academia.endereco} /><DetailItem label="Website" value={academia.website || '-'} /><DetailItem label="E-mail" value={academia.email || '-'} /><DetailItem label="E-mail verificado" value={academia.email_verificado ? 'Sim' : 'Não'} /><DetailItem label="Telefone" value={academia.telefone || '-'} /><DetailItem label="Telefone verificado" value={academia.telefone_verificado ? 'Sim' : 'Não'} /><DetailItem label="Total de estudantes" value={academia.total_estudantes} /><DetailItem label="Ano letivo" value={academia.ano_letivo} /><DetailItem label="Tipo do ano letivo" value={academia.tipo_ano_letivo} /><DetailItem label="Ativação do ano letivo" value={formatarDataHora(academia.ano_letivo_ativado_em)} /><DetailItem label="Motivo de desativação/deleção" value={academia.motivo_desativacao} /><DetailItem label="Deletada em" value={formatarDataHora(academia.deleted_at)} /><DetailItem label="Deletada por" value={academia.deletado_por} /><DetailItem label="Versão" value={academia.version} /><DetailItem label="Data de criação" value={formatarDataHora(academia.created_at)} /><DetailItem label="Última atualização" value={formatarDataHora(academia.updated_at)} /></div></section>
     <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]"><h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Anos académicos</h3>{academia.anos_academicos?.length ? <div className="flex flex-wrap gap-2">{academia.anos_academicos.map((ano) => <span key={ano} className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">{formatAnoAcademico(ano)}</span>)}</div> : <p className="text-sm text-gray-500 dark:text-gray-400">Não há anos académicos registados.</p>}</section>

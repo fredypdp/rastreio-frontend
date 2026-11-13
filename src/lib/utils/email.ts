@@ -18,9 +18,10 @@ export async function VerificarEmailComFrontend(_identificador: string, _tipo: U
 }
 
 /**
- * Solicita a recuperação de senha. O backend reseta a senha imediatamente
- * e envia a nova senha temporária por email (com o HTML de marca da
- * plataforma) — não há mais token/link envolvido.
+ * Pede a recuperação de senha. O backend envia ao e-mail verificado um LINK
+ * de uso único (1 hora) para /recuperar-senha/<token>; a senha só muda quando
+ * o titular escolhe a nova senha nessa página. A resposta é sempre a mesma,
+ * exista a conta ou não.
  *
  * 'tipo' continua opcional: quando não informado, o backend tenta
  * identificar o usuário como estudante, depois academia, depois admin,
@@ -36,6 +37,16 @@ export async function RecuperarSenhaComFrontend(identificador: string, tipo?: Us
   }
 
   return emailAuthService.solicitarRecuperacaoSenha(identificador.trim(), tipo);
+}
+
+/**
+ * Define a nova senha com o token do link de recuperação.
+ */
+export async function ResetarSenhaComToken(token: string, novaSenha: string) {
+  if (!token || token.trim() === '') {
+    throw new Error('Token é obrigatório');
+  }
+  return emailAuthService.resetarSenha(token.trim(), novaSenha);
 }
 
 /**

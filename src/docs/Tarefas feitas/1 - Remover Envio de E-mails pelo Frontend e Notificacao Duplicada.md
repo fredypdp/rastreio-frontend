@@ -245,16 +245,16 @@ export interface AlterarSenhaResponse {
 }
 
 /**
- * Senhas padrão por tipo de usuário
+ * Senhas padrão por tipo de usuário (valores literais removidos na Tarefa 34 — SEC-05; este bloco foi eliminado do código na Tarefa 123/34)
  * Baseado em: internal/services/email_service.go -> GetDefaultPassword()
  */
 export const SenhasPadrao = {
   estudante: (codigo: string) => codigo,           // codigo_estudante
   academia: (codigo: string) => codigo,            // codigo_academia
-  admin: "spuriadm",
-  gerente: "spurigerente",
-  fpp: "spurifpp",
-  default: "spuri123"
+  admin: "[REMOVIDO]",
+  gerente: "[REMOVIDO]",
+  fpp: "[REMOVIDO]",
+  default: "[REMOVIDO]"
 } as const;
 
 /**
@@ -262,10 +262,10 @@ export const SenhasPadrao = {
  */
 export type SenhaPadrao = 
   | string                    // Para estudante/academia (dinâmico)
-  | "spuriadm"               // Admin
-  | "spurigerente"           // Gerente
-  | "spurifpp"               // FPP
-  | "spuri123";              // Default
+  | "[REMOVIDO]"               // Admin
+  | "[REMOVIDO]"           // Gerente
+  | "[REMOVIDO]"               // FPP
+  | "[REMOVIDO]";              // Default
 
 /**
  * Helper para obter senha padrão

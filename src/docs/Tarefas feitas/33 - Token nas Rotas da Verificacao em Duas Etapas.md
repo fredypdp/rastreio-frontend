@@ -1,6 +1,6 @@
 # Tarefa 33 — Token nas rotas da Verificação em Duas Etapas (frontend)
 
-**Estado:** pendente
+**Estado:** feito
 **Repositório:** https://github.com/fredypdp/rastreio-frontend
 **Gerado sobre:** `main` @ `77ef4cf`
 **Entrega:** arquivos completos e atualizados na pasta `rastreio-frontend/`, com os mesmos caminhos do repositório

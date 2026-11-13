@@ -1,5 +1,6 @@
 "use client";
 
+import { descreverEnvioCredenciais } from "@/components/common/CredenciaisEnvioAviso";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { academiaService, adminService, documentosService } from "@/lib/api/services";
 import { tokenStorage } from "@/lib/api/client";
@@ -105,6 +106,7 @@ export default function PageContent() {
   const [totalGeral, setTotalGeral] = useState(0);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+  const [avisoCredenciais, setAvisoCredenciais] = useState("");
   const [motivo, setMotivo] = useState<Record<string, string>>({});
   const [anoSelecionado, setAnoSelecionado] = useState<string | null>(null);
   const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState<string | null>(null);
@@ -171,7 +173,16 @@ export default function PageContent() {
     [items, solicitacaoSelecionada]
   );
 
-  async function aprovar(codigo: string) { setOrdem("recentes"); await academiaService.aprovarSolicitacaoMatricula(codigo); await carregar(); }
+  async function aprovar(codigo: string) {
+    setOrdem("recentes");
+    setAvisoCredenciais("");
+    const res = await academiaService.aprovarSolicitacaoMatricula(codigo);
+    // SEC-04: sem taxa, a aprovação cria a conta e envia a senha temporária por SMS.
+    // Com taxa, a conta só nasce depois do pagamento e a resposta não traz "credenciais".
+    const aviso = descreverEnvioCredenciais(res?.credenciais, "ao telefone cadastrado");
+    if (aviso) setAvisoCredenciais(aviso.texto);
+    await carregar();
+  }
   async function obterBlobDocumento(codigo: string, campo: string, downloadUrl?: string) {
     const token = tokenStorage.get() || undefined;
     if (downloadUrl) return documentosService.baixarDocumentoSolicitacaoMatriculaPorUrl(downloadUrl, token);
@@ -267,6 +278,7 @@ export default function PageContent() {
       </div>
 
       {erro && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{erro}</p>}
+      {avisoCredenciais && <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">{avisoCredenciais}</p>}
 
       {!anoSelecionado && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

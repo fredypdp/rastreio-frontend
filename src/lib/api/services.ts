@@ -40,6 +40,8 @@ import type {
   DesativarRequest,
   AlterarSenhaRequest,
   SolicitarRecuperacaoRequest,
+  CredenciaisEnvio,
+  ReenviarCredenciaisResponse,
   MeuPerfilResponse,
   ConsultarEstudanteResponse,
   ConsultarAcademiaResponse,
@@ -669,20 +671,21 @@ export const emailService = {
   verificarEmail: (token: string) =>
     api.post<{ message: string }>(`/email/verificar-email/${token}`, {}),
 
-  solicitarVerificacaoEmail: (data: { email: string }) =>
-    api.post<{ message: string }>('/email/verificar-email/solicitar', data),
+  /** Exige login: o backend identifica o usuário pelo próprio JWT (sem payload). */
+  solicitarVerificacaoEmail: (token?: string) =>
+    api.post<{ message: string }>(
+      '/email/verificar-email/solicitar',
+      {},
+      { token: token || tokenStorage.get() || undefined }
+    ),
 
+  /** Pede o LINK de recuperação. A resposta é sempre a mesma (200), exista a conta ou não. */
   solicitarRecuperacaoSenha: (data: SolicitarRecuperacaoRequest) =>
     api.post<{ message: string }>('/email/recuperar-senha/solicitar', data),
 
+  /** Define a nova senha com o token do link recebido por e-mail (uso único, 1 hora). */
   resetarSenha: (token: string, data: { nova_senha: string }) =>
     api.post<{ message: string }>(`/email/recuperar-senha/${token}`, data),
-
-  gerarTokenVerificacao: (data: { email: string }) =>
-    api.post<{ message: string }>('/email/gerar-token/verificacao', data),
-
-  gerarTokenRecuperacao: (data: { email: string }) =>
-    api.post<{ message: string }>('/email/gerar-token/recuperacao', data),
 };
 
 // =====================
@@ -1149,6 +1152,18 @@ export const eventSourcingService = {
 // =====================
 
 export const estudanteService = {
+  /**
+   * POST /estudantes/:codigo/credenciais/reenviar (academia dona ou admin fpp).
+   * Gera nova senha temporária e envia-a por SMS (encarregado no escolar,
+   * estudante no superior); invalida as sessões anteriores. Intervalo mínimo de
+   * 10 minutos por conta (429 com retry_after_segundos).
+   */
+  reenviarCredenciais: (codigoEstudante: string, token?: string) =>
+    api.post<ReenviarCredenciaisResponse>(
+      `/estudantes/${encodeURIComponent(codigoEstudante)}/credenciais/reenviar`,
+      undefined,
+      { token: token || tokenStorage.get() || undefined }
+    ),
   listarServicosExtrasDisponiveis: (codigoAcademia: string, token?: string) => api.get<{ servicos_extras: ServicoExtra[]; total: number }>(`/academia/servico/${encodeURIComponent(codigoAcademia)}/servicos-extras`, { token: token || tokenStorage.get() || undefined }),
   /** GET /estudante/servicos-extras/catalogo (Tarefa 112) — catálogo já filtrado pela elegibilidade do próprio estudante (ano/curso), com as categorias já resolvidas (a rota de categorias exige academia/admin, o estudante não consegue chamá-la). Substitui listarServicosExtrasDisponiveis (rota pública, sem filtro de elegibilidade) no catálogo do estudante. */
   listarCatalogoServicosExtras: (token?: string) => api.get<{ servicos_extras: ServicoExtra[]; categorias_servico: CategoriaServico[]; total: number }>('/estudante/servicos-extras/catalogo', { token: token || tokenStorage.get() || undefined }),
@@ -1386,7 +1401,7 @@ export const academiaService = {
     ),
 
   cadastrarEstudante: (data: CriarEstudanteRequest, token?: string) =>
-    api.postForm<{ message: string; data: { id: string; codigo_estudante: string; codigo_academia: string; codigo_turma?: string; turma_vinculada?: boolean; turma_aviso?: string } }>(
+    api.postForm<{ message: string; data: { id: string; codigo_estudante: string; codigo_academia: string; codigo_turma?: string; turma_vinculada?: boolean; turma_aviso?: string; credenciais?: CredenciaisEnvio } }>(
       '/academia/estudante/register',
       prepareCriarEstudanteForm(data),
       { token: token || tokenStorage.get() || undefined }
@@ -2397,9 +2412,32 @@ export const adminService = {
     ),
 
   criarAdmin: (data: CriarAdminRequest, token?: string) =>
-    api.post<{ message: string; data: AdminDetalhado; aviso?: string }>(
+    api.post<{ message: string; data: AdminDetalhado; aviso?: string; credenciais?: CredenciaisEnvio }>(
       '/dominis/register',
       data,
+      { token: token || tokenStorage.get() || undefined }
+    ),
+
+  /**
+   * POST /dominis/administradores/:id/credenciais/reenviar (admin fpp).
+   * Gera nova senha temporária e envia-a por e-mail; invalida as sessões
+   * anteriores. Intervalo mínimo de 10 minutos por conta (429).
+   */
+  reenviarCredenciaisAdmin: (id: string, token?: string) =>
+    api.post<ReenviarCredenciaisResponse>(
+      `/dominis/administradores/${encodeURIComponent(id)}/credenciais/reenviar`,
+      undefined,
+      { token: token || tokenStorage.get() || undefined }
+    ),
+
+  /**
+   * POST /dominis/academias/:codigo/credenciais/reenviar (admin fpp).
+   * Nova senha temporária por SMS ao telefone da academia.
+   */
+  reenviarCredenciaisAcademia: (codigoAcademia: string, token?: string) =>
+    api.post<ReenviarCredenciaisResponse>(
+      `/dominis/academias/${encodeURIComponent(codigoAcademia)}/credenciais/reenviar`,
+      undefined,
       { token: token || tokenStorage.get() || undefined }
     ),
 
@@ -2422,7 +2460,7 @@ export const adminService = {
       formData.append(key, String(value));
     });
 
-    return api.postForm<{ message: string; codigo_academia: string; data: { codigo_academia: string; id: string; nome: string; nif: string; provincia: string } }>(
+    return api.postForm<{ message: string; codigo_academia: string; data: { codigo_academia: string; id: string; nome: string; nif: string; provincia: string }; credenciais?: CredenciaisEnvio }>(
       '/dominis/academia/cadastro',
       formData,
       { token: token || tokenStorage.get() || undefined }
