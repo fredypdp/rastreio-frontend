@@ -266,6 +266,13 @@ function FiltrosPanel({ filtros, setFiltros, isAdmin, onAplicar, visibilidade, c
             </div>
             {isAdmin && (
               <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo de vínculo</label>
+                <SearchableSelect value={filtros.vinculo} onChange={v => setFiltros({ ...filtros, vinculo: (v as 'atual' | 'anterior' | 'todos' | '') || '' })} isClearable={false}
+                  options={[{ value: '', label: 'Todos' }, { value: 'atual', label: 'Vínculo atual' }, { value: 'anterior', label: 'Vínculo anterior' }, { value: 'todos', label: 'Todos (atual + anterior)' }]} />
+              </div>
+            )}
+            {isAdmin && (
+              <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Situação geral</label>
                 <SearchableSelect value={filtros.status} onChange={v => setFiltros({ ...filtros, status: v || '' })} isClearable={false}
                   options={[{ value: '', label: 'Todos' }, { value: 'ativo', label: 'Ativo' }, { value: 'pendente_documentos', label: 'Pendência de documentos' }, { value: 'inativo', label: 'Inativo' }, { value: 'finalizado', label: 'Finalizado' }]} />
@@ -576,6 +583,11 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
   };
 
   const vinculadoNestaAcademia = estudanteConsultado.status === 'ativo' || estudanteConsultado.status === 'pendente_documentos';
+  // SEC-15: verificar se é perfil reduzido (vínculo anterior) ou estudante inativo
+  const isPerfilReduzido = estudanteConsultado.tipo_acesso === 'anterior';
+  const isEstudanteInativo = estudanteConsultado.status === 'inativo';
+  // Ações bloqueadas para estudantes inativos ou com perfil reduzido
+  const acoesBloqueadas = isEstudanteInativo || isPerfilReduzido;
 
   const handleDeletarConta = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -594,6 +606,21 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
   return (
     <div className="space-y-5">
       <BotaoVoltarEstudantes onVoltar={onVoltar} />
+      {/* SEC-15: banner para perfil reduzido (vínculo anterior) */}
+      {isPerfilReduzido && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-900/10">
+          <div className="flex items-center gap-3">
+            <Icon icon="mdi:information-outline" width={20} className="text-amber-600 dark:text-amber-400 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Perfil de vínculo anterior</p>
+              <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                Este estudante teve vínculo com esta academia no passado, mas não possui vínculo ativo no momento.
+                Apenas informações básicas de identificação e histórico de vínculos estão disponíveis.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -605,18 +632,43 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
               <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-100 dark:bg-sky-400/15 dark:text-sky-100 dark:ring-sky-300/30">
                 <Icon icon="mdi:school-outline" width={14} /> {nivelLabel}
               </span>
+              {isPerfilReduzido && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-400/30">
+                  <Icon icon="mdi:clock-outline" width={14} /> Vínculo anterior
+                </span>
+              )}
             </div>
           </div>
           <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full capitalize ${getStatusBadgeClass(estudanteConsultado.status)}`}>{formatarStatusEstudante(estudanteConsultado.status)}</span>
         </div>
       </div>
-      <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]"><h4 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Informações do vínculo atual</h4><div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <DetailItem label="Ano/Nível atual" value={ano ? formatAnoAcademico(ano) : '-'} />
-        {curso && <DetailItem label="Curso" value={curso} />}
-        {contexto === 'superior' && <DetailItem label="Semestre atual" value={estudanteConsultado.semestre_atual ?? '-'} />}
-        <DetailItem label="Estado acadêmico" value={statusContexto?.replace(/_/g, ' ') || '-'} className="capitalize" />
-        {isAdmin && <DetailItem label="Academia" value={estudanteConsultado.codigo_academia || '-'} />}
-      </div></section>
+      <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+        <h4 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+          {isPerfilReduzido ? 'Informações do vínculo anterior' : 'Informações do vínculo atual'}
+        </h4>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {isPerfilReduzido ? (
+            <>
+              <DetailItem label="Período do vínculo" value={
+                estudanteConsultado.periodos_vinculo && estudanteConsultado.periodos_vinculo.length > 0
+                  ? estudanteConsultado.periodos_vinculo.map(v =>
+                      `${v.vinculo_ativo ? 'Ativo' : 'Encerrado'} · ${v.codigo_academia} · ${new Date(v.vinculado_em).toLocaleDateString('pt-PT')}${v.desvinculado_em ? ` – ${new Date(v.desvinculado_em).toLocaleDateString('pt-PT')}` : ''}`
+                    ).join('; ')
+                  : 'Sem dados de período'
+              } />
+              {isAdmin && <DetailItem label="Academia" value={estudanteConsultado.codigo_academia || '-'} />}
+            </>
+          ) : (
+            <>
+              <DetailItem label="Ano/Nível atual" value={ano ? formatAnoAcademico(ano) : '-'} />
+              {curso && <DetailItem label="Curso" value={curso} />}
+              {contexto === 'superior' && <DetailItem label="Semestre atual" value={estudanteConsultado.semestre_atual ?? '-'} />}
+              <DetailItem label="Estado acadêmico" value={statusContexto?.replace(/_/g, ' ') || '-'} className="capitalize" />
+              {isAdmin && <DetailItem label="Academia" value={estudanteConsultado.codigo_academia || '-'} />}
+            </>
+          )}
+        </div>
+      </section>
       <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]"><h4 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Identificação</h4><div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <DetailItem label="Género" value={estudanteConsultado.genero || '-'} className="capitalize" />
         <DetailItem label="Nascimento" value={`${formatarDataNasc(estudanteConsultado.data_nascimento)}${estudanteConsultado.data_nascimento ? ` (${calcularIdade(estudanteConsultado.data_nascimento)} anos)` : ''}`} />
@@ -630,13 +682,22 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
       </div></section>
       <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
         <h4 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Credenciais de acesso</h4>
-        <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
-          {credenciaisPendentes
-            ? 'O estudante ainda não trocou a senha temporária recebida por SMS. Se o SMS não chegou, reenvie as credenciais.'
-            : 'O estudante já definiu a sua própria senha. Reenviar gera uma nova senha temporária e encerra as sessões abertas.'}
-        </p>
-        {feedbackCredenciais && <p className={`mb-3 rounded-lg border px-3 py-2 text-sm ${feedbackCredenciais.tipo === 'ok' ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200'}`}>{feedbackCredenciais.texto}</p>}
-        <Button size="sm" variant="outline" disabled={reenviandoCredenciais} onClick={handleReenviarCredenciais}>{reenviandoCredenciais ? 'A reenviar...' : 'Reenviar credenciais'}</Button>
+        {acoesBloqueadas && (
+          <p className="mb-3 text-sm text-amber-700 dark:text-amber-300">
+            <Icon icon="mdi:shield-alert" width={14} className="inline" /> Ações de credenciais indisponíveis: estudante com vínculo anterior ou status inativo.
+          </p>
+        )}
+        {!acoesBloqueadas && (
+          <>
+            <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+              {credenciaisPendentes
+                ? 'O estudante ainda não trocou a senha temporária recebida por SMS. Se o SMS não chegou, reenvie as credenciais.'
+                : 'O estudante já definiu a sua própria senha. Reenviar gera uma nova senha temporária e encerra as sessões abertas.'}
+            </p>
+            {feedbackCredenciais && <p className={`mb-3 rounded-lg border px-3 py-2 text-sm ${feedbackCredenciais.tipo === 'ok' ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200'}`}>{feedbackCredenciais.texto}</p>}
+            <Button size="sm" variant="outline" disabled={reenviandoCredenciais} onClick={handleReenviarCredenciais}>{reenviandoCredenciais ? 'A reenviar...' : 'Reenviar credenciais'}</Button>
+          </>
+        )}
       </section>
       <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -685,7 +746,7 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
           </div>
         )}
       </section>
-      {!isAdmin && (
+      {!isAdmin && !isPerfilReduzido && (
         <section className="rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-900/60 dark:bg-red-900/10 lg:p-6">
           <h4 className="text-lg font-semibold text-red-800 dark:text-red-200">Zona de Perigo</h4>
           <p className="mt-2 text-sm text-red-700 dark:text-red-300">
@@ -694,8 +755,11 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
           {!vinculadoNestaAcademia && (
             <p className="mt-3 text-sm text-red-700 dark:text-red-300">Este estudante não está vinculado a esta academia no momento, então a conta não pode ser deletada por aqui.</p>
           )}
+          {isEstudanteInativo && (
+            <p className="mt-3 text-sm text-red-700 dark:text-red-300">Este estudante está inativo, a deleção da conta não está disponível.</p>
+          )}
           <div className="mt-4">
-            <Button size="sm" variant="danger" disabled={!vinculadoNestaAcademia} onClick={() => { setErroDelecao(''); setMotivoDelecao(''); modalDelecao.openModal(); }}>
+            <Button size="sm" variant="danger" disabled={!vinculadoNestaAcademia || isEstudanteInativo} onClick={() => { setErroDelecao(''); setMotivoDelecao(''); modalDelecao.openModal(); }}>
               Deletar conta do estudante
             </Button>
           </div>
@@ -874,7 +938,7 @@ export default function Estudantes() {
 
   const parametrosConsultaEstudantes = useMemo(() => {
     const filtrosPermitidos = sanitizarFiltrosPorVisibilidade(filtrosAplicados, visibilidadeFiltros, !!isAdmin);
-    return {
+    const params: Record<string, unknown> = {
       limit: ITEMS_POR_PAGINA,
       offset: (paginaAtual - 1) * ITEMS_POR_PAGINA,
       genero: filtrosPermitidos.genero || undefined,
@@ -894,6 +958,11 @@ export default function Estudantes() {
       status: filtrosPermitidos.statusDocumentos || filtrosPermitidos.status || undefined,
       com_turma: filtrosPermitidos.comTurma === '' ? undefined : filtrosPermitidos.comTurma === 'true',
     };
+    // SEC-15: vinculo filter (apenas para admin)
+    if (isAdmin && filtrosPermitidos.vinculo) {
+      params.vinculo = filtrosPermitidos.vinculo;
+    }
+    return params;
   }, [filtrosAplicados, isAdmin, paginaAtual, visibilidadeFiltros]);
 
   const carregarLista = useCallback(() => {

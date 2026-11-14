@@ -13,8 +13,7 @@ import { exigeDoisFatores, TAMANHO_CODIGO_DOIS_FATORES } from "@/types/dois-fato
 import type { DoisFatoresDesafio } from "@/types/dois-fatores";
 import { useContagemRegressiva } from "@/hooks/useContagemRegressiva";
 import CodigoVerificacaoInput from "@/components/auth/CodigoVerificacaoInput";
-import { setCookieHours } from "@/lib/utils/cookies";
-import { formatApiError, getLoginTokenCookieExpirationHours } from "@/lib/api/client";
+import { formatApiError } from "@/lib/api/client";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -50,19 +49,6 @@ export default function LoginForm() {
     // troca obrigatória. Depois dela, /trocar-senha segue para o destino normal.
     const deveAlterarSenha = result.deve_alterar_senha === true;
     tokenStorage.setDeveAlterarSenha(deveAlterarSenha);
-    if (tokenStorage.isRestrictedFinance()) {
-      const userMinimo = {
-        tipo: "estudante",
-        estudante: {
-          codigo_estudante: result.codigo,
-          nome: result.nome,
-          status: "inativo",
-        },
-      };
-      setCookieHours("user", JSON.stringify(userMinimo), getLoginTokenCookieExpirationHours());
-      router.push(deveAlterarSenha ? "/trocar-senha" : "/pagamentos");
-      return;
-    }
     router.push(deveAlterarSenha ? "/trocar-senha" : "/painel");
   };
 

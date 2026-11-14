@@ -2098,6 +2098,14 @@ export interface Evento {
 
 // ── Perfis ────────────────────────────────────────────────────────────────────
 
+/** SEC-15: período de vínculo do estudante com uma academia. */
+export interface PeriodoVinculoDTO {
+  codigo_academia: string;
+  vinculado_em: string; // ISO timestamp
+  desvinculado_em?: string; // ISO timestamp, omitido se vínculo ainda ativo
+  vinculo_ativo: boolean;
+}
+
 export interface EstudanteDetalhado {
   id: string;
   nome: string;
@@ -2131,6 +2139,12 @@ export interface EstudanteDetalhado {
   created_at: string;
   updated_at: string;
   version: number;
+  /** SEC-15: tipo de vínculo do estudante com a academia consultada — 'atual' ou 'anterior'. */
+  tipo_acesso?: 'atual' | 'anterior';
+  /** SEC-15: filtro de vínculo aplicado na listagem — 'atual', 'anterior' ou 'todos'. */
+  vinculo?: 'atual' | 'anterior' | 'todos';
+  /** SEC-15: períodos de vínculo (devolvido quando tipo_acesso === 'anterior'). */
+  periodos_vinculo?: PeriodoVinculoDTO[];
 }
 
 export interface AcademiaDetalhada {

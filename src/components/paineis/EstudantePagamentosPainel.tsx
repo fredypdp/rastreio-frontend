@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { consultasService, financeiroService, tokenStorage, useApi } from "@/lib/api";
+import { consultasService, financeiroService, useApi } from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
 import { useUserCookie } from "@/hooks/useUserCookie";
 import Alert from "@/components/ui/alert/Alert";
@@ -193,7 +193,6 @@ function SecaoPendentesAcademia({
 
 export default function EstudantePagamentosPainel() {
   const { user, loading } = useUserCookie();
-  const restricted = tokenStorage.isRestrictedFinance();
   const codigo = getCodigo(user);
 
   const [tela, setTela] = useState<Tela>({ nome: "lista" });
@@ -282,7 +281,7 @@ export default function EstudantePagamentosPainel() {
   }, [loading, codigo, recarregarPendentes]);
 
   const recarregarHistorico = useCallback(async () => {
-    if (!codigo || restricted) return;
+    if (!codigo) return;
     try {
       await historicoApi.execute(codigo, {
         estado: estadoHistorico ? [estadoHistorico] : ESTADOS_COBRANCA_REAL,
@@ -294,7 +293,7 @@ export default function EstudantePagamentosPainel() {
       setAlert(formatApiError(e, "Não foi possível carregar o histórico de cobranças."));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codigo, restricted, estadoHistorico, tipoHistorico, paginaHistorico]);
+  }, [codigo, estadoHistorico, tipoHistorico, paginaHistorico]);
 
   useEffect(() => {
     if (!loading && codigo) void recarregarHistorico();
@@ -476,7 +475,6 @@ export default function EstudantePagamentosPainel() {
 
   return (
     <div className="space-y-6">
-      {restricted && <Alert variant="warning" title="Acesso financeiro restrito" message="O seu vínculo com a academia foi encerrado. Você pode consultar e regularizar pendências financeiras aqui." />}
       {alert && <Alert variant="error" title="Pagamentos" message={alert} />}
 
       <div className="flex items-center gap-2">
@@ -544,10 +542,7 @@ export default function EstudantePagamentosPainel() {
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">Histórico</h2>
         </div>
 
-        {restricted ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">Histórico completo indisponível nesta sessão restrita; apenas mensalidades e pagamento estão liberados.</p>
-        ) : (
-          <>
+        <>
             <div className="grid gap-3 sm:grid-cols-2">
               <SearchableSelect
                 value={tipoHistorico}
@@ -583,7 +578,6 @@ export default function EstudantePagamentosPainel() {
               <PaginacaoSetas paginaAtual={paginaHistorico} totalPaginas={totalPaginasHistorico} total={totalHistorico} porPagina={PAGE_SIZE} onChange={setPaginaHistorico} />
             </div>
           </>
-        )}
       </section>
     </div>
   );

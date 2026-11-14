@@ -21,7 +21,6 @@ export function getLoginTokenCookieExpirationHours(): number {
 export interface DecodedTokenClaims {
   user_id?: string;
   user_type?: string;
-  acesso_restrito_financeiro?: boolean;
   exp?: number;
 }
 
@@ -419,11 +418,5 @@ export const tokenStorage = {
     } else {
       removeCookie('deve_alterar_senha');
     }
-  },
-
-  isRestrictedFinance: () => {
-    const token = tokenStorage.get();
-    if (!token) return false;
-    return decodeTokenPayload(token)?.acesso_restrito_financeiro === true;
   },
 };

@@ -40,8 +40,8 @@ export default function RouteGuard({ children }: RouteGuardProps) {
     const token = tokenStorage.get();
     const isAuthenticated = !!token;
     const userType = user?.tipo || null;
-    
-    const isRestrictedFinance = tokenStorage.isRestrictedFinance();
+
+    const isRestrictedFinance = false; // SEC-12: eliminado
     const deveAlterarSenha = tokenStorage.deveAlterarSenha();
     return checkRoutePermission(pathname, userType, isAuthenticated, isRestrictedFinance, deveAlterarSenha);
   }, [pathname, user]);

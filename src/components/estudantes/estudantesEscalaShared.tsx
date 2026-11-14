@@ -78,6 +78,8 @@ export interface FiltrosState {
   turno: string; codigoTurma: string; comTurma: string;
   semestreAtual: string; cursoId: string; codigoAcademia: string;
   statusDocumentos: string;
+  /** SEC-15: filtro por tipo de vínculo — 'atual', 'anterior' ou 'todos' (padrão). */
+  vinculo: 'atual' | 'anterior' | 'todos' | '';
 }
 
 export const FILTROS_INICIAIS: FiltrosState = {
@@ -87,6 +89,7 @@ export const FILTROS_INICIAIS: FiltrosState = {
   turno: '', codigoTurma: '', comTurma: '',
   semestreAtual: '', cursoId: '', codigoAcademia: '',
   statusDocumentos: '',
+  vinculo: '',
 };
 
 function filtroAceitaValor(filtro: string, valor?: string): boolean {
@@ -117,6 +120,7 @@ export function aplicarFiltros(lista: EstudanteDetalhado[], filtros: FiltrosStat
       const valoresSemestre = filtros.semestreAtual.split(',').map(item => Number(item.trim())).filter(Number.isFinite);
       if (valoresSemestre.length > 0 && !valoresSemestre.includes(Number(estudante.semestre_atual))) return false;
     }
+    if (filtros.vinculo && estudante.vinculo !== filtros.vinculo) return false;
     if (idadeMin !== null && (idade === null || idade < idadeMin)) return false;
     if (idadeMax !== null && (idade === null || idade > idadeMax)) return false;
 

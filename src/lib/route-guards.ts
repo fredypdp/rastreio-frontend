@@ -365,7 +365,7 @@ export function checkRoutePermission(
   pathname: string,
   userType: UserType | null,
   isAuthenticated: boolean,
-  isRestrictedFinance = false,
+  isRestrictedFinance = false, // kept for signature compatibility (SEC-12 eliminated)
   deveAlterarSenha = false
 ): {
   allowed: boolean;
@@ -382,9 +382,7 @@ export function checkRoutePermission(
     return { allowed: false, redirectTo: '/trocar-senha' };
   }
 
-  if (isRestrictedFinance && normalizedPath !== '/pagamentos') {
-    return { allowed: false, redirectTo: '/pagamentos' };
-  }
+  // SEC-12: sessão de acesso restrito a finanças eliminada (isRestrictedFinance ignorado)
 
   if (normalizedPath === '/testes' && !isTestesPageEnabled()) {
     return { allowed: false, redirectTo: '/painel' };

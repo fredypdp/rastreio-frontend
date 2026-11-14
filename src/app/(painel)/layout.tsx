@@ -51,7 +51,6 @@ export default function PainelLayout({ children }: { children: React.ReactNode }
 
     const token = tokenStorage.get();
     if (!token) return;
-    if (tokenStorage.isRestrictedFinance()) return;
 
     hasLoadedProfile.current = true;
 

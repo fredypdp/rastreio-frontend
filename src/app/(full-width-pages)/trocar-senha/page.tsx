@@ -47,7 +47,7 @@ export default function TrocarSenhaPage() {
           setVerificando(false);
         } else {
           tokenStorage.setDeveAlterarSenha(false);
-          router.replace(tokenStorage.isRestrictedFinance() ? '/pagamentos' : '/painel');
+          router.replace('/painel');
         }
       })
       .catch(() => {
@@ -75,7 +75,7 @@ export default function TrocarSenhaPage() {
     try {
       await perfilService.alterarSenha({ senha_atual: senhaAtual, nova_senha: novaSenha });
       tokenStorage.setDeveAlterarSenha(false);
-      router.replace(tokenStorage.isRestrictedFinance() ? '/pagamentos' : '/painel');
+      router.replace('/painel');
     } catch (error) {
       setErroServidor(formatApiError(error, 'Não foi possível alterar a senha. Tente novamente.'));
     } finally {

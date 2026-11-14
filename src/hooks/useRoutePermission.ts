@@ -20,7 +20,7 @@ export function useRoutePermission() {
     pathname,
     userType,
     isAuthenticated,
-    tokenStorage.isRestrictedFinance(),
+    false, // acesso_restrito_financeiro eliminado (SEC-12)
     tokenStorage.deveAlterarSenha()
   );
   const routeInfo = getRouteInfo(pathname);

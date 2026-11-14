@@ -11,7 +11,6 @@ import {
 } from "../icons/index";
 import Icon from "@/components/ui/Icon";
 import SidebarWidget from "./SidebarWidget";
-import { tokenStorage } from '@/lib/api/client';
 import { isTestesPageEnabled } from '@/lib/app-env';
 import { useUserCookie } from '@/hooks/useUserCookie';
 
@@ -226,9 +225,6 @@ export default function AppSidebar() {
     // nenhum item — evita mostrar por um instante opções que o tipo
     // de usuário não deveria ver, antes de sabermos qual tipo é.
     if (loadingUser) return [];
-    if (tokenStorage.isRestrictedFinance()) {
-      return environmentNavItems.filter((item) => item.path === "/pagamentos");
-    }
 
     /*
      * user?.academia?.nivel distingue o tipo de instituição: 'escola' | 'superior'

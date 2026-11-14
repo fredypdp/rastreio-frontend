@@ -749,6 +749,8 @@ export const consultasService = {
     turno?: string | string[];
     codigo_turma?: string | string[];
     com_turma?: boolean;
+    /** SEC-15: filtro por tipo de vínculo — 'atual', 'anterior' ou 'todos' (padrão). */
+    vinculo?: 'atual' | 'anterior' | 'todos';
     /** Tarefa 111: busca livre por código, nome, BI, telefone ou e-mail — ver GET /estudantes?busca=. */
     busca?: string;
   }): Promise<ConsultarEstudantesResponse> => {
@@ -776,6 +778,7 @@ export const consultasService = {
     appendMultiValueParam(qs, 'turno', params?.turno);
     appendMultiValueParam(qs, 'codigo_turma', params?.codigo_turma);
     if (params?.com_turma !== undefined) qs.append('com_turma', String(params.com_turma));
+    if (params?.vinculo) qs.append('vinculo', params.vinculo);
     const query = qs.toString() ? `?${qs.toString()}` : '';
     return api.get<ConsultarEstudantesResponse>(`/estudantes${query}`, {
       token: params?.token || tokenStorage.get() || undefined,
