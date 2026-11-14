@@ -39,7 +39,6 @@ import type {
   CriarAdminRequest,
   DesativarRequest,
   AlterarSenhaRequest,
-  SolicitarRecuperacaoRequest,
   CredenciaisEnvio,
   ReenviarCredenciaisResponse,
   MeuPerfilResponse,
@@ -665,27 +664,6 @@ export const doisFatoresService = {
       data,
       { token: token || tokenStorage.get() || undefined }
     ),
-};
-
-export const emailService = {
-  verificarEmail: (token: string) =>
-    api.post<{ message: string }>(`/email/verificar-email/${token}`, {}),
-
-  /** Exige login: o backend identifica o usuário pelo próprio JWT (sem payload). */
-  solicitarVerificacaoEmail: (token?: string) =>
-    api.post<{ message: string }>(
-      '/email/verificar-email/solicitar',
-      {},
-      { token: token || tokenStorage.get() || undefined }
-    ),
-
-  /** Pede o LINK de recuperação. A resposta é sempre a mesma (200), exista a conta ou não. */
-  solicitarRecuperacaoSenha: (data: SolicitarRecuperacaoRequest) =>
-    api.post<{ message: string }>('/email/recuperar-senha/solicitar', data),
-
-  /** Define a nova senha com o token do link recebido por e-mail (uso único, 1 hora). */
-  resetarSenha: (token: string, data: { nova_senha: string }) =>
-    api.post<{ message: string }>(`/email/recuperar-senha/${token}`, data),
 };
 
 // =====================

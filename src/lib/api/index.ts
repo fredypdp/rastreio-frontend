@@ -8,7 +8,6 @@ export type { ApiErrorCode, ApiErrorDetail, ApiErrorEnvelope, FetchOptions, Deco
 export {
   authService,
   doisFatoresService,
-  emailService,
   perfilService,
   consultasService,
   eventSourcingService,
