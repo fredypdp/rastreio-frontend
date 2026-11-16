@@ -22,6 +22,7 @@ import {
   TabelaEstudantes, VistaEscala,
 } from "@/components/estudantes/estudantesEscalaShared";
 import EstudantesVistaEscalaAdmin from "@/components/estudantes/EstudantesVistaEscalaAdmin";
+import AvisoExclusaoConta from "@/components/estudante/AvisoExclusaoConta";
 
 const ITEMS_POR_PAGINA = 50;
 
@@ -264,13 +265,11 @@ function FiltrosPanel({ filtros, setFiltros, isAdmin, onAplicar, visibilidade, c
               <SearchableSelect value={filtros.comTurma} onChange={v => setFiltros({ ...filtros, comTurma: v || '' })} isClearable={false}
                 options={[{ value: '', label: 'Todos' }, { value: 'true', label: 'Com turma' }, { value: 'false', label: 'Sem turma' }]} />
             </div>
-            {isAdmin && (
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo de vínculo</label>
-                <SearchableSelect value={filtros.vinculo} onChange={v => setFiltros({ ...filtros, vinculo: (v as 'atual' | 'anterior' | 'todos' | '') || '' })} isClearable={false}
-                  options={[{ value: '', label: 'Todos' }, { value: 'atual', label: 'Vínculo atual' }, { value: 'anterior', label: 'Vínculo anterior' }, { value: 'todos', label: 'Todos (atual + anterior)' }]} />
-              </div>
-            )}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo de vínculo</label>
+              <SearchableSelect value={filtros.vinculo} onChange={v => setFiltros({ ...filtros, vinculo: (v as 'atual' | 'anterior' | 'todos' | '') || '' })} isClearable={false}
+                options={[{ value: '', label: 'Todos (atual + anterior)' }, { value: 'atual', label: 'Vínculo atual' }, { value: 'anterior', label: 'Vínculo anterior' }]} />
+            </div>
             {isAdmin && (
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Situação geral</label>
@@ -477,6 +476,7 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
   const { loading: deletando, execute: executarDelecao } = useApi(academiaService.deletarContaEstudantePorAcademia);
   const [motivoDelecao, setMotivoDelecao] = useState('');
   const [erroDelecao, setErroDelecao] = useState('');
+  const [podeConfirmarDelecao, setPodeConfirmarDelecao] = useState(false);
 
   // Tarefa 123 (SEC-04): reenvio das credenciais temporárias por SMS.
   const { loading: reenviandoCredenciais, execute: executarReenvioCredenciais } = useApi(estudanteService.reenviarCredenciais);
@@ -769,6 +769,7 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 A conta de {estudanteConsultado.nome} será desativada. Registros acadêmicos já lançados continuarão guardados.
               </p>
+              <AvisoExclusaoConta perspectiva="academia" codigoEstudante={estudanteConsultado.codigo_estudante} onPodeConfirmarChange={setPodeConfirmarDelecao} />
               <Label>Motivo *</Label>
               <textarea
                 className="w-full resize-none rounded-lg border border-gray-200 px-4 py-3 text-sm dark:border-white/[0.05] dark:bg-white/[0.03]"
@@ -781,7 +782,7 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
               {erroDelecao && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{erroDelecao}</p>}
               <div className="flex justify-end gap-3">
                 <Button size="sm" variant="outline" onClick={modalDelecao.closeModal} disabled={deletando}>Cancelar</Button>
-                <Button size="sm" variant="danger" disabled={deletando}>{deletando ? 'Deletando...' : 'Deletar conta'}</Button>
+                <Button size="sm" variant="danger" disabled={deletando || !podeConfirmarDelecao}>{deletando ? 'Deletando...' : 'Deletar conta'}</Button>
               </div>
             </form>
           </Modal>
@@ -958,8 +959,8 @@ export default function Estudantes() {
       status: filtrosPermitidos.statusDocumentos || filtrosPermitidos.status || undefined,
       com_turma: filtrosPermitidos.comTurma === '' ? undefined : filtrosPermitidos.comTurma === 'true',
     };
-    // SEC-15: vinculo filter (apenas para admin)
-    if (isAdmin && filtrosPermitidos.vinculo) {
+    // SEC-15: filtro de vínculo (academia e admin; só atual/anterior, 'todos' é o padrão do servidor)
+    if (filtrosPermitidos.vinculo === 'atual' || filtrosPermitidos.vinculo === 'anterior') {
       params.vinculo = filtrosPermitidos.vinculo;
     }
     return params;

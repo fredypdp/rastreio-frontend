@@ -2141,8 +2141,16 @@ export interface EstudanteDetalhado {
   version: number;
   /** SEC-15: tipo de vínculo do estudante com a academia consultada — 'atual' ou 'anterior'. */
   tipo_acesso?: 'atual' | 'anterior';
-  /** SEC-15: filtro de vínculo aplicado na listagem — 'atual', 'anterior' ou 'todos'. */
+  /**
+   * SEC-15: relação REAL do estudante com a academia consultada na listagem —
+   * 'atual' ou 'anterior' (o filtro pedido vai na resposta, em `vinculo` do envelope).
+   */
   vinculo?: 'atual' | 'anterior' | 'todos';
+  /**
+   * SEC-15: 'reduzido' quando o estudante já seguiu para OUTRA academia: a linha só traz
+   * nome, código e vínculo (os demais campos vêm nulos).
+   */
+  acesso?: 'reduzido';
   /** SEC-15: períodos de vínculo (devolvido quando tipo_acesso === 'anterior'). */
   periodos_vinculo?: PeriodoVinculoDTO[];
 }

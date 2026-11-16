@@ -72,6 +72,8 @@ export interface ApiErrorEnvelope {
   /**
    * Código de negócio opcional. 'SENHA_TEMPORARIA' (403): a conta ainda usa a
    * senha temporária e só pode ler o perfil, trocar a senha e sair.
+   * 'SESSAO_INVALIDA' (401): a sessão deixou de valer. 'CONTA_DESVINCULADA'
+   * (403): estudante desvinculado só consulta e paga.
    */
   code?: string;
   /** 429 do reenvio de credenciais: segundos até poder tentar de novo. */
@@ -83,6 +85,34 @@ export const CODIGO_SENHA_TEMPORARIA = 'SENHA_TEMPORARIA';
 
 /** Página da troca obrigatória da senha temporária. */
 export const ROTA_TROCAR_SENHA = '/trocar-senha';
+
+/**
+ * Código dos 401 de autenticação do servidor (token ausente, inválido ou
+ * expirado, conta bloqueada, sessão encerrada por reset/reenvio/troca da senha
+ * temporária). Os 401 de negócio — ex.: senha atual errada — NÃO o trazem, por
+ * isso não terminam a sessão.
+ */
+export const CODIGO_SESSAO_INVALIDA = 'SESSAO_INVALIDA';
+
+/** 403 do estudante desvinculado ao tentar uma ação que não seja consulta/pagamento. */
+export const CODIGO_CONTA_DESVINCULADA = 'CONTA_DESVINCULADA';
+
+/** Destino do login quando a sessão foi encerrada pelo servidor. */
+export const ROTA_LOGIN_SESSAO_ENCERRADA = '/login?motivo=sessao-encerrada';
+
+/**
+ * Sessão inválida (401 SESSAO_INVALIDA) numa chamada que levava token: limpa a
+ * sessão local e leva ao login, seja qual for a tela que fez a chamada.
+ */
+function tratarSessaoInvalida(status: number, errorData: ApiErrorEnvelope | undefined, enviouToken: boolean) {
+  if (status !== 401 || errorData?.code !== CODIGO_SESSAO_INVALIDA || !enviouToken) return;
+  if (typeof window === 'undefined') return;
+  tokenStorage.remove();
+  const caminho = window.location.pathname;
+  if (!caminho.startsWith('/login')) {
+    window.location.assign(ROTA_LOGIN_SESSAO_ENCERRADA);
+  }
+}
 
 export interface FetchOptions extends RequestInit {
   token?: string;
@@ -268,6 +298,8 @@ async function fetchApi<T>(
       }
     }
 
+    tratarSessaoInvalida(response.status, errorData, Boolean(token));
+
     // ✅ SpuriApiError já extrai a mensagem no construtor
     throw new SpuriApiError(response.status, response.statusText, errorData);
   }
@@ -311,6 +343,8 @@ export async function fetchApiBlob(endpoint: string, options: FetchOptions = {})
     } catch {
       errorData = undefined;
     }
+
+    tratarSessaoInvalida(response.status, errorData, Boolean(token));
 
     throw new SpuriApiError(response.status, response.statusText, errorData);
   }

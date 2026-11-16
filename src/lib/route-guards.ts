@@ -365,7 +365,6 @@ export function checkRoutePermission(
   pathname: string,
   userType: UserType | null,
   isAuthenticated: boolean,
-  isRestrictedFinance = false, // kept for signature compatibility (SEC-12 eliminated)
   deveAlterarSenha = false
 ): {
   allowed: boolean;
@@ -377,12 +376,10 @@ export function checkRoutePermission(
 
   // SEC-04: com a senha temporária ainda ativa, a única tela permitida é a da
   // troca obrigatória (o servidor recusa o resto com 403 SENHA_TEMPORARIA).
-  // Vem antes da sessão restrita: o estudante inativo também troca primeiro.
+  // O estudante desvinculado (inativo) também troca primeiro.
   if (isAuthenticated && deveAlterarSenha && normalizedPath !== '/trocar-senha') {
     return { allowed: false, redirectTo: '/trocar-senha' };
   }
-
-  // SEC-12: sessão de acesso restrito a finanças eliminada (isRestrictedFinance ignorado)
 
   if (normalizedPath === '/testes' && !isTestesPageEnabled()) {
     return { allowed: false, redirectTo: '/painel' };

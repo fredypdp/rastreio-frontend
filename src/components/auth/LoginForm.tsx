@@ -4,7 +4,7 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useApi, authService, tokenStorage } from "@/lib/api";
@@ -21,6 +21,12 @@ export default function LoginForm() {
   const [identificador, setIdentificador] = useState("");
   const [senha, setSenha] = useState("");
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  // O cliente de API leva aqui (?motivo=sessao-encerrada) quando o servidor
+  // encerra a sessão (reset de senha, troca da senha temporária, conta bloqueada).
+  const [sessaoEncerrada, setSessaoEncerrada] = useState(false);
+  useEffect(() => {
+    setSessaoEncerrada(new URLSearchParams(window.location.search).get("motivo") === "sessao-encerrada");
+  }, []);
 
   // Segunda etapa (verificação em duas etapas por e-mail)
   const [etapa, setEtapa] = useState<"credenciais" | "codigo">("credenciais");
@@ -289,6 +295,14 @@ export default function LoginForm() {
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {sessaoEncerrada && !erroLogin && validationErrors.length === 0 && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    A sua sessão foi encerrada. Entre novamente para continuar.
+                  </p>
                 </div>
               )}
 

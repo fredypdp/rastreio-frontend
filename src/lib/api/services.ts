@@ -677,7 +677,9 @@ export const perfilService = {
     }),
 
   alterarSenha: (data: AlterarSenhaRequest, token?: string) =>
-    api.put<{ message: string }>(
+    // `token` só vem na troca da senha TEMPORÁRIA: as sessões anteriores foram
+    // encerradas e este é o token novo do titular.
+    api.put<{ message: string; token?: string }>(
       '/alterar-senha',
       data,
       { token: token || tokenStorage.get() || undefined }

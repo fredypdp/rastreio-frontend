@@ -41,9 +41,8 @@ export default function RouteGuard({ children }: RouteGuardProps) {
     const isAuthenticated = !!token;
     const userType = user?.tipo || null;
 
-    const isRestrictedFinance = false; // SEC-12: eliminado
     const deveAlterarSenha = tokenStorage.deveAlterarSenha();
-    return checkRoutePermission(pathname, userType, isAuthenticated, isRestrictedFinance, deveAlterarSenha);
+    return checkRoutePermission(pathname, userType, isAuthenticated, deveAlterarSenha);
   }, [pathname, user]);
 
   // Resetar flag quando pathname muda

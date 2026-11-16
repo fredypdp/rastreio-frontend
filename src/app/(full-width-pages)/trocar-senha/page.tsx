@@ -73,7 +73,12 @@ export default function TrocarSenhaPage() {
 
     setEnviando(true);
     try {
-      await perfilService.alterarSenha({ senha_atual: senhaAtual, nova_senha: novaSenha });
+      const resposta = await perfilService.alterarSenha({ senha_atual: senhaAtual, nova_senha: novaSenha });
+      // A troca da senha temporária encerra as sessões emitidas antes (inclusive
+      // esta): o servidor devolve um token novo, que passa a ser o da sessão.
+      if (resposta.token) {
+        tokenStorage.set(resposta.token);
+      }
       tokenStorage.setDeveAlterarSenha(false);
       router.replace('/painel');
     } catch (error) {

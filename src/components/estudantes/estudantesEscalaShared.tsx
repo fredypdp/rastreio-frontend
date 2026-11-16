@@ -120,7 +120,8 @@ export function aplicarFiltros(lista: EstudanteDetalhado[], filtros: FiltrosStat
       const valoresSemestre = filtros.semestreAtual.split(',').map(item => Number(item.trim())).filter(Number.isFinite);
       if (valoresSemestre.length > 0 && !valoresSemestre.includes(Number(estudante.semestre_atual))) return false;
     }
-    if (filtros.vinculo && estudante.vinculo !== filtros.vinculo) return false;
+    // 'todos' (ou vazio) não filtra; 'atual'/'anterior' comparam com a relação real da linha.
+    if ((filtros.vinculo === 'atual' || filtros.vinculo === 'anterior') && estudante.vinculo !== filtros.vinculo) return false;
     if (idadeMin !== null && (idade === null || idade < idadeMin)) return false;
     if (idadeMax !== null && (idade === null || idade > idadeMax)) return false;
 
@@ -164,6 +165,7 @@ export function formatarStatusEstudante(status: string): string {
     case 'inativo': return 'Inativo';
     case 'arquivado': return 'Arquivado';
     case 'finalizado': return 'Finalizado';
+    case 'desvinculado': return 'Desvinculado';
     default: return status ? status.replace(/_/g, ' ') : '-';
   }
 }
@@ -272,25 +274,36 @@ export function TabelaEstudantes({ estudantes, isAdmin, onVerDetalhes, onAdicion
         <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
           {estudantes.map(est => (
             <TableRow key={est.codigo_estudante} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-              <TableCell className="max-w-[180px] capitalize truncate px-4 py-3 text-gray-900 dark:text-white text-start text-theme-sm font-medium">{est.nome || '-'}</TableCell>
+              <TableCell className="max-w-[180px] capitalize truncate px-4 py-3 text-gray-900 dark:text-white text-start text-theme-sm font-medium">
+                {est.nome || '-'}
+                {est.vinculo === 'anterior' && (
+                  <span className="ml-2 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold normal-case text-amber-700 ring-1 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200">
+                    Vínculo anterior
+                  </span>
+                )}
+              </TableCell>
               <TableCell className="whitespace-nowrap px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 font-mono text-xs">{est.codigo_estudante || '-'}</TableCell>
               <TableCell className="whitespace-nowrap px-4 py-3 text-start text-theme-sm">
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${est.genero === 'masculino' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' : 'bg-pink-100 text-pink-700 dark:bg-pink-900/20 dark:text-pink-400'}`}>
+                {est.acesso === 'reduzido' ? '-' : <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${est.genero === 'masculino' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' : 'bg-pink-100 text-pink-700 dark:bg-pink-900/20 dark:text-pink-400'}`}>
                   <Icon icon={est.genero === 'masculino' ? 'mdi:gender-male' : 'mdi:gender-female'} width={12} />
                   {est.genero === 'masculino' ? 'Masc.' : 'Fem.'}
-                </span>
+                </span>}
               </TableCell>
               <TableCell className="whitespace-nowrap px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                <span className="block">{formatarDataNasc(est.data_nascimento)}</span>
+                <span className="block">{est.acesso === 'reduzido' ? '-' : formatarDataNasc(est.data_nascimento)}</span>
                 {est.data_nascimento && <span className="text-xs text-gray-400">{calcularIdade(est.data_nascimento)} anos</span>}
               </TableCell>
               <TableCell className="whitespace-nowrap px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">{est.email || '-'}</TableCell>
               {isAdmin && <TableCell className="whitespace-nowrap px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">{academias?.[est.codigo_academia ?? ''] ?? est.codigo_academia ?? '-'}</TableCell>}
               <TableCell className="whitespace-nowrap px-4 py-3 text-start text-theme-sm">
-                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full capitalize ${getStatusBadgeClass(est.status)}`}>{formatarStatusEstudante(est.status)}</span>
+                {est.acesso === 'reduzido' ? (
+                  <span className="inline-flex rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">Desvinculado</span>
+                ) : (
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full capitalize ${getStatusBadgeClass(est.status)}`}>{formatarStatusEstudante(est.status)}</span>
+                )}
               </TableCell>
               <TableCell className="whitespace-nowrap px-4 py-3 text-start text-theme-sm">
-                {String(est.status) === 'pendente_documentos' && onAdicionarDocumentacao ? (
+                {est.acesso !== 'reduzido' && String(est.status) === 'pendente_documentos' && onAdicionarDocumentacao ? (
                   <Button size="sm" variant="primary" onClick={() => onAdicionarDocumentacao(est)}>Adicionar documentação</Button>
                 ) : (
                   <Button size="sm" variant="outline" onClick={() => onVerDetalhes(est)}>Ver mais</Button>

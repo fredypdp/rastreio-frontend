@@ -11,6 +11,7 @@ import { tokenStorage, useApi, perfilService } from '@/lib/api';
 import { setCookie } from '@/lib/utils/cookies';
 import { useUserCookie } from '@/hooks/useUserCookie';
 import RouteGuard from "@/components/guards/RouteGuard";
+import AvisoContaDesvinculada from "@/components/estudante/AvisoContaDesvinculada";
 
 /**
  * Tela de espera reutilizada enquanto ainda confirmamos se há um perfil mais
@@ -100,6 +101,7 @@ export default function PainelLayout({ children }: { children: React.ReactNode }
             <AppHeader />
 
             <div className="p-4 mx-auto w-full max-w-(--breakpoint-2xl) md:p-6">
+              {user?.tipo === 'estudante' && user.estudante?.status === 'inativo' && <AvisoContaDesvinculada />}
               {children}
             </div>
           </div>
