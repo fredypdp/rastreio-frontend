@@ -14,8 +14,7 @@ import type { AcademiaNivel, EstudanteDetalhado, FinanceiroAvisoMetodos, Finance
 /**
  * Utilitários e componentes partilhados pelas telas de pagamentos e de
  * configurações financeiras (FinanceiroPagamentosPainel,
- * EstudantePagamentosPainel, FinanceiroConfiguracoesPainel e
- * MatriculaPublicPage). Extraído da tarefa 49 e ampliado na correção
+ * EstudantePagamentosPainel e FinanceiroConfiguracoesPainel). Extraído da tarefa 49 e ampliado na correção
  * seguinte (subtelas em vez de modais, terminologia e inferência de nível
  * a partir dos dados da própria academia).
  */
@@ -99,8 +98,8 @@ export function formatAnoLetivo(v?: string) {
 
 /** "Avulsa" no backend passou a ser apresentada como "Outros" no frontend (pedido do produto). */
 export const origemLabel: Record<FinanceiroOrigemCobranca, string> = {
-  matricula: "Matrícula",
   mensalidade: "Mensalidade",
+  servico_extra: "Serviço extra",
   avulsa: "Outros",
 };
 
@@ -192,8 +191,8 @@ export function rotuloMetodoCobranca(r: PagamentoResumo): string {
  * interface e esse rótulo não cabe numa frase, então vira "cobrança".
  */
 export function tipoCobrancaNaFrase(origem: FinanceiroOrigemCobranca): string {
-  if (origem === "matricula") return "matrícula";
   if (origem === "mensalidade") return "mensalidade";
+  if (origem === "servico_extra") return "taxa de serviço extra";
   return "cobrança";
 }
 
@@ -981,7 +980,6 @@ export function SubtelaDetalheCobranca({ cobranca, onVoltar, mostrarDadosEstudan
             onCopiar={cobranca.merchant_transaction_id ? () => copiar(cobranca.merchant_transaction_id!, "transacao") : undefined}
             copiado={copiado === "transacao"}
           />
-          {cobranca.codigo_solicitacao && <CampoDetalheCobranca label="Solicitação de matrícula" valor={cobranca.codigo_solicitacao} />}
           {cobranca.referencia_externa && <CampoDetalheCobranca label="Referência do comprovativo" valor={cobranca.referencia_externa} />}
         </div>
 

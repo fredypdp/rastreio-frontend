@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Peças reutilizáveis pelas páginas de /financas/configuracoes, /mensalidade
- * e /taxa-matricula (Tarefa 11 — cada uma dessas telas passou a ser uma
- * página própria em vez de uma subtela dentro de um único componente
- * gigante). Este arquivo concentra o estado e os componentes que mais de
- * uma dessas páginas precisa, para evitar duplicar a mesma lógica em cada
- * page.tsx.
+ * Peças reutilizáveis pelas páginas de /financas/configuracoes e /mensalidade
+ * (Tarefa 11 — cada uma dessas telas passou a ser uma página própria em
+ * vez de uma subtela dentro de um único componente gigante; a taxa de
+ * matrícula foi removida na Parte 1 do plano de atualizações). Este
+ * arquivo concentra o estado e os componentes que mais de uma dessas
+ * páginas precisa, para evitar duplicar a mesma lógica em cada page.tsx.
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -24,7 +24,7 @@ import Checkbox from "@/components/form/input/Checkbox";
 import Radio from "@/components/form/input/Radio";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { LoadingState, METODO_PAGAMENTO_LABEL, NIVEL_LABEL, niveisDaAcademia, ConfirmDialog, ValorKzInput, money } from "@/components/paineis/financeiroShared";
-import type { Curso, FinanceiroMetodoPagamento, FinanceiroModoVigencia, FinanceiroNivel, MatriculaConfiguracaoView, MensalidadeConfiguracaoView } from "@/types/api";
+import type { Curso, FinanceiroMetodoPagamento, FinanceiroModoVigencia, FinanceiroNivel, MensalidadeConfiguracaoView } from "@/types/api";
 
 export const METODOS: FinanceiroMetodoPagamento[] = ["GPO", "REF", "GPO_QR"];
 export const MES_FIM_OPCOES = [
@@ -65,8 +65,8 @@ export type FormFieldErrors = Partial<Record<"ano_academico" | "curso_id" | "val
 
 /**
  * Estado e chamadas de API compartilhados por todas as páginas de
- * configurações financeiras (lista de mensalidade, lista de taxa de
- * matrícula, e os formulários de criação de cada uma). Cada página chama
+ * configurações financeiras (lista de mensalidade e os formulários de
+ * criação e edição). Cada página chama
  * este hook de forma independente — como cada uma agora é uma rota própria
  * (Next.js monta cada page.tsx separadamente), isso significa que navegar
  * entre elas refaz essas buscas; é a mesma troca que qualquer conversão de
@@ -83,16 +83,12 @@ export function useFinanceiroNivelContext() {
   const [cursos, setCursos] = useState<Curso[]>([]);
 
   const mensalidadesApi = useApi(financeiroService.listarConfiguracoesMensalidade);
-  const matriculasApi = useApi(financeiroService.listarConfiguracoesMatricula);
   const credenciaisApi = useApi(financeiroService.listarCredenciais);
   const provedorApi = useApi(financeiroService.consultarProvedor);
 
   const reload = async () => {
     if (!codigoAcademia) return;
-    await Promise.all([
-      mensalidadesApi.execute({ codigo_academia: codigoAcademia }),
-      matriculasApi.execute({ codigo_academia: codigoAcademia }),
-    ]);
+    await mensalidadesApi.execute({ codigo_academia: codigoAcademia });
   };
 
   useEffect(() => {
@@ -120,14 +116,14 @@ export function useFinanceiroNivelContext() {
   const bloquear = credenciaisApi.loading || !temCredenciais;
 
   // Métodos de pagamento que o provedor ATIVO da academia suporta: é só entre eles
-  // que a academia pode escolher ao configurar propina e matrícula. `null` enquanto
+  // que a academia pode escolher ao configurar a propina. `null` enquanto
   // o estado do provedor ainda não carregou (não filtra nada); lista vazia quando
   // a academia não tem provedor ativo.
   const provedorAtivo = provedorApi.data?.provedores.find((p) => p.ativo) ?? null;
   const metodosSuportados: FinanceiroMetodoPagamento[] | null = provedorApi.data ? (provedorAtivo?.metodos ?? []) : null;
   const provedorAtivoNome = provedorAtivo?.nome ?? null;
 
-  return { user, isAdmin, isAcademia, isFpp, loading, codigoAcademia, anosAcademicosAcademia, niveisDisponiveis, cursos, mensalidadesApi, matriculasApi, reload, bloquear, metodosSuportados, provedorAtivoNome };
+  return { user, isAdmin, isAcademia, isFpp, loading, codigoAcademia, anosAcademicosAcademia, niveisDisponiveis, cursos, mensalidadesApi, reload, bloquear, metodosSuportados, provedorAtivoNome };
 }
 
 export type FinanceiroNivelContext = ReturnType<typeof useFinanceiroNivelContext>;
@@ -149,7 +145,7 @@ export function FinanceiroAcessoGuard({ ctx, children }: { ctx: FinanceiroNivelC
           <div>
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Configurações financeiras</h2>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Propina, matrícula e as demais configurações desta página pertencem a cada academia, não ao administrador —
+              Propina e as demais configurações desta página pertencem a cada academia, não ao administrador —
               indisponível no momento. Ainda não existe nenhuma configuração financeira própria do Spuri.
             </p>
           </div>
@@ -229,12 +225,12 @@ export function metodosValidos(selecionados: FinanceiroMetodoPagamento[], suport
 }
 
 /**
- * Seletor de métodos de pagamento das configurações de propina e matrícula.
+ * Seletor de métodos de pagamento das configurações de propina.
  * Mostra SÓ os métodos que o provedor de pagamento ativo da academia suporta
  * (`suportados`); métodos já marcados que o provedor atual não suporta são
  * sinalizados e não são enviados ao guardar.
  */
-export function MetodosPagamentoCheckboxes({ kind, selected, onToggle, suportados, provedorNome }: { kind: "mensalidade" | "matricula" | "servico" | "taxa_inscricao"; selected: FinanceiroMetodoPagamento[]; onToggle: (metodo: FinanceiroMetodoPagamento) => void; suportados?: FinanceiroMetodoPagamento[] | null; provedorNome?: string | null }) {
+export function MetodosPagamentoCheckboxes({ kind, selected, onToggle, suportados, provedorNome }: { kind: "mensalidade" | "servico" | "taxa_inscricao"; selected: FinanceiroMetodoPagamento[]; onToggle: (metodo: FinanceiroMetodoPagamento) => void; suportados?: FinanceiroMetodoPagamento[] | null; provedorNome?: string | null }) {
   const visiveis = METODOS.filter((m) => !suportados || suportados.includes(m));
   const indisponiveis = suportados ? selected.filter((m) => !suportados.includes(m)) : [];
   return (
@@ -297,7 +293,7 @@ export function validarValorEAno(form: NivelFormState, existeConfiguracaoParaEsc
 
 /**
  * true quando já existe, entre `linhas` (as configurações já carregadas —
- * `ctx.mensalidadesApi.data.configuracoes` ou `ctx.matriculasApi.data.configuracoes`),
+ * `ctx.mensalidadesApi.data.configuracoes`),
  * uma configuração vigente para o escopo atualmente selecionado no
  * formulário (mesmo nível + ano_academico, e para médio/superior também o
  * mesmo curso_id). Usado tanto para decidir se a pergunta "o que acontece
@@ -307,7 +303,7 @@ export function validarValorEAno(form: NivelFormState, existeConfiguracaoParaEsc
  * de duplicada nos dois formulários (Tarefa 12).
  */
 export function existeConfiguracaoParaEscopo(
-  linhas: (MensalidadeConfiguracaoView | MatriculaConfiguracaoView)[],
+  linhas: MensalidadeConfiguracaoView[],
   form: Pick<NivelFormState, "nivel" | "ano_academico" | "curso_id">
 ): boolean {
   if (!form.ano_academico) return false;
@@ -320,9 +316,8 @@ export function existeConfiguracaoParaEscopo(
 
 /**
  * Campos de nível/curso/ano/valor/pendente, compartilhados pelos
- * formulários de criação de mensalidade e de taxa de matrícula — os dois
- * sempre tiveram exatamente os mesmos campos aqui (só o que vem depois, como
- * "Mês de encerramento da cobrança", é exclusivo da mensalidade).
+ * formulários de criação e de edição de mensalidade (o que vem depois,
+ * como "Mês de encerramento da cobrança", fica fora deste componente).
  *
  * Nível só aparece como escolha quando a academia oferece mais de um (ex.:
  * nivel_escolar="misto"). Com um único nível, ele é aplicado direto, sem
@@ -344,7 +339,7 @@ export function existeConfiguracaoParaEscopo(
 export function NivelCamposFields({
   kind, form, errors, setForm, niveisDisponiveis, cursos, anosAcademicosAcademia, escopoFixo = false, existeConfiguracaoParaEscopo: existeConfig,
 }: {
-  kind: "mensalidade" | "matricula";
+  kind: "mensalidade";
   form: NivelFormState;
   errors: FormFieldErrors;
   setForm: (updater: (prev: NivelFormState) => NivelFormState) => void;
@@ -394,9 +389,7 @@ export function NivelCamposFields({
                   <span>
                     <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar retroativamente</span>
                     <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
-                      {kind === "mensalidade"
-                        ? "O novo valor passa a valer também para mensalidades de meses anteriores que já venceram e ainda não foram pagas."
-                        : "O novo valor passa a valer também para matrículas já aprovadas que ainda não foram pagas."}
+                      {"O novo valor passa a valer também para mensalidades de meses anteriores que já venceram e ainda não foram pagas."}
                     </span>
                   </span>
                 }
@@ -411,9 +404,7 @@ export function NivelCamposFields({
                   <span>
                     <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar só daqui para frente</span>
                     <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
-                      {kind === "mensalidade"
-                        ? "Quem já está com uma mensalidade pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para cobranças futuras."
-                        : "Quem já está com uma matrícula pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para matrículas aprovadas a partir de agora."}
+                      {"Quem já está com uma mensalidade pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para cobranças futuras."}
                     </span>
                   </span>
                 }
@@ -494,9 +485,7 @@ export function NivelCamposFields({
                 <span>
                   <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar retroativamente</span>
                   <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
-                    {kind === "mensalidade"
-                      ? "O novo valor passa a valer também para mensalidades de meses anteriores que já venceram e ainda não foram pagas."
-                      : "O novo valor passa a valer também para matrículas já aprovadas que ainda não foram pagas."}
+                    {"O novo valor passa a valer também para mensalidades de meses anteriores que já venceram e ainda não foram pagas."}
                   </span>
                 </span>
               }
@@ -511,9 +500,7 @@ export function NivelCamposFields({
                 <span>
                   <span className="block font-semibold text-gray-800 dark:text-white/90">Aplicar só daqui para frente</span>
                   <span className="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
-                    {kind === "mensalidade"
-                      ? "Quem já está com uma mensalidade pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para cobranças futuras."
-                      : "Quem já está com uma matrícula pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para matrículas aprovadas a partir de agora."}
+                    {"Quem já está com uma mensalidade pendente continua pagando o valor antigo até quitá-la; o novo valor vale só para cobranças futuras."}
                   </span>
                 </span>
               }
@@ -528,11 +515,11 @@ export function NivelCamposFields({
 }
 
 /** Chave estável para identificar qual linha está com remoção em andamento (desabilita só o botão daquela linha). */
-function configKey(kind: "mensalidade" | "matricula", c: { nivel: string; ano_academico?: string; curso_id?: string }) {
+function configKey(kind: "mensalidade", c: { nivel: string; ano_academico?: string; curso_id?: string }) {
   return `${kind}|${c.nivel}|${c.ano_academico ?? ""}|${c.curso_id ?? ""}`;
 }
 
-type ConfigRow = MensalidadeConfiguracaoView | MatriculaConfiguracaoView;
+type ConfigRow = MensalidadeConfiguracaoView;
 
 /** Agrupa as configurações em secções para exibição em cartões (Tarefa 12): uma secção "Ensino Primário e Iº Ciclo" (todo o fundamental junto) e uma secção por curso para médio/superior. */
 function agruparEmSecoes(linhas: ConfigRow[], cursos: Curso[]): { titulo: string; linhas: ConfigRow[] }[] {
@@ -566,7 +553,7 @@ export function ConfiguracoesDefinidasCards({
 }: {
   linhas: ConfigRow[];
   comMesFim: boolean;
-  kind: "mensalidade" | "matricula";
+  kind: "mensalidade";
   cursos: Curso[];
   codigoAcademia: string;
   reload: () => Promise<void>;
@@ -575,7 +562,6 @@ export function ConfiguracoesDefinidasCards({
   suportados?: FinanceiroMetodoPagamento[] | null;
 }) {
   const removerMensalidade = useApi(financeiroService.removerConfiguracaoMensalidade);
-  const removerMatricula = useApi(financeiroService.removerConfiguracaoMatricula);
   const [removendo, setRemovendo] = useState(false);
   const [confirmarRemocao, setConfirmarRemocao] = useState(false);
   const [selecionada, setSelecionada] = useState<ConfigRow | null>(null);
@@ -585,12 +571,10 @@ export function ConfiguracoesDefinidasCards({
 
   const editarHref = (c: ConfigRow) => {
     const qs = new URLSearchParams({ nivel: c.nivel, ...(c.ano_academico ? { ano_academico: c.ano_academico } : {}), ...(c.curso_id ? { curso_id: c.curso_id } : {}) });
-    // Tarefa 16: mensalidade passou a ter uma rota de edição própria,
-    // separada de /criar (ver MensalidadeEditarPainel.tsx). Taxa de
-    // matrícula ainda não tem essa separação — continua na rota antiga,
-    // com o nível/ano/curso vindo travado por estes mesmos parâmetros.
-    if (kind === "mensalidade") return `/financas/configuracoes/mensalidade/editar?${qs.toString()}`;
-    return `/financas/configuracoes/taxa-matricula/criar?${qs.toString()}`;
+    // Tarefa 16: mensalidade tem uma rota de edição própria, separada de
+    // /criar (ver MensalidadeEditarPainel.tsx), com o nível/ano/curso
+    // vindo travado por estes mesmos parâmetros.
+    return `/financas/configuracoes/mensalidade/editar?${qs.toString()}`;
   };
 
   const onRemover = async () => {
@@ -598,13 +582,12 @@ export function ConfiguracoesDefinidasCards({
     onAlert(null);
     setRemovendo(true);
     try {
-      const executar = kind === "mensalidade" ? removerMensalidade.execute : removerMatricula.execute;
-      await executar({ codigo_academia: codigoAcademia, nivel: selecionada.nivel, ano_academico: selecionada.ano_academico, curso_id: selecionada.curso_id });
-      onAlert({ variant: "success", message: kind === "mensalidade" ? "Configuração de mensalidade removida com sucesso." : "Configuração de matrícula removida com sucesso." });
+      await removerMensalidade.execute({ codigo_academia: codigoAcademia, nivel: selecionada.nivel, ano_academico: selecionada.ano_academico, curso_id: selecionada.curso_id });
+      onAlert({ variant: "success", message: "Configuração de mensalidade removida com sucesso." });
       setSelecionada(null);
       await reload();
     } catch (err) {
-      onAlert({ variant: "error", message: formatApiError(err, `Não foi possível remover a configuração de ${kind === "mensalidade" ? "mensalidade" : "matrícula"}.`) });
+      onAlert({ variant: "error", message: formatApiError(err, "Não foi possível remover a configuração de mensalidade.") });
     } finally {
       setRemovendo(false);
       setConfirmarRemocao(false);
@@ -620,12 +603,8 @@ export function ConfiguracoesDefinidasCards({
       <div className="space-y-4">
         {confirmarRemocao && (
           <ConfirmDialog
-            title={kind === "mensalidade" ? "Remover configuração de propina" : "Remover taxa de matrícula"}
-            message={
-              kind === "mensalidade"
-                ? `Tem certeza que deseja remover a configuração de propina de ${NIVEL_LABEL[selecionada.nivel]} — ${labelEscopo(selecionada)}? Meses já cobrados não são afetados; a partir de agora, novas mensalidades desse escopo ficam sem valor definido até configurar de novo.`
-                : `Tem certeza que deseja remover a configuração de taxa de matrícula de ${NIVEL_LABEL[selecionada.nivel]} — ${labelEscopo(selecionada)}? A matrícula volta a ser gratuita para este escopo até configurar de novo.`
-            }
+            title="Remover configuração de propina"
+            message={`Tem certeza que deseja remover a configuração de propina de ${NIVEL_LABEL[selecionada.nivel]} — ${labelEscopo(selecionada)}? Meses já cobrados não são afetados; a partir de agora, novas mensalidades desse escopo ficam sem valor definido até configurar de novo.`}
             confirmLabel="Remover"
             onConfirm={onRemover}
             onClose={() => setConfirmarRemocao(false)}

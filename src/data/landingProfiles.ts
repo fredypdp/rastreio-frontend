@@ -28,31 +28,31 @@ export interface ProfileContent {
 export const profileContent: Record<Profile, ProfileContent> = {
   estudante: {
     label: "Estudante / Encarregado",
-    headline: "Faça a sua matrícula, sem filas nem deslocações.",
+    headline: "Notas, faltas e propinas da sua instituição, sempre à mão.",
     subheadline:
-      "Peça a matrícula em qualquer colégio ou universidade parceira do Spuri, direto do telemóvel ou computador e acompanhe o pedido em tempo real.",
+      "Acompanhe notas, faltas, pagamentos e comunicados da sua instituição parceira do Spuri, direto do telemóvel ou computador.",
     problems: [
-      "Filas longas e deslocações para tratar de matrícula",
+      "Filas longas e deslocações para tratar de assuntos da escola",
       "Ter de se deslocar só para pagar propinas ou material",
       "Não saber a tempo quando sai uma nota, falta, pautas ou o seu certificado",
       "Perder ou danificar documentos físicos importantes",
-      "Falta de visibilidade sobre o estado do pedido de matrícula",
+      "Falta de visibilidade sobre a sua situação académica e financeira",
     ],
     solutions: [
-      "Matrícula 100% online, a qualquer hora",
+      "Consulta do seu painel a qualquer hora",
       "Pagamento de propinas e material sem sair de casa",
-      "Documentos enviados digitalmente, sem burocracia",
+      "Documentos guardados digitalmente, sem burocracia",
       "Notificações imediatas sobre notas, faltas e resultado da sua avaliação final",
       "Histórico académico seguro, protegido contra fraude e sempre acessível",
     ],
     highlights:
-      "pagamentos e matrículas digitais · notificações em tempo real · painel do estudante com notas, faltas e avaliações.",
-    cta: "Fazer Matrícula",
-    href: "/matricula",
+      "pagamentos digitais · notificações em tempo real · painel do estudante com notas, faltas e avaliações.",
+    cta: "Entrar",
+    href: "/login",
     steps: [
-      "Escolha uma instituição parceira.",
-      "Envie documentos e solicite a matrícula online.",
-      "Acompanhe respostas, pagamentos, notas e faltas no seu painel.",
+      "A sua instituição parceira regista a sua matrícula no Spuri.",
+      "Entre com o acesso que a instituição lhe enviou.",
+      "Acompanhe pagamentos, notas e faltas no seu painel.",
     ],
   },
   "colegio-pequeno-medio": {
@@ -175,8 +175,8 @@ export const featureCategories: FeatureCategory[] = [
       {
         title: "Matrículas 100% digitais",
         description:
-          "Elimine filas e papel: solicite, envie documentos e acompanhe matrículas de forma simples e rápida.",
-        studentRelevant: true,
+          "Elimine filas e papel: registe matrículas e guarde os documentos dos estudantes de forma simples e rápida.",
+        studentRelevant: false,
       },
       {
         title: "Notas e faltas sempre disponíveis",

@@ -24,11 +24,6 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
     redirectIfUnauthorized: '/',
   },
   {
-    path: '/matricula',
-    allowedTypes: 'public',
-    redirectIfUnauthorized: '/',
-  },
-  {
     path: '/instituicoes/cadastrar',
     allowedTypes: 'public',
     redirectIfUnauthorized: '/',
@@ -73,11 +68,6 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
   },
   {
     path: '/estudantes',
-    allowedTypes: ['admin', 'academia'],
-    redirectIfUnauthorized: '/',
-  },
-  {
-    path: '/solicitacoes-matricula',
     allowedTypes: ['admin', 'academia'],
     redirectIfUnauthorized: '/',
   },
@@ -161,16 +151,6 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
     redirectIfUnauthorized: '/',
   },
   {
-    path: '/financas/configuracoes/taxa-matricula',
-    allowedTypes: ['admin', 'academia'],
-    redirectIfUnauthorized: '/',
-  },
-  {
-    path: '/financas/configuracoes/taxa-matricula/criar',
-    allowedTypes: ['admin', 'academia'],
-    redirectIfUnauthorized: '/',
-  },
-  {
     path: '/financas/gestao-cobrancas',
     allowedTypes: ['admin', 'academia'],
     redirectIfUnauthorized: '/',
@@ -197,11 +177,6 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
   },
   {
     path: '/financas/pagamentos/mensalidades',
-    allowedTypes: ['admin', 'academia'],
-    redirectIfUnauthorized: '/',
-  },
-  {
-    path: '/financas/pagamentos/taxas-matricula',
     allowedTypes: ['admin', 'academia'],
     redirectIfUnauthorized: '/',
   },

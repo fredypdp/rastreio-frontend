@@ -69,7 +69,6 @@ export type Turno = 'manha' | 'tarde' | 'noite';
 export type Genero      = 'masculino' | 'feminino';
 
 export type TipoEnsino = 'fundamental' | 'medio' | 'superior';
-export type SolicitacaoMatriculaStatus = 'pendente' | 'aprovada' | 'aprovada_pendente_pagamento_matricula' | 'reprovada' | 'cancelada';
 export type JobStatus = 'pending' | 'processing' | 'done' | 'failed';
 export type JobEventType = 'job_enqueued' | 'job_progress' | 'job_done' | 'job_failed';
 /** Date-only ISO string (YYYY-MM-DD), correspondente ao tipo `date` na documentação da API. */
@@ -315,42 +314,7 @@ export interface AtualizarDocumentosObrigatoriosResponse {
   documentos_obrigatorios: DocumentosObrigatorios;
 }
 
-export interface CriarSolicitacaoMatriculaRequest {
-  codigo_academia: string;
-  nome: string;
-  genero: Genero;
-  data_nascimento: ApiDate;
-  email?: string;
-  telefone?: string;
-  telefone_encarregado?: string;
-  /** Quando ambos forem enviados, não podem ser iguais (trim + case-insensitive). */
-  bilhete_identidade?: string;
-  bilhete_identidade_encarregado?: string;
-  ano_escolar_fundamental?: string;
-  ano_escolar_medio?: string;
-  curso_medio_id?: string;
-  ano_superior?: string;
-  curso_superior_id?: string;
-  /** Obrigatório quando `declaracao` for enviada; deve ser o ano acadêmico imediatamente anterior. */
-  declaracao_ano_academico?: string;
-  bi_estudante?: File;
-  bi_encarregado?: File;
-  cedula_estudante?: File;
-  declaracao?: File;
-  certificado_6_ano_fundamental?: File;
-  certificado_9_ano_fundamental?: File;
-  certificado_ensino_medio?: File;
-  [campo: `documento_extra_${string}`]: File | string | null | undefined;
-}
-
-export interface CriarSolicitacaoMatriculaResponse {
-  message: string;
-  codigo_solicitacao: string;
-  codigo_academia: string;
-  status: SolicitacaoMatriculaStatus;
-}
-
-export interface SolicitacaoMatriculaDocumento {
+export interface DocumentoMatricula {
   documento_id?: string;
   tipo?: string;
   nivel?: 'fundamental' | 'medio' | 'superior' | 'escopo_desconhecido' | string;
@@ -359,68 +323,6 @@ export interface SolicitacaoMatriculaDocumento {
   path: string;
   file_url?: string;
   download_url?: string;
-}
-
-export interface SolicitacaoMatricula {
-  id?: string;
-  codigo_solicitacao: string;
-  codigo_academia: string;
-  academia_nome?: string;
-  nome: string;
-  genero: Genero;
-  data_nascimento: ApiDate;
-  email?: string;
-  telefone?: string;
-  bilhete_identidade?: string;
-  bilhete_identidade_encarregado?: string;
-  ano_escolar_fundamental?: string;
-  ano_escolar_medio?: string;
-  curso_medio_id?: string;
-  curso_medio_nome?: string;
-  ano_superior?: string;
-  curso_superior_id?: string;
-  curso_superior_nome?: string;
-  documentos?: Record<string, SolicitacaoMatriculaDocumento>;
-  status: SolicitacaoMatriculaStatus;
-  valor_matricula?: number;
-  metodos_pagamento_matricula?: FinanceiroMetodoPagamento[];
-  /** Códigos de outras solicitações mapeadas pelo backend como semelhantes a esta. */
-  solicitacoes_semelhantes: string[];
-  codigo_estudante_gerado?: string;
-  motivo_reprovacao?: string;
-  aprovada_por?: string;
-  reprovada_por?: string;
-  created_at: string;
-  updated_at?: string;
-  version?: number;
-}
-
-export interface ListarSolicitacoesMatriculaParams {
-  status?: SolicitacaoMatriculaStatus | SolicitacaoMatriculaStatus[];
-  codigo_academia?: string;
-  limit?: number;
-  offset?: number;
-  token?: string;
-}
-
-export interface ListarSolicitacoesMatriculaResponse {
-  solicitacoes: SolicitacaoMatricula[];
-  total: number;
-  total_geral?: number;
-  limit?: number;
-  offset?: number;
-}
-
-export interface AprovarSolicitacaoMatriculaResponse {
-  message: string;
-  codigo_solicitacao: string;
-  codigo_estudante_gerado: string;
-  /** Envio da senha temporária por SMS (aprovação sem taxa; com taxa, segue após o pagamento). */
-  credenciais?: CredenciaisEnvio;
-}
-
-export interface ReprovarSolicitacaoMatriculaRequest {
-  motivo_reprovacao: string;
 }
 
 export interface AcademiaStorageUsage {
@@ -646,8 +548,8 @@ export interface SolicitacaoEdicaoDadoEstudante {
   valor_solicitado: string;
   documento_temporario_path?: string;
   documento_temporario_url?: string;
-  documento?: SolicitacaoMatriculaDocumento | null;
-  documentos?: Record<string, SolicitacaoMatriculaDocumento | string | null | undefined>;
+  documento?: DocumentoMatricula | null;
+  documentos?: Record<string, DocumentoMatricula | string | null | undefined>;
   status: StatusSolicitacaoEdicaoDadoEstudante;
   motivo_reprovacao?: string | null;
   solicitado_por: string;
@@ -1884,7 +1786,7 @@ export interface MensalidadePagamentoResponse {
   meses: { ano_letivo: string; mes: number }[];
 }
 
-export type FinanceiroOrigemCobranca = 'matricula' | 'mensalidade' | 'avulsa';
+export type FinanceiroOrigemCobranca = 'mensalidade' | 'servico_extra' | 'avulsa';
 
 export interface CobrancaResumo {
   id: string;
@@ -1902,7 +1804,6 @@ export interface CobrancaResumo {
   /** "EXTERNO" aparece quando a cobrança foi criada já paga fora da plataforma (pendência sem cobrança marcada como paga). */
   metodo_pagamento?: FinanceiroMetodoPagamento | 'EXTERNO';
   codigo_estudante?: string;
-  codigo_solicitacao?: string;
   mensalidades?: { ano_letivo: string; mes: number }[];
   /** true quando a academia marcou manualmente a cobrança como paga fora da plataforma (status "Success"). */
   pagamento_externo?: boolean;
@@ -1980,90 +1881,6 @@ export interface ListarCobrancasEstudanteParams {
   offset?: number;
 }
 
-export interface MatriculaConfiguracaoInput {
-  codigo_academia: string;
-  nivel: FinanceiroNivel;
-  /** Formato "N_ano_fundamental" | "N_ano_medio" — ver MensalidadeConfiguracaoInput.ano_academico. */
-  ano_academico?: string;
-  curso_id?: string;
-  valor: number;
-  metodos_pagamento: FinanceiroMetodoPagamento[];
-  /** Ver o mesmo campo em MensalidadeConfiguracaoInput — só obrigatório ao editar um escopo que já tem configuração vigente. */
-  modo_vigencia?: FinanceiroModoVigencia;
-}
-
-export interface MatriculaRepricingResumo {
-  atualizadas: number;
-  ignoradas: number;
-  falhas: number;
-}
-
-export interface MatriculaConfiguracaoView extends MatriculaConfiguracaoInput {
-  vigente_em: string;
-  /** Só presente na resposta de POST/PUT quando modo_vigencia="cobrancas_pendentes". */
-  repricing_pendentes?: MatriculaRepricingResumo;
-}
-
-export interface ListarConfiguracoesMatriculaResponse {
-  codigo_academia: string;
-  configuracoes: MatriculaConfiguracaoView[];
-}
-
-/**
- * Corpo de DELETE /financeiro/matriculas/configuracoes
- * (finance.RemoveMatriculaConfiguracao). Remove a configuração vigente do
- * escopo — depois de removida, a matrícula volta a ser gratuita para essa
- * combinação nível/ano/curso, como se nunca tivesse tido configuração.
- */
-export interface RemoverMatriculaConfiguracaoRequest {
-  codigo_academia: string;
-  nivel: FinanceiroNivel;
-  ano_academico?: string;
-  curso_id?: string;
-}
-
-export interface BuscarSolicitacoesMatriculaParams {
-  telefone?: string;
-  telefone_encarregado?: string;
-  email?: string;
-  bilhete_identidade?: string;
-  bilhete_identidade_encarregado?: string;
-}
-
-export interface SolicitacaoMatriculaResumo {
-  codigo_solicitacao: string;
-  nome_estudante: string;
-  academia: string;
-  data_submissao: string;
-  status: string;
-}
-
-export interface BuscarSolicitacoesMatriculaResponse {
-  solicitacoes: SolicitacaoMatriculaResumo[];
-}
-
-export interface SolicitacaoMatriculaStatusResponse {
-  status: string;
-  codigo_academia: string;
-  valor_matricula?: number;
-  metodos_pagamento?: FinanceiroMetodoPagamento[];
-  /** Só quando `metodos_pagamento` veio vazio: o motivo (backend ≥ 2.9.0). */
-  metodos_pagamento_aviso?: FinanceiroAvisoMetodos;
-}
-
-export interface PagamentoMatriculaInput {
-  metodo_pagamento: FinanceiroMetodoPagamento;
-  telefone?: string;
-}
-
-export interface PagamentoMatriculaResponse {
-  cobranca: QRCodeChargeResult;
-}
-
-export interface CancelarSolicitacaoMatriculaInput {
-  motivo: string;
-}
-
 export interface CategoriaNotaItem {
   id?: string;
   codigo_academia: string;
@@ -2135,7 +1952,7 @@ export interface EstudanteDetalhado {
   curso_superior_id?: string;
   total_notas?: number;
   total_faltas?: number;
-  documentos?: Record<string, SolicitacaoMatriculaDocumento | string | null | undefined>;
+  documentos?: Record<string, DocumentoMatricula | string | null | undefined>;
   created_at: string;
   updated_at: string;
   version: number;
@@ -2193,7 +2010,7 @@ export interface AcademiaDetalhada {
   tipo_ano_letivo?: 'escolar' | 'superior';
   ano_letivo_ativado_em?: string;
   anos_letivos_lista: AnoLetivoItem[];
-  documentos?: Record<string, SolicitacaoMatriculaDocumento | string | null | undefined>;
+  documentos?: Record<string, DocumentoMatricula | string | null | undefined>;
   documentos_obrigatorios?: DocumentosObrigatorios;
 }
 

@@ -74,7 +74,6 @@ const navItems: NavItem[] = [
     subItems: [
       { name: "Listar",    path: "/estudantes"           },
       { name: "Cadastrar", path: "/estudantes/cadastrar" },
-      { name: "Matrículas", path: "/solicitacoes-matricula" },
     ],
   },
   {

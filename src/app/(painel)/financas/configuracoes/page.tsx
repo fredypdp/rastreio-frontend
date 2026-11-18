@@ -3,7 +3,7 @@ import FinanceiroConfiguracoesRootPainel from "@/components/paineis/FinanceiroCo
 
 export const metadata: Metadata = {
   title: "Finanças - Configurações",
-  description: "Configure propina, mensalidade e taxa de matrícula da academia no Spuri.",
+  description: "Configure o provedor de pagamento e a mensalidade da academia no Spuri.",
 };
 
 export default function FinanceiroConfiguracoesPage() {

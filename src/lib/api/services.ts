@@ -154,13 +154,6 @@ import type {
   DecidirSolicitacaoStatusAcademicoRequest,
   ReprovarSolicitacaoStatusAcademicoRequest,
   DecidirSolicitacaoStatusAcademicoResponse,
-  CriarSolicitacaoMatriculaRequest,
-  CriarSolicitacaoMatriculaResponse,
-  ListarSolicitacoesMatriculaParams,
-  ListarSolicitacoesMatriculaResponse,
-  SolicitacaoMatricula,
-  AprovarSolicitacaoMatriculaResponse,
-  ReprovarSolicitacaoMatriculaRequest,
   StorageQuotaResponse,
   ListarConfiguracoesAnoLetivoResponse,
   AtualizarConfiguracaoAnoLetivoRequest,
@@ -199,21 +192,11 @@ import type {
   ConsultarMensalidadesEstudanteResponse,
   MensalidadePagamentoInput,
   MensalidadePagamentoResponse,
-  MatriculaConfiguracaoInput,
-  MatriculaConfiguracaoView,
-  ListarConfiguracoesMatriculaResponse,
-  RemoverMatriculaConfiguracaoRequest,
   ListarCobrancasParams,
   ListarCobrancasResponse,
   ListarCobrancasEstudanteParams,
   ChargeResult,
   FinanceiroContextoTipo,
-  BuscarSolicitacoesMatriculaParams,
-  BuscarSolicitacoesMatriculaResponse,
-  SolicitacaoMatriculaStatusResponse,
-  PagamentoMatriculaInput,
-  PagamentoMatriculaResponse,
-  CancelarSolicitacaoMatriculaInput,
 } from '@/types/api';
 
 const API_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -418,17 +401,6 @@ function prepareMotivoEstudante(data: MotivoEstudanteRequest): MotivoEstudanteRe
   return { motivo };
 }
 
-function buildSolicitacoesMatriculaQuery(params?: ListarSolicitacoesMatriculaParams): string {
-  const qs = new URLSearchParams();
-  const statuses = Array.isArray(params?.status) ? params?.status : params?.status ? [params.status] : [];
-  statuses.forEach((status) => qs.append('status', status));
-  if (params?.codigo_academia) appendMultiValueParam(qs, 'codigo_academia', params.codigo_academia);
-  if (params?.limit !== undefined) qs.set('limit', String(params.limit));
-  if (params?.offset !== undefined) qs.set('offset', String(params.offset));
-  const query = qs.toString();
-  return query ? `?${query}` : '';
-}
-
 function prepareAtualizarDadosPessoaisEstudante(
   data: AtualizarDadosPessoaisEstudanteRequest
 ): AtualizarDadosPessoaisEstudanteRequest {
@@ -489,57 +461,6 @@ function buildSolicitacoesAlteracaoNIFAcademiaQuery(params?: ListarSolicitacoesA
   return query ? `?${query}` : '';
 }
 
-function prepareSolicitacaoMatriculaForm(data: CriarSolicitacaoMatriculaRequest): FormData {
-  const bilheteIdentidade = normalizarBilheteIdentidade(data.bilhete_identidade);
-  const bilheteIdentidadeEncarregado = normalizarBilheteIdentidade(data.bilhete_identidade_encarregado);
-  ensureBilhetesDiferentes(bilheteIdentidade, bilheteIdentidadeEncarregado);
-
-  const form = new FormData();
-  const entries: Array<[keyof CriarSolicitacaoMatriculaRequest, unknown]> = Object.entries({
-    ...data,
-    bilhete_identidade: bilheteIdentidade,
-    bilhete_identidade_encarregado: bilheteIdentidadeEncarregado,
-  }) as any;
-  entries.forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-    if (value instanceof File) {
-      form.append(key, value);
-    } else {
-      form.append(key, String(value).trim());
-    }
-  });
-  return form;
-}
-
-// =====================
-// SOLICITAÇÃO DE MATRÍCULA (pública)
-// =====================
-
-export const solicitacaoMatriculaService = {
-  criar: (data: CriarSolicitacaoMatriculaRequest) =>
-    api.postForm<CriarSolicitacaoMatriculaResponse>(
-      '/solicitacao-matricula',
-      prepareSolicitacaoMatriculaForm(data)
-    ),
-
-  buscar: (params: BuscarSolicitacoesMatriculaParams) => {
-    const qs = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value) qs.set(key, value);
-    });
-    return api.get<BuscarSolicitacoesMatriculaResponse>(`/solicitacao-matricula/busca?${qs.toString()}`);
-  },
-
-  consultarStatus: (codigo: string) =>
-    api.get<SolicitacaoMatriculaStatusResponse>(`/solicitacao-matricula/${encodeURIComponent(codigo)}/status`),
-
-  iniciarPagamento: (codigo: string, data: PagamentoMatriculaInput) =>
-    api.post<PagamentoMatriculaResponse, PagamentoMatriculaInput>(
-      `/solicitacao-matricula/${encodeURIComponent(codigo)}/pagamento-matricula`,
-      data
-    ),
-};
-
 // =====================
 // CADASTRO PÚBLICO DE ACADEMIA (rota pública, sem token)
 // =====================
@@ -567,7 +488,7 @@ export const academiaPublicaService = {
       formData.append(key, String(value));
     });
 
-    // Rota pública — nenhum token é enviado, igual a solicitacaoMatriculaService.criar.
+    // Rota pública — nenhum token é enviado, sem sessão.
     return api.postForm<CadastroAcademiaPublicaResponse>('/academia/cadastro', formData);
   },
 };
@@ -1065,11 +986,6 @@ export const financeiroService = {
   iniciarPagamentoObrigacaoServicoExtra: (data: IniciarPagamentoObrigacaoRequest, token?: string) => api.post<{ cobranca: QRCodeChargeResult }, IniciarPagamentoObrigacaoRequest>('/financeiro/servicos-extras/obrigacao/pagamento', data, { token: token || tokenStorage.get() || undefined }),
   consultarMensalidadesEstudante: (codigoEstudante: string, token?: string) => api.get<ConsultarMensalidadesEstudanteResponse>(`/financeiro/mensalidades/estudante/${encodeURIComponent(codigoEstudante)}`, { token: token || tokenStorage.get() || undefined }),
   iniciarPagamentoMensalidades: (data: MensalidadePagamentoInput, token?: string) => api.post<MensalidadePagamentoResponse, MensalidadePagamentoInput>('/financeiro/mensalidades/pagamento', data, { token: token || tokenStorage.get() || undefined }),
-  listarConfiguracoesMatricula: (params: { codigo_academia?: string } = {}, token?: string) => api.get<ListarConfiguracoesMatriculaResponse>(`/financeiro/matriculas/configuracoes${params.codigo_academia ? `?codigo_academia=${encodeURIComponent(params.codigo_academia)}` : ''}`, { token: token || tokenStorage.get() || undefined }),
-  configurarMatricula: (data: MatriculaConfiguracaoInput, token?: string) => api.post<MatriculaConfiguracaoView, MatriculaConfiguracaoInput>('/financeiro/matriculas/configuracoes', data, { token: token || tokenStorage.get() || undefined }),
-  atualizarConfiguracaoMatricula: (data: MatriculaConfiguracaoInput, token?: string) => api.put<MatriculaConfiguracaoView, MatriculaConfiguracaoInput>('/financeiro/matriculas/configuracoes', data, { token: token || tokenStorage.get() || undefined }),
-  /** DELETE /financeiro/matriculas/configuracoes — remove a configuração vigente; matrícula volta a ser gratuita para o escopo. */
-  removerConfiguracaoMatricula: (data: RemoverMatriculaConfiguracaoRequest, token?: string) => api.delete<void, RemoverMatriculaConfiguracaoRequest>('/financeiro/matriculas/configuracoes', data, { token: token || tokenStorage.get() || undefined }),
   listarCobrancas: (params: ListarCobrancasParams, token?: string) => {
     const qs = new URLSearchParams();
     if (params.contexto_tipo) qs.set('contexto_tipo', params.contexto_tipo);
@@ -1308,18 +1224,6 @@ export const documentosService = {
       { token: token || tokenStorage.get() || undefined }
     ),
 
-  baixarDocumentoSolicitacaoMatricula: (codigoSolicitacao: string, campo: string, token?: string) =>
-    fetchApiBlob(
-      `/documentos/solicitacoes-matricula/${encodeURIComponent(codigoSolicitacao)}/${encodeURIComponent(campo)}/download`,
-      { token: token || tokenStorage.get() || undefined }
-    ),
-
-  baixarDocumentoSolicitacaoMatriculaPorUrl: (downloadUrl: string, token?: string) =>
-    fetchApiBlob(
-      normalizarDocumentoEndpoint(downloadUrl, '/documentos/solicitacoes-matricula/'),
-      { token: token || tokenStorage.get() || undefined }
-    ),
-
   baixarDocumentoSolicitacaoEdicaoEstudante: (codigoSolicitacao: string, token?: string) =>
     fetchApiBlob(
       `/academia/documentos/solicitacoes-edicao-estudante/${encodeURIComponent(codigoSolicitacao)}/documento/download`,
@@ -1404,50 +1308,6 @@ export const academiaService = {
 
   baixarDocumentoEstudante: (codigoEstudante: string, campo: string, token?: string, params?: { nivel?: string; ano_academico?: string }) =>
     documentosService.baixarDocumentoEstudante(codigoEstudante, campo, token, params),
-
-  // ── Solicitações de matrícula ────────────────────────────────────
-
-  listarSolicitacoesMatricula: (params?: ListarSolicitacoesMatriculaParams | string): Promise<ListarSolicitacoesMatriculaResponse> => {
-    const isLegacy = typeof params === 'string';
-    if (!isLegacy && !hasExplicitPagination(params)) {
-      return getAllPaginated((limit, offset) => academiaService.listarSolicitacoesMatricula({ ...params, limit, offset }), 'solicitacoes');
-    }
-    const tok = isLegacy ? params : params?.token;
-    const qs = isLegacy ? '' : buildSolicitacoesMatriculaQuery(params);
-    return api.get<ListarSolicitacoesMatriculaResponse>(`/academia/solicitacoes-matricula${qs}`, {
-      token: tok || tokenStorage.get() || undefined,
-    });
-  },
-
-  consultarSolicitacaoMatricula: (codigo: string, token?: string) =>
-    api.get<{ solicitacao: SolicitacaoMatricula }>(
-      `/academia/solicitacao-matricula/${encodeURIComponent(codigo)}`,
-      { token: token || tokenStorage.get() || undefined }
-    ),
-
-  aprovarSolicitacaoMatricula: (codigo: string, token?: string) =>
-    api.put<AprovarSolicitacaoMatriculaResponse>(
-      `/academia/solicitacao-matricula/${encodeURIComponent(codigo)}/aprovar`,
-      undefined,
-      { token: token || tokenStorage.get() || undefined }
-    ),
-
-  reprovarSolicitacaoMatricula: (codigo: string, data: ReprovarSolicitacaoMatriculaRequest, token?: string) =>
-    api.put<MensagemResponse>(
-      `/academia/solicitacao-matricula/${encodeURIComponent(codigo)}/reprovar`,
-      { motivo_reprovacao: data.motivo_reprovacao?.trim() },
-      { token: token || tokenStorage.get() || undefined }
-    ),
-
-  baixarDocumentoSolicitacaoMatricula: (codigo: string, campo: string, token?: string) =>
-    documentosService.baixarDocumentoSolicitacaoMatricula(codigo, campo, token),
-
-  cancelarSolicitacaoMatricula: (codigo: string, data: CancelarSolicitacaoMatriculaInput, token?: string) =>
-    api.put<{ message: string }, CancelarSolicitacaoMatriculaInput>(
-      `/academia/solicitacao-matricula/${encodeURIComponent(codigo)}/cancelar`,
-      data,
-      { token: token || tokenStorage.get() || undefined }
-    ),
 
   // ── Notas ──────────────────────────────────────────────────────────
 
@@ -1768,11 +1628,6 @@ export const academiaService = {
     const query = qs.toString();
     return api.get<{ documentos_extra: DocumentoExtra[]; total: number }>(`/academia/documentos-extra${query ? `?${query}` : ''}`, { token: params?.token || tokenStorage.get() || undefined });
   },
-  // Rota pública (sem necessidade de sessão de academia) — usada pela tela
-  // pública de matrícula (/matricula) para saber, em segundo plano, se a
-  // academia escolhida tem documentos extra configurados. Mesmo padrão de
-  // `listarServicosExtrasDisponiveis` logo abaixo.
-  listarDocumentosExtraDisponiveis: (codigoAcademia: string, token?: string) => api.get<{ documentos_extra: DocumentoExtra[]; total: number }>(`/academia/documento/${encodeURIComponent(codigoAcademia)}/documentos-extra`, { token: token || tokenStorage.get() || undefined }),
   criarServicoExtra: (data: ServicoExtraPayload, token?: string) => api.post<{ message: string; data: ServicoExtra }, ServicoExtraPayload>('/academia/servicos-extras', data, { token: token || tokenStorage.get() || undefined }),
   atualizarServicoExtra: (id: string, data: ServicoExtraPayload, token?: string) => api.put<{ message: string; data: ServicoExtra }, ServicoExtraPayload>(`/academia/servicos-extras/${id}`, data, { token: token || tokenStorage.get() || undefined }),
   desativarServicoExtra: (id: string, token?: string) => api.put<{ data: ServicoExtra }>(`/academia/servicos-extras/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
@@ -2541,18 +2396,6 @@ export const adminService = {
     api.get<StorageQuotaResponse>('/dominis/storage/quota', {
       token: token || tokenStorage.get() || undefined,
     }),
-
-  listarSolicitacoesMatricula: (params?: ListarSolicitacoesMatriculaParams | string): Promise<ListarSolicitacoesMatriculaResponse> => {
-    const isLegacy = typeof params === 'string';
-    if (!isLegacy && !hasExplicitPagination(params)) {
-      return getAllPaginated((limit, offset) => adminService.listarSolicitacoesMatricula({ ...params, limit, offset }), 'solicitacoes');
-    }
-    const tok = isLegacy ? params : params?.token;
-    const qs = isLegacy ? '' : buildSolicitacoesMatriculaQuery(params);
-    return api.get<ListarSolicitacoesMatriculaResponse>(`/solicitacoes-matricula${qs}`, {
-      token: tok || tokenStorage.get() || undefined,
-    });
-  },
 
   listarSolicitacoesStatusAcademico: (params?: ListarSolicitacoesStatusAcademicoParams | string): Promise<ListarSolicitacoesStatusAcademicoResponse> => {
     const isLegacy = typeof params === 'string';

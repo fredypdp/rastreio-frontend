@@ -3,8 +3,8 @@
 /**
  * Peças compartilhadas pelas duas páginas de /financas/pagamentos
  * (Tarefa 13 — antes eram dois cards que abriam subtelas dentro de
- * FinanceiroPagamentosPainel; agora `/financas/pagamentos/mensalidades` e
- * `/financas/pagamentos/taxas-matricula` são páginas próprias, mesmo padrão
+ * FinanceiroPagamentosPainel; agora `/financas/pagamentos/mensalidades` é
+ * página própria, mesmo padrão
  * de navegação por rota já usado em /financas/configuracoes desde a
  * Tarefa 9). O visual de cada peça abaixo é idêntico ao que já existia em
  * FinanceiroPagamentosPainel.tsx antes desta tarefa — só a divisão em
@@ -54,8 +54,7 @@ export function mesesDoAnoLetivo(anoLetivo: string, tipo: "escolar" | "superior"
  * FinanceiroPagamentosPainel) — filtro de estado, tabela (ou vazio/
  * carregando), paginação, e a subtela de detalhe quando um pagamento é
  * aberto. Reaproveitada por PagamentosMensalidadesPainel (com `anoLetivo` +
- * `mes`) e por PagamentosTaxasMatriculaPainel (sem os dois, matrícula não
- * tem o conceito de "mês do ano letivo").
+ * `mes`).
  */
 export function PagamentosCobrancasSubtela({
   origem, titulo, icon, onVoltar, codigoAcademia, anoLetivo, mes,

@@ -16,7 +16,7 @@ export {
   academiaService,
   adminService,
   comunicacaoService,
-  solicitacaoMatriculaService,
+  
   financeiroService,
 } from './services';
 
@@ -142,7 +142,6 @@ export type {
   StatusEscolarFundamental,
   StatusEscolarMedio,
   TipoEnsino,
-  SolicitacaoMatriculaStatus,
   SolicitacaoStatusAcademicoTipo,
   SolicitacaoStatusAcademicoStatus,
   CriarSolicitacaoStatusAcademicoRequest,
@@ -157,11 +156,6 @@ export type {
   DocumentosObrigatorios,
   AtualizarDocumentosObrigatoriosRequest,
   DocumentosObrigatoriosResponse,
-  CriarSolicitacaoMatriculaRequest,
-  CriarSolicitacaoMatriculaResponse,
-  SolicitacaoMatricula,
-  ListarSolicitacoesMatriculaParams,
-  ListarSolicitacoesMatriculaResponse,
   StorageQuotaResponse,
   FinanceiroContextoTipo,
   FinanceiroAmbiente,

@@ -10,7 +10,6 @@ import { VerificarEmailComFrontend } from "@/lib/utils/email";
 const stepRouteReferences: Record<string, { href: string; label: string }[]> = {
   estudantes: [
     { href: "/estudantes/cadastrar", label: "Cadastrar estudantes" },
-    { href: "/solicitacoes-matricula", label: "Ver solicitações de matrículas" },
   ],
 };
 

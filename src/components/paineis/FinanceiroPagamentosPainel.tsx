@@ -5,11 +5,11 @@ import { SubtelasMenu } from "@/components/paineis/financeiroShared";
 import { AvisoCredenciaisPagamentos, PagamentosAcessoGuard, usePagamentosAcesso } from "@/components/paineis/PagamentosShared";
 
 /**
- * /financas/pagamentos (Tarefa 13). Antes os dois cards ("Mensalidade /
- * Propina" e "Taxa de matrícula") abriam subtelas dentro deste mesmo
- * componente, com um estado local (`tela`) controlando o drill-down.
- * Agora os dois navegam para páginas próprias — /financas/pagamentos/
- * mensalidades e /financas/pagamentos/taxas-matricula — mesmo padrão de
+ * /financas/pagamentos (Tarefa 13). Antes os cards abriam subtelas dentro
+ * deste mesmo componente, com um estado local (`tela`) controlando o
+ * drill-down. Agora o card de mensalidades navega para a página própria
+ * /financas/pagamentos/mensalidades (a taxa de matrícula foi removida
+ * na Parte 1 do plano de atualizações) — mesmo padrão de
  * navegação por rota já usado em /financas/configuracoes desde a
  * Tarefa 9; o visual não mudou em nada, só a navegação passou de estado
  * local para rota de verdade.
@@ -34,7 +34,6 @@ export default function FinanceiroPagamentosPainel() {
           <SubtelasMenu
             opcoes={[
               { id: "mensalidade", icon: "mdi:calendar-month-outline", label: "Mensalidades", descricao: "Consultar por ano letivo e mês.", href: "/financas/pagamentos/mensalidades", disabled: bloqueado },
-              { id: "matricula", icon: "mdi:school-outline", label: "Taxas de matrícula", descricao: "Todas as cobranças de matrícula, em todos os estados.", href: "/financas/pagamentos/taxas-matricula", disabled: bloqueado },
             ]}
           />
           {bloqueado && <AvisoCredenciaisPagamentos />}

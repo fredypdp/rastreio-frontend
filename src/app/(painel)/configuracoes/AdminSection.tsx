@@ -79,13 +79,6 @@ const PROJECTIONS: ProjectionMeta[] = [
     tier: 4,
   },
   {
-    name: "solicitacoes_matricula",
-    label: "Solicitações de Matrícula",
-    description:
-      "Pedidos de matrícula, documentos enviados e decisões de aprovação, reprovação ou cancelamento.",
-    tier: 5,
-  },
-  {
     name: "solicitacoes_edicao_dados_estudante",
     label: "Solicitações de Edição",
     description:

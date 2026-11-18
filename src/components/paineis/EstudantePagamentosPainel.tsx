@@ -47,7 +47,7 @@ function getCodigo(user: any) { return user?.estudante?.codigo_estudante || user
 const TIPO_OPCOES: { value: "" | FinanceiroOrigemCobranca; label: string }[] = [
   { value: "", label: "Todos os tipos" },
   { value: "mensalidade", label: "Mensalidade" },
-  { value: "matricula", label: "Matrícula" },
+  { value: "servico_extra", label: "Serviço extra" },
   { value: "avulsa", label: "Outros" },
 ];
 
@@ -337,7 +337,7 @@ export default function EstudantePagamentosPainel() {
           // GET /consultar-academia/:codigo devolve os campos da academia
           // NO NÍVEL RAIZ da resposta, não envolvidos em `{ academia: {...} }`
           // como o tipo ConsultarAcademiaResponse sugere — mesma
-          // divergência já contornada em MatriculaPublicPage.tsx.
+          // divergência já conhecida nas telas que consultam a academia.
           const bruto = r as unknown as { academia?: { nome?: string }; nome?: string };
           const nome = bruto.academia?.nome ?? bruto.nome;
           if (!nome) return;

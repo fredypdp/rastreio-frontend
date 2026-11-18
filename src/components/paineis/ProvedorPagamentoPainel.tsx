@@ -89,7 +89,7 @@ function nomeDoProvedor(catalogo: FinanceiroProvedor[], id: string) {
 /**
  * Página /financas/configuracoes/provedor (Tarefa 30): escolha do provedor de
  * pagamento (PSP) e credenciais por provedor. Vive dentro de Configurações,
- * como as páginas de Mensalidade e Taxa de Matrícula. Serve a academia (o seu
+ * como a página de Mensalidade. Serve a academia (o seu
  * próprio contexto) e o admin FPP (contexto "Spuri (Global)"; nos demais, só consulta).
  */
 /**

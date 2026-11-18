@@ -13,7 +13,7 @@ import { ConfirmDialog, SubtelaPanel, formatAnoLetivo, capitalizar } from "@/com
 import { FinanceiroAcessoGuard, ManualDeFuncionamento, useFinanceiroNivelContext, MES_NOME_OPCOES } from "@/components/paineis/financeiroNivelShared";
 import type { MensalidadeConfiguracaoView } from "@/types/api";
 
-/** /financas/configuracoes/mensalidade/inicio-cobranca (Tarefa 11) — antes era a subtela de topo "Início de cobrança fora do padrão"; agora vive só dentro de Mensalidade, já que não se aplica a taxa de matrícula. */
+/** /financas/configuracoes/mensalidade/inicio-cobranca (Tarefa 11) — antes era a subtela de topo "Início de cobrança fora do padrão"; agora vive só dentro de Mensalidade, já que só se aplica a mensalidade. */
 export default function InicioCobrancaPainel() {
   const ctx = useFinanceiroNivelContext();
   return (
