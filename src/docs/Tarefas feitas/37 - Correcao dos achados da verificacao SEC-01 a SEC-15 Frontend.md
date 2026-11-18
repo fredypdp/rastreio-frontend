@@ -1,6 +1,6 @@
 # Tarefa 37 — Correção dos achados da verificação de segurança SEC-01 a SEC-15 (frontend)
 
-**Estado:** pendente
+**Estado:** feito
 **Repositório:** https://github.com/fredypdp/rastreio-frontend
 **Gerado sobre:** `main` @ `14a635c`
 **Entrega:** arquivos completos e atualizados na pasta `rastreio-frontend/`, com os mesmos caminhos do repositório (nenhum arquivo a apagar)

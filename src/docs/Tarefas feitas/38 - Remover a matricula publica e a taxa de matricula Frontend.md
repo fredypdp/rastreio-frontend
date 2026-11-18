@@ -1,6 +1,6 @@
 # Tarefa 38 — Remover a matrícula pública e a taxa de matrícula (Parte 1 do Plano de Atualizações) (frontend)
 
-**Estado:** pendente
+**Estado:** feito
 **Repositório:** https://github.com/fredypdp/rastreio-frontend
 **Gerado sobre:** `main` @ `bee765b`
 **Entrega:** arquivos completos e atualizados na pasta `rastreio-frontend/`, com os mesmos caminhos do repositório. **10 arquivos precisam ser apagados** (lista em "Como aplicar").
