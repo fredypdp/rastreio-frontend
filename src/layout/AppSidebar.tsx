@@ -138,6 +138,7 @@ const navItems: NavItem[] = [
       { name: "Matrícula", path: "/configuracoes/matricula" },
       { name: "Regras de avaliação", path: "/configuracoes/regras-avaliacao-final" },
       { name: "Segurança", path: "/configuracoes/seguranca" },
+      { name: "Sistema", path: "/configuracoes/sistema" },
     ],
   },
   {
@@ -238,6 +239,8 @@ export default function AppSidebar() {
 
     const isAdmin = user?.tipo === "admin";
     const isFpp = isAdmin && user?.admin?.role === "fpp";
+    // Configurações do sistema: leitura para adm e fpp (só o fpp altera, dentro da página).
+    const canSeeSystemSettings = isAdmin && ["fpp", "adm"].includes(user?.admin?.role ?? "");
 
     return environmentNavItems
       .filter((item) => {
@@ -327,8 +330,10 @@ export default function AppSidebar() {
               ? academiaSettingsPaths
               : user?.tipo === "admin"
                 ? isFpp
-                  ? ["/configuracoes/personalizar", "/configuracoes/ano-letivo", "/configuracoes/regras-avaliacao-final", "/configuracoes/seguranca"]
-                  : ["/configuracoes/personalizar"]
+                  ? ["/configuracoes/personalizar", "/configuracoes/ano-letivo", "/configuracoes/regras-avaliacao-final", "/configuracoes/seguranca", "/configuracoes/sistema"]
+                  : canSeeSystemSettings
+                    ? ["/configuracoes/personalizar", "/configuracoes/sistema"]
+                    : ["/configuracoes/personalizar"]
                 : ["/configuracoes/personalizar", "/configuracoes/regras-avaliacao-final", "/configuracoes/seguranca"],
           );
           return {

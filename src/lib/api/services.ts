@@ -161,6 +161,8 @@ import type {
   FinalizarAnoLetivoRequest,
   FinalizarAnoLetivoResponse,
   ListarFinalizacoesAnoLetivoResponse,
+  ListarConfiguracoesSistemaResponse,
+  SalvarConfiguracaoSistemaResponse,
   ListarLimitesFinalizacaoAnoLetivoResponse,
   AnoLetivoTipo,
   GerirAnosAcademicosRequest,
@@ -259,6 +261,7 @@ const ACADEMIA_ANO_LETIVO_ENDPOINT = '/academia/ano-letivo';
 const ACADEMIA_CONFIGURACAO_STATUS_ENDPOINT = '/academia/configuracao-status';
 const ACADEMIA_DEFINIR_ANO_LETIVO_ENDPOINT = '/academia/definir-ano-letivo';
 const ADMIN_SISTEMA_ANO_LETIVO_ENDPOINT = '/admin/definir-ano-letivo-geral';
+const ADMIN_SISTEMA_CONFIGURACOES_ENDPOINT = '/admin/sistema/configuracoes';
 const GLOBAL_ANO_LETIVO_ENDPOINT = '/ano-letivo';
 const GLOBAL_ANOS_LETIVOS_LISTA_ENDPOINT = '/anos-letivos-lista';
 const ANOS_LETIVOS_CONFIGURACOES_ENDPOINT = '/anos-letivos/configuracoes';
@@ -2218,6 +2221,31 @@ export const adminService = {
       { token: token || tokenStorage.get() || undefined }
     );
   },
+
+  /**
+   * GET /admin/sistema/configuracoes (adm e fpp)
+   * Configurações operacionais editáveis, com valor efetivo e origem. Segredos vêm só com máscara.
+   */
+  listarConfiguracoesSistema: (token?: string) =>
+    api.get<ListarConfiguracoesSistemaResponse>(
+      ADMIN_SISTEMA_CONFIGURACOES_ENDPOINT,
+      { token: token || tokenStorage.get() || undefined }
+    ),
+
+  /** PUT /admin/sistema/configuracoes/:chave (só fpp). O valor de um segredo substitui o atual. */
+  definirConfiguracaoSistema: (chave: string, valor: string, token?: string) =>
+    api.put<SalvarConfiguracaoSistemaResponse>(
+      `${ADMIN_SISTEMA_CONFIGURACOES_ENDPOINT}/${encodeURIComponent(chave)}`,
+      { valor },
+      { token: token || tokenStorage.get() || undefined }
+    ),
+
+  /** DELETE /admin/sistema/configuracoes/:chave (só fpp). A chave volta a ser lida da variável de ambiente. */
+  removerConfiguracaoSistema: (chave: string, token?: string) =>
+    api.delete<SalvarConfiguracaoSistemaResponse>(
+      `${ADMIN_SISTEMA_CONFIGURACOES_ENDPOINT}/${encodeURIComponent(chave)}`,
+      { token: token || tokenStorage.get() || undefined }
+    ),
 
   listarConfiguracoesAnoLetivo: (token?: string) =>
     api.get<ListarConfiguracoesAnoLetivoResponse>(

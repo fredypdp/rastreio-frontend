@@ -2351,6 +2351,49 @@ export interface ListarAuditoriaDelecoesResponse {
   offset?: number;
 }
 
+// ─── Configurações do sistema (Parte 3 do Plano de Atualizações) ─────────────
+
+export type ConfiguracaoSistemaTipo = 'texto' | 'numero' | 'booleano' | 'segredo';
+
+/** Quando a alteração passa a valer: na hora, ou só no próximo reinício do servidor. */
+export type ConfiguracaoSistemaAplicacao = 'imediato' | 'reinicio';
+
+/** De onde vem o valor efetivo: gravado pela tela (banco), variável de ambiente, ou lugar nenhum. */
+export type ConfiguracaoSistemaOrigem = 'banco' | 'ambiente' | 'nao_definida';
+
+export interface ConfiguracaoSistemaItem {
+  chave: string;
+  grupo: string;
+  descricao: string;
+  tipo: ConfiguracaoSistemaTipo;
+  aplicacao: ConfiguracaoSistemaAplicacao;
+  observacao?: string;
+  exemplo?: string;
+  opcoes?: string[];
+  inteiro?: boolean;
+  min?: number;
+  max?: number;
+  segredo: boolean;
+  origem: ConfiguracaoSistemaOrigem;
+  definida_no_banco: boolean;
+  /** Valor efetivo. Sempre null para segredo e para origem "nao_definida". */
+  valor: string | null;
+  /** Só em segredo que tem valor efetivo: o valor nunca chega ao navegador. */
+  mascara?: string;
+  atualizado_em?: string;
+  atualizado_por_id?: string;
+  atualizado_por_nome?: string;
+}
+
+export interface ListarConfiguracoesSistemaResponse {
+  data: ConfiguracaoSistemaItem[];
+}
+
+export interface SalvarConfiguracaoSistemaResponse {
+  message: string;
+  data: ConfiguracaoSistemaItem;
+}
+
 export interface ListarAdminsResponse {
   admins: AdminDetalhado[];
   total: number;

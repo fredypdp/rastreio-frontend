@@ -121,6 +121,13 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
     allowedTypes: ['admin', 'academia', 'estudante'],
     redirectIfUnauthorized: '/',
   },
+  {
+    // Configurações do sistema (Parte 3): a rota é de admin; a página só abre para os
+    // papéis adm e fpp (e só o fpp altera, como exige o backend).
+    path: '/configuracoes/sistema',
+    allowedTypes: ['admin'],
+    redirectIfUnauthorized: '/',
+  },
 
   // ==========================================
   // ROTAS DE FINANÇAS — Admin FPP e Academia

@@ -9,13 +9,15 @@ import AdminSection from "./AdminSection";
 import PasswordSettingsCard from "./PasswordSettingsCard";
 import DoisFatoresSettingsCard from "./DoisFatoresSettingsCard";
 import AvaliacaoFinalRulesSection from "./AvaliacaoFinalRulesSection";
+import SistemaConfiguracoesSection from "./SistemaConfiguracoesSection";
 
 type SettingsSection =
   | "ano-letivo"
   | "anos-academicos"
   | "categorias-nota"
   | "regras-avaliacao-final"
-  | "seguranca";
+  | "seguranca"
+  | "sistema";
 
 const PAGE_TITLES: Record<SettingsSection, string> = {
   "ano-letivo": "Ano Letivo",
@@ -23,6 +25,7 @@ const PAGE_TITLES: Record<SettingsSection, string> = {
   "categorias-nota": "Categorias de nota",
   "regras-avaliacao-final": "Regras de avaliação final",
   seguranca: "Segurança",
+  sistema: "Configurações do sistema",
 };
 
 export default function PageContent({ section }: { section: SettingsSection }) {
@@ -77,6 +80,37 @@ export default function PageContent({ section }: { section: SettingsSection }) {
     );
   }
 
+  const acessoRestrito = (
+    <div>
+      <PageBreadcrumb pageTitle={pageTitle} />
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20 flex items-center gap-4">
+        <span className="text-red-500 text-2xl">
+          <Icon icon="mdi:lock-outline" width="28px" />
+        </span>
+        <div>
+          <p className="font-semibold text-red-700 dark:text-red-400">Acesso restrito</p>
+          <p className="mt-1 text-sm text-red-600 dark:text-red-300">
+            Esta configuração não está disponível para o seu perfil{isEstudante ? " de estudante" : ""}.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Configurações do sistema (Parte 3): leitura para adm e fpp; a própria tela só
+  // oferece alterar ao fpp (o backend exige fpp para PUT e DELETE).
+  if (section === "sistema") {
+    if (isAdmin && ["fpp", "adm"].includes(user?.admin?.role ?? "")) {
+      return (
+        <div>
+          <PageBreadcrumb pageTitle={pageTitle} />
+          <SistemaConfiguracoesSection />
+        </div>
+      );
+    }
+    return acessoRestrito;
+  }
+
   if (isAcademia) {
     return (
       <div>
@@ -95,20 +129,5 @@ export default function PageContent({ section }: { section: SettingsSection }) {
     );
   }
 
-  return (
-    <div>
-      <PageBreadcrumb pageTitle={pageTitle} />
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20 flex items-center gap-4">
-        <span className="text-red-500 text-2xl">
-          <Icon icon="mdi:lock-outline" width="28px" />
-        </span>
-        <div>
-          <p className="font-semibold text-red-700 dark:text-red-400">Acesso restrito</p>
-          <p className="mt-1 text-sm text-red-600 dark:text-red-300">
-            Esta configuração não está disponível para o seu perfil{isEstudante ? " de estudante" : ""}.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+  return acessoRestrito;
 }
