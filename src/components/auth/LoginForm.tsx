@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 
 import { useApi, authService, tokenStorage } from "@/lib/api";
 import type { AuthResponse } from "@/types/api";
+import { rotaInicial } from "@/lib/perfil-efetivo-regras";
 import { exigeDoisFatores, TAMANHO_CODIGO_DOIS_FATORES } from "@/types/dois-fatores";
 import type { DoisFatoresDesafio } from "@/types/dois-fatores";
 import { useContagemRegressiva } from "@/hooks/useContagemRegressiva";
@@ -55,7 +56,7 @@ export default function LoginForm() {
     // troca obrigatória. Depois dela, /trocar-senha segue para o destino normal.
     const deveAlterarSenha = result.deve_alterar_senha === true;
     tokenStorage.setDeveAlterarSenha(deveAlterarSenha);
-    router.push(deveAlterarSenha ? "/trocar-senha" : "/painel");
+    router.push(deveAlterarSenha ? "/trocar-senha" : rotaInicial(result.type, false));
   };
 
   // Mostra a tela do código para um desafio novo (login ou reenvio).

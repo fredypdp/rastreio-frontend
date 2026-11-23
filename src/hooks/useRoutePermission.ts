@@ -20,7 +20,8 @@ export function useRoutePermission() {
     pathname,
     userType,
     isAuthenticated,
-    tokenStorage.deveAlterarSenha()
+    tokenStorage.deveAlterarSenha(),
+    { tipoReal: user?.tipo_real ?? user?.tipo ?? null, permissoes: user?.permissoes }
   );
   const routeInfo = getRouteInfo(pathname);
 
@@ -43,6 +44,9 @@ export function useUserType() {
   const isAdmin = user?.tipo === 'admin';
   const isAcademia = user?.tipo === 'academia';
   const isEstudante = user?.tipo === 'estudante';
+  const isSecretario = user?.tipo_real === 'secretario';
+  const isProfessor = user?.tipo === 'professor';
+  const isEncarregado = user?.tipo_real === 'encarregado' || user?.tipo === 'encarregado';
 
   const hasType = (type: UserType | UserType[]) => {
     if (!user) return false;
@@ -60,6 +64,9 @@ export function useUserType() {
     isAdmin,
     isAcademia,
     isEstudante,
+    isSecretario,
+    isProfessor,
+    isEncarregado,
     hasType,
     user,
   };

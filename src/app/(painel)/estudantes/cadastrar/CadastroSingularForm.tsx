@@ -12,6 +12,14 @@ import DocumentUpload from "@/components/form/DocumentUpload";
 import SearchableSelect from "@/components/form/SearchableSelect";
 import type { Genero, Curso, Turma, DocumentoExtra, AnoAcademico, CredenciaisEnvio } from '@/types/api';
 import CredenciaisEnvioAviso from "@/components/common/CredenciaisEnvioAviso";
+import EncarregadoCadastroFields, {
+  ENCARREGADO_FORM_VAZIO,
+  blocoDoFormulario,
+  validarEncarregadoForm,
+  type EncarregadoForm,
+  type EstadoEncarregado,
+} from "@/components/estudantes/EncarregadoCadastroFields";
+import type { EncarregadoDoCadastro } from "@/types/contas";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +34,8 @@ interface ResultadoCadastro {
   codigo_turma?: string;
   turma_aviso?: string;
   credenciais?: CredenciaisEnvio;
+  /** Nível escolar: o encarregado criado ou vinculado no cadastro. */
+  encarregado?: EncarregadoDoCadastro;
 }
 
 type FileKey = "bi_estudante" | "bi_encarregado" | "cedula_estudante" | "declaracao" | "certificado_6_ano_fundamental" | "certificado_9_ano_fundamental" | "certificado_ensino_medio";
@@ -145,6 +155,13 @@ function SuccessState({
         )}
 
         <CredenciaisEnvioAviso credenciais={resultado.credenciais} destino="ao telefone cadastrado (encarregado no ensino escolar; estudante no superior)" />
+        {resultado.encarregado && (
+          <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+            {resultado.encarregado.conta_nova
+              ? `Foi criada a conta do encarregado (código ${resultado.encarregado.codigo}). As credenciais dele e as do estudante foram enviadas por SMS para o telefone do encarregado.`
+              : `O encarregado já tinha conta (código ${resultado.encarregado.codigo}) e foi vinculado a este estudante. Não foram geradas novas credenciais para ele.`}
+          </p>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <button
@@ -184,7 +201,10 @@ export default function CadastroSingularForm() {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
-  const [telefoneEncarregado, setTelefoneEncarregado] = useState('');
+  const [encarregado, setEncarregado] = useState<EncarregadoForm>(ENCARREGADO_FORM_VAZIO);
+  const [estadoEncarregado, setEstadoEncarregado] = useState<EstadoEncarregado>({ tipo: 'desconhecido' });
+  // Telefone do encarregado = contato do estudante escolar (Parte 5).
+  const telefoneEncarregado = encarregado.telefone;
   const [bilheteIdentidade, setBilheteIdentidade] = useState('');
   const [bilheteEncarregado, setBilheteEncarregado] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
@@ -425,8 +445,8 @@ export default function CadastroSingularForm() {
     if (isEstudanteSuperior(anoEscolarSelecionado) && !telefone.trim()) {
       erros.push('Telefone do estudante é obrigatório no ensino superior');
     }
-    if (!isEstudanteSuperior(anoEscolarSelecionado) && !telefoneEncarregado.trim()) {
-      erros.push('Telefone do encarregado de educação é obrigatório para estudantes escolares');
+    if (!isEstudanteSuperior(anoEscolarSelecionado)) {
+      erros.push(...validarEncarregadoForm(encarregado, estadoEncarregado));
     }
     if (bilhetesIdentidadeIguais()) {
       erros.push('O BI do estudante não pode ser igual ao BI do encarregado de educação');
@@ -447,7 +467,6 @@ export default function CadastroSingularForm() {
       erros.push('E-mail inválido');
     }
     if (telefone.trim() && normalizePhone(telefone).length !== 9) erros.push('Telefone do estudante deve ter exatamente 9 dígitos locais');
-    if (telefoneEncarregado.trim() && normalizePhone(telefoneEncarregado).length !== 9) erros.push('Telefone do encarregado de educação deve ter exatamente 9 dígitos locais');
     if (telefone.trim() && telefoneEncarregado.trim() && normalizePhone(telefone) === normalizePhone(telefoneEncarregado)) erros.push('Os telefones do estudante e do encarregado de educação não podem ser iguais');
     if (anoEscolarSelecionado !== '1_ano_fundamental' && !isBiValido(bilheteIdentidade)) erros.push('BI do estudante deve usar o formato 123456789LA041');
     if (!isBiValido(bilheteEncarregado)) erros.push('BI do encarregado de educação deve usar o formato 123456789LA041');
@@ -473,7 +492,8 @@ export default function CadastroSingularForm() {
     setNome('');
     setEmail('');
     setTelefone('');
-    setTelefoneEncarregado('');
+    setEncarregado(ENCARREGADO_FORM_VAZIO);
+    setEstadoEncarregado({ tipo: 'desconhecido' });
     setBilheteIdentidade('');
     setBilheteEncarregado('');
     setDataNascimento('');
@@ -499,7 +519,8 @@ export default function CadastroSingularForm() {
       data_nascimento: dataNascimentoISO,
       email: email.trim() || undefined,
       telefone: normalizePhone(telefone) || undefined,
-      telefone_encarregado: normalizePhone(telefoneEncarregado) || undefined,
+      telefone_encarregado: isEstudanteSuperior(anoEscolarSelecionado) ? undefined : (normalizePhone(telefoneEncarregado) || undefined),
+      encarregado: isEstudanteSuperior(anoEscolarSelecionado) ? undefined : blocoDoFormulario(encarregado, estadoEncarregado),
       bilhete_identidade: anoEscolarSelecionado === '1_ano_fundamental' ? undefined : bilheteIdentidade.trim().toUpperCase() || undefined,
       bilhete_identidade_encarregado: bilheteEncarregado.trim().toUpperCase() || undefined,
       ano_escolar_fundamental:
@@ -539,6 +560,7 @@ export default function CadastroSingularForm() {
           codigo_turma: res.data.codigo_turma,
           turma_aviso: res.data.turma_aviso,
           credenciais: res.data.credenciais,
+          encarregado: (res.data as { encarregado?: EncarregadoDoCadastro }).encarregado,
         });
       }
     } catch (err) {
@@ -694,10 +716,15 @@ export default function CadastroSingularForm() {
             />
           </div>
 
-          <div className="col-span-2 sm:col-span-1">
-            <Label>Telefone do encarregado de educação</Label>
-            <Input type="text" placeholder="Ex: 923456789" value={maskTelefone(telefoneEncarregado)} onChange={e => setTelefoneEncarregado(normalizePhone(e.target.value))} disabled={carregandoCadastro} />
-          </div>
+          {!isEstudanteSuperior(anoEscolarSelecionado) && (
+            <EncarregadoCadastroFields
+              valor={encarregado}
+              onChange={setEncarregado}
+              estado={estadoEncarregado}
+              onEstado={setEstadoEncarregado}
+              disabled={carregandoCadastro}
+            />
+          )}
 
           {/* Bilhetes */}
           {anoEscolarSelecionado !== '1_ano_fundamental' && (

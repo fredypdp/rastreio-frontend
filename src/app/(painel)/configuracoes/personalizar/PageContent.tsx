@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Alert from "@/components/ui/alert/Alert";
 import Icon from "@/components/ui/Icon";
-import { academiaService, adminService, estudanteService, perfilService, useApi } from "@/lib/api";
+import { academiaService, adminService, encarregadoService, estudanteService, perfilService, useApi } from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
 import { setCookie } from "@/lib/utils/cookies";
 import type { CampoEdicaoDadoEstudante, MeuPerfilResponse } from "@/types/api";
@@ -13,7 +13,6 @@ import NIFSettingsCard from "../NIFSettingsCard";
 
 type DadosForm = {
   nome: string;
-  telefone_encarregado: string;
   bilhete_identidade: string;
   bilhete_identidade_encarregado: string;
   data_nascimento: string;
@@ -25,7 +24,6 @@ type ContatoForm = { email: string; telefone: string };
 
 const emptyDados: DadosForm = {
   nome: "",
-  telefone_encarregado: "",
   bilhete_identidade: "",
   bilhete_identidade_encarregado: "",
   data_nascimento: "",
@@ -52,7 +50,7 @@ const bilheteIdentidadeField: (typeof sensitiveStudentFields)[number] = {
 
 function onlyDigits(value: string): string { return value.replace(/\D/g, "").slice(0, 9); }
 function getDadosInitial(user: MeuPerfilResponse): DadosForm {
-  if (user.estudante) return { ...emptyDados, nome: user.estudante.nome ?? "", telefone_encarregado: user.estudante.telefone_encarregado ?? "", bilhete_identidade: user.estudante.bilhete_identidade ?? "", bilhete_identidade_encarregado: user.estudante.bilhete_identidade_encarregado ?? "", data_nascimento: user.estudante.data_nascimento?.slice(0, 10) ?? "" };
+  if (user.estudante) return { ...emptyDados, nome: user.estudante.nome ?? "", bilhete_identidade: user.estudante.bilhete_identidade ?? "", bilhete_identidade_encarregado: user.estudante.bilhete_identidade_encarregado ?? "", data_nascimento: user.estudante.data_nascimento?.slice(0, 10) ?? "" };
   if (user.academia) return { ...emptyDados, nome: user.academia.nome ?? "", provincia: user.academia.provincia ?? "", endereco: user.academia.endereco ?? "", website: user.academia.website ?? "" };
   return { ...emptyDados, nome: user.admin?.nome ?? "" };
 }
@@ -125,27 +123,45 @@ function StudentBilheteIdentidadeCard({ vinculado, initialValue, onUpdated }: { 
   return <StudentBilheteIdentidadeDirectCard initialValue={initialValue} onUpdated={onUpdated} />;
 }
 
-function StudentGuardianPhoneCard({ initialValue, onUpdated }: { initialValue: string; onUpdated: () => Promise<unknown> | void }) {
-  const [value, setValue] = useState(initialValue);
+// (Parte 5) O telefone do encarregado já não se edita aqui: pertence à CONTA do encarregado
+// (ele altera em "Meu perfil") ou é trocado pela academia. Quando o estudante conclui o nível
+// escolar, pode desvincular-se do encarregado e passar a responder por si.
+function StudentGuardianCard({ user, onUpdated }: { user: MeuPerfilResponse; onUpdated: () => Promise<unknown> | void }) {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
-  useEffect(() => setValue(initialValue), [initialValue]);
+  const estudante = user.estudante;
+  const concluiuEscolar = estudante?.status_escolar_medio === "finalizado" || Boolean(estudante?.ano_superior);
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault(); setSuccess(""); setError("");
-    const telefone = value.trim();
-    if (telefone === initialValue.trim()) return setError("Altere o telefone antes de guardar.");
-    if (telefone.length !== 9) return setError("Telefone do encarregado deve ter exatamente 9 dígitos locais.");
-    setSaving(true);
+  async function desvincular() {
+    setSuccess(""); setError(""); setSaving(true);
     try {
-      await estudanteService.atualizarTelefoneEncarregado({ telefone_encarregado: telefone });
+      await encarregadoService.desvincularDoEstudante();
       await onUpdated();
-      setSuccess("Telefone do encarregado atualizado com sucesso.");
-    } catch (err) { setError(formatApiError(err, "Não foi possível atualizar o telefone do encarregado.")); } finally { setSaving(false); }
+      setSuccess("Encarregado desvinculado. A partir de agora os contatos e mensagens passam a ser os seus.");
+    } catch (err) { setError(formatApiError(err, "Não foi possível desvincular o encarregado.")); } finally { setSaving(false); }
   }
 
-  return <form onSubmit={submit} className="rounded-xl border border-gray-100 p-4 dark:border-gray-800"><div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end"><Field id="personalizar-telefone-encarregado" label="Telefone do encarregado" type="tel" value={value} disabled={saving} onChange={(next) => setValue(onlyDigits(next))} /><button type="submit" disabled={saving} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50">{saving ? "A guardar..." : "Guardar telefone"}</button></div>{error && <div className="mt-3"><Alert title="Erro" message={error} variant="error" /></div>}{success && <div className="mt-3"><Alert title="Telefone atualizado" message={success} variant="success" /></div>}</form>;
+  return (
+    <div className="rounded-xl border border-gray-100 p-4 dark:border-gray-800">
+      <p className="text-sm font-medium text-gray-800 dark:text-white/90">Encarregado de educação</p>
+      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        O encarregado tem conta própria: o telefone e o e-mail dele são alterados por ele, em &quot;Meu perfil&quot;, ou pela academia, que pode trocar o encarregado.
+      </p>
+      {concluiuEscolar ? (
+        <div className="mt-3">
+          <button type="button" disabled={saving} onClick={desvincular} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">
+            {saving ? "Desvinculando..." : "Desvincular encarregado"}
+          </button>
+          <p className="mt-2 text-xs text-gray-500">Disponível porque já concluiu o nível escolar. O encarregado deixa de ter acesso.</p>
+        </div>
+      ) : (
+        <p className="mt-2 text-xs text-gray-500">Só será possível desvincular o encarregado depois de concluir o nível escolar.</p>
+      )}
+      {error && <div className="mt-3"><Alert title="Erro" message={error} variant="error" /></div>}
+      {success && <div className="mt-3"><Alert title="Feito" message={success} variant="success" /></div>}
+    </div>
+  );
 }
 
 function DadosPessoaisSection({ user, onUpdated }: { user: MeuPerfilResponse; onUpdated: () => Promise<unknown> | void }) {
@@ -176,7 +192,7 @@ function DadosPessoaisSection({ user, onUpdated }: { user: MeuPerfilResponse; on
 
   if (isEstudante) {
     const vinculado = user.estudante?.status === "ativo" || user.estudante?.status === "pendente_documentos";
-    return <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900"><CardHeader icon="mdi:account-edit-outline" title="Dados do estudante" description="Cada dado é editado em uma seção separada. Dados sensíveis criam solicitações com PDF comprovativo para aprovação da academia." /><div className="space-y-4"><StudentGuardianPhoneCard initialValue={initial.telefone_encarregado} onUpdated={onUpdated} /><StudentBilheteIdentidadeCard vinculado={vinculado} initialValue={initial.bilhete_identidade} onUpdated={onUpdated} />{sensitiveStudentFields.map((field) => <StudentEditRequestCard key={field.campo} field={field} initialValue={initial[field.key]} onCreated={onUpdated} />)}</div></section>;
+    return <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900"><CardHeader icon="mdi:account-edit-outline" title="Dados do estudante" description="Cada dado é editado em uma seção separada. Dados sensíveis criam solicitações com PDF comprovativo para aprovação da academia." /><div className="space-y-4"><StudentGuardianCard user={user} onUpdated={onUpdated} /><StudentBilheteIdentidadeCard vinculado={vinculado} initialValue={initial.bilhete_identidade} onUpdated={onUpdated} />{sensitiveStudentFields.map((field) => <StudentEditRequestCard key={field.campo} field={field} initialValue={initial[field.key]} onCreated={onUpdated} />)}</div></section>;
   }
 
   return <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900"><CardHeader icon="mdi:account-edit-outline" title="Dados pessoais" description="Atualize apenas os campos aceitos pela rota de dados do seu tipo de usuário." /><form onSubmit={handleSubmit} className="space-y-4"><div className="grid grid-cols-1 gap-4 md:grid-cols-2"><Field id="personalizar-nome" label="Nome" value={form.nome} disabled={saving} onChange={(value) => setField("nome", value)} />{isAcademia && <Field id="personalizar-endereco" label="Endereço" value={form.endereco} disabled={saving} onChange={(value) => setField("endereco", value)} />}{isAcademia && <Field id="personalizar-website" label="Website" type="url" value={form.website} disabled={saving} onChange={(value) => setField("website", value)} />}</div>{error && <Alert title="Erro ao atualizar dados" message={error} variant="error" />}{success && <Alert title="Dados atualizados" message={success} variant="success" />}<div className="flex justify-end"><button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50">{saving ? "A guardar..." : "Guardar dados"}</button></div></form></section>;

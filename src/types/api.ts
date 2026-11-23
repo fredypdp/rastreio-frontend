@@ -4,7 +4,7 @@
 // BASE TYPES
 // =====================
 
-export type UserType = 'academia' | 'estudante' | 'admin';
+export type UserType = 'academia' | 'estudante' | 'admin' | 'secretario' | 'professor' | 'encarregado';
 export type AdminRole = 'fpp' | 'adm' | 'gerente';
 export type AdminType = AdminRole;
 
@@ -182,7 +182,14 @@ export interface CriarEstudanteRequest {
   data_nascimento: ApiDate;
   email?: string;
   telefone?: string;
+  /** Alias antigo de `encarregado.telefone` (continua aceito pela API). */
   telefone_encarregado?: string;
+  /**
+   * Encarregado (Parte 5). Obrigatório para o nível fundamental/médio: o contato do
+   * estudante é o dele. Dados pessoais só são necessários quando o encarregado ainda
+   * não tem conta; com um encarregado já existente basta o telefone.
+   */
+  encarregado?: import('@/types/contas').BlocoEncarregado;
   /** Não pode ser igual ao BI do encarregado de educação (trim + case-insensitive). */
   bilhete_identidade?: string;
   /** Não pode ser igual ao BI do estudante (trim + case-insensitive). */
@@ -500,20 +507,16 @@ export type StatusSolicitacaoEdicaoDadoEstudante = 'pendente' | 'aprovada' | 're
 
 /**
  * @deprecated A rota genérica PUT /estudante/dados-pessoais foi removida.
- * Use as solicitações documentadas de edição de dados sensíveis e
- * AtualizarTelefoneEncarregadoEstudanteRequest para telefone do encarregado.
+ * Use as solicitações documentadas de edição de dados sensíveis. O telefone do
+ * encarregado pertence à conta do encarregado (PUT /me/telefone) ou é trocado
+ * pela academia (PUT /academia/estudante/:codigo/encarregado).
  */
 export interface AtualizarDadosPessoaisEstudanteRequest {
   nome?: string;
-  telefone_encarregado?: string;
   /** Quando ambos forem enviados, não podem ser iguais (trim + case-insensitive). */
   bilhete_identidade?: string;
   bilhete_identidade_encarregado?: string;
   data_nascimento?: ApiDate;
-}
-
-export interface AtualizarTelefoneEncarregadoEstudanteRequest {
-  telefone_encarregado: string;
 }
 
 /**
@@ -2422,7 +2425,30 @@ export interface TurmasEstudanteResponse {
  * Retorna { tipo, academia } | { tipo, admin } | { tipo, estudante }
  */
 export interface MeuPerfilResponse {
+  /**
+   * No cookie "user" este campo guarda o tipo EFETIVO usado pela interface
+   * (secretário → 'academia'; encarregado com educando escolhido → 'estudante').
+   * O tipo REAL de quem entrou fica em `tipo_real` (ver lib/perfil-efetivo).
+   */
   tipo: UserType;
+  /** Tipo real da conta que fez login; só preenchido quando difere de `tipo`. */
+  tipo_real?: UserType;
+  /** Secretário: permissões concedidas pela academia (conjunto normalizado). */
+  permissoes?: string[];
+  /** Campos da conta de secretário, professor ou encarregado (GET /meu-perfil). */
+  id?: string;
+  codigo?: string;
+  nome?: string;
+  telefone?: string;
+  email?: string | null;
+  email_verificado?: boolean;
+  status?: string;
+  codigo_academia?: string;
+  nome_academia?: string;
+  /** Encarregado: educandos ativos. */
+  educandos?: import('@/types/contas').EducandoEncarregado[];
+  /** Encarregado: educando em nome de quem a interface está a agir. */
+  educando_ativo?: import('@/types/contas').EducandoEncarregado;
   /** true enquanto a conta usa a senha temporária (troca obrigatória pendente). */
   deve_alterar_senha?: boolean;
   estudante?: EstudanteDetalhado & {

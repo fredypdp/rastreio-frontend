@@ -2,6 +2,7 @@
 
 import { UserType } from '@/types/api';
 import { isTestesPageEnabled } from '@/lib/app-env';
+import { secretarioPodeAbrir } from '@/lib/perfil-efetivo-regras';
 
 export interface RouteConfig {
   path: string;
@@ -318,6 +319,34 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
   },
 
   // ==========================================
+  // PARTE 4 — SECRETÁRIOS, PROFESSORES E ENCARREGADOS
+  // ==========================================
+  {
+    // Gestão de secretários: só a conta da academia (o secretário é barrado
+    // em checkRoutePermission, que vê o tipo REAL).
+    path: '/secretarios',
+    allowedTypes: ['academia'],
+    redirectIfUnauthorized: '/painel',
+  },
+  {
+    // A academia, ou o secretário com professores.ver.
+    path: '/professores',
+    allowedTypes: ['academia'],
+    redirectIfUnauthorized: '/painel',
+  },
+  {
+    path: '/professor',
+    allowedTypes: ['professor'],
+    redirectIfUnauthorized: '/painel',
+  },
+  {
+    // 'estudante' cobre o encarregado que já escolheu um educando (tipo efetivo).
+    path: '/encarregado',
+    allowedTypes: ['encarregado', 'estudante'],
+    redirectIfUnauthorized: '/painel',
+  },
+
+  // ==========================================
   // ROTAS PARA USUÁRIOS AUTENTICADOS
   // ==========================================
   {
@@ -343,11 +372,60 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
   },
 ];
 
+/** Contexto do perfil REAL, para as regras dos tipos da Parte 4. */
+export interface ContextoPerfil {
+  /** Tipo real de quem entrou (o `userType` é o efetivo). */
+  tipoReal?: UserType | null;
+  /** Secretário: permissões concedidas pela academia. */
+  permissoes?: string[];
+}
+
+/** Páginas das contas pessoais que professor e encarregado (sem educando) podem abrir. */
+const PAGINAS_DE_CONTA = ['/perfil', '/trocar-senha', '/configuracoes/seguranca'];
+
+function dentroDe(pathname: string, prefixo: string): boolean {
+  return pathname === prefixo || pathname.startsWith(`${prefixo}/`);
+}
+
+/**
+ * Regras do tipo REAL (Parte 4). Devolve o redirecionamento quando a página não
+ * é do perfil; undefined se nada a objetar. Só decide o que mostrar — o
+ * servidor continua a ser quem permite.
+ */
+function restricaoDoTipoReal(
+  pathname: string,
+  userType: UserType | null,
+  contexto: ContextoPerfil
+): { allowed: false; redirectTo: string } | undefined {
+  const real = contexto.tipoReal ?? userType;
+  if (real === 'secretario') {
+    return secretarioPodeAbrir(pathname, contexto.permissoes) ? undefined : { allowed: false, redirectTo: '/painel' };
+  }
+  if (real === 'professor') {
+    const ok = dentroDe(pathname, '/professor') || PAGINAS_DE_CONTA.some((p) => dentroDe(pathname, p));
+    return ok ? undefined : { allowed: false, redirectTo: '/professor' };
+  }
+  if (real === 'encarregado') {
+    if (dentroDe(pathname, '/encarregado') || PAGINAS_DE_CONTA.some((p) => dentroDe(pathname, p))) return undefined;
+    // Sem educando escolhido (tipo efetivo ainda 'encarregado') só há a lista de educandos.
+    if (userType === 'encarregado') return { allowed: false, redirectTo: '/encarregado' };
+    // Com educando: as páginas pessoais do estudante (dados dele) não são do encarregado.
+    if (dentroDe(pathname, '/configuracoes/personalizar')) return { allowed: false, redirectTo: '/perfil' };
+    return undefined;
+  }
+  // Ninguém além do encarregado vê a área do encarregado, nem além do professor a do professor.
+  if (dentroDe(pathname, '/encarregado') || dentroDe(pathname, '/professor')) {
+    return { allowed: false, redirectTo: '/painel' };
+  }
+  return undefined;
+}
+
 export function checkRoutePermission(
   pathname: string,
   userType: UserType | null,
   isAuthenticated: boolean,
-  deveAlterarSenha = false
+  deveAlterarSenha = false,
+  contexto: ContextoPerfil = {}
 ): {
   allowed: boolean;
   redirectTo?: string;
@@ -365,6 +443,11 @@ export function checkRoutePermission(
 
   if (normalizedPath === '/testes' && !isTestesPageEnabled()) {
     return { allowed: false, redirectTo: '/painel' };
+  }
+
+  if (isAuthenticated && userType) {
+    const restricao = restricaoDoTipoReal(normalizedPath, userType, contexto);
+    if (restricao) return restricao;
   }
 
   const routeConfig = ROUTE_PERMISSIONS.find(route => {

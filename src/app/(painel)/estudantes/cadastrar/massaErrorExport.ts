@@ -41,7 +41,8 @@ function escreverPlanilhaComErros(nomeArquivo: string, contexto: ContextoModelo 
   const dados = [[...CABECALHO_BASE, 'Erro(s) encontrados'], ...linhas];
   const ws: any = XLSX.utils.aoa_to_sheet(dados);
   ws['!cols'] = [
-    { wch: 30 }, { wch: 24 }, { wch: 24 }, { wch: 22 }, { wch: 22 }, { wch: 20 }, { wch: 24 }, { wch: 28 }, { wch: 60 },
+    { wch: 30 }, { wch: 24 }, { wch: 24 }, { wch: 22 }, { wch: 22 }, { wch: 20 }, { wch: 24 }, { wch: 28 },
+    { wch: 34 }, { wch: 24 }, { wch: 26 }, { wch: 28 }, { wch: 30 }, { wch: 26 }, { wch: 60 },
   ];
   // Mantém o nome "Estudantes" para que este ficheiro possa ser corrigido e
   // reenviado diretamente, sem precisar de descarregar um novo modelo — a
@@ -88,6 +89,12 @@ export function baixarLinhasComErro(
     l.telefone,
     l.telefoneEncarregado,
     l.email,
+    l.encarregadoNome,
+    l.encarregadoGenero,
+    l.encarregadoDataNascimento,
+    l.encarregadoEmail,
+    l.encarregadoRelacao,
+    l.encarregadoRelacaoOutro,
     (errosPorLinha.get(l.linha) || []).join(' | '),
   ]);
 
@@ -117,8 +124,14 @@ export function baixarEstudantesComFalha(contexto: ContextoModelo | null, result
       p.bilhete_identidade || '',
       p.bilhete_identidade_encarregado || '',
       p.telefone || '',
-      p.telefone_encarregado || '',
+      p.telefone_encarregado || p.encarregado?.telefone || '',
       p.email || '',
+      p.encarregado?.nome || '',
+      p.encarregado?.genero || '',
+      p.encarregado?.data_nascimento ? formatDataNascimento(p.encarregado.data_nascimento) : '',
+      p.encarregado?.email || '',
+      p.encarregado?.relacao || '',
+      p.encarregado?.relacao_outro || '',
       erro || 'Não foi possível identificar o motivo da falha.',
     ];
   });

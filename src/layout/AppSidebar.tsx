@@ -1,5 +1,6 @@
 // src/layout/AppSidebar.tsx
 "use client";
+import { secretarioPodeAbrir } from "@/lib/perfil-efetivo-regras";
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -75,6 +76,26 @@ const navItems: NavItem[] = [
       { name: "Listar",    path: "/estudantes"           },
       { name: "Cadastrar", path: "/estudantes/cadastrar" },
     ],
+  },
+  {
+    icon: <Icon width="24px" icon="mdi:account-key-outline" />,
+    name: "Secretários",
+    path: "/secretarios",
+  },
+  {
+    icon: <Icon width="24px" icon="mdi:human-male-board" />,
+    name: "Professores",
+    path: "/professores",
+  },
+  {
+    icon: <Icon width="24px" icon="mdi:google-classroom" />,
+    name: "Minhas turmas",
+    path: "/professor",
+  },
+  {
+    icon: <Icon width="24px" icon="mdi:account-child-outline" />,
+    name: "Meus educandos",
+    path: "/encarregado",
   },
   {
     name: "Notas & Faltas",
@@ -244,6 +265,20 @@ export default function AppSidebar() {
 
     return environmentNavItems
       .filter((item) => {
+        // Parte 4: professor e encarregado (sem educando) só têm a sua área, o perfil e a segurança.
+        if (user?.tipo === "professor" || user?.tipo === "encarregado") {
+          return (
+            item.path === (user.tipo === "professor" ? "/professor" : "/encarregado") ||
+            item.path === "/perfil" ||
+            item.name === "Configurações"
+          );
+        }
+        // Secretários: só a conta da academia os gere; professores: academia (ou secretário com permissão).
+        if (item.path === "/secretarios") return user?.tipo === "academia" && user?.tipo_real !== "secretario";
+        if (item.path === "/professores") return user?.tipo === "academia";
+        if (item.path === "/professor") return false;
+        // "Meus educandos": o encarregado com educando escolhido continua a vê-lo, para trocar.
+        if (item.path === "/encarregado") return user?.tipo_real === "encarregado";
         if (user?.tipo) {
           // Academias: apenas admin
           if (item.name === "Academias") {
@@ -326,7 +361,9 @@ export default function AppSidebar() {
             "/configuracoes/seguranca",
           ];
           const visiblePaths = new Set(
-            user?.tipo === "academia"
+            user?.tipo === "professor" || user?.tipo === "encarregado"
+              ? ["/configuracoes/seguranca"]
+              : user?.tipo === "academia"
               ? academiaSettingsPaths
               : user?.tipo === "admin"
                 ? isFpp
@@ -370,6 +407,20 @@ export default function AppSidebar() {
 
         return item;
       })
+      // Secretário: só vê o que a academia lhe concedeu (o servidor continua a decidir).
+      .map((item) => {
+        if (user?.tipo_real !== "secretario" || !item.subItems) return item;
+        return {
+          ...item,
+          subItems: item.subItems.filter((sub) => secretarioPodeAbrir(sub.path, user.permissoes)),
+        };
+      })
+      .filter(
+        (item) =>
+          user?.tipo_real !== "secretario" ||
+          !item.path ||
+          secretarioPodeAbrir(item.path, user.permissoes),
+      )
       // Grupo sem nenhum subitem visível para este tipo de usuário não aparece
       // (evita um botão que abre vazio, ex.: "Serviços" para admin).
       .filter((item) => !item.subItems || item.subItems.length > 0);

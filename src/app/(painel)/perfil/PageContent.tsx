@@ -1,5 +1,6 @@
 "use client";
 
+import ContaPessoaCard from "@/components/user-profile/ContaPessoaCard";
 import Details from "@/components/user-profile/Details";
 import UserInfoCard from "@/components/user-profile/UserInfoCard";
 import UserMetaCard from "@/components/user-profile/UserMetaCard";
@@ -47,11 +48,15 @@ export default function PerfilPageContent() {
     loadProfile().catch(() => undefined);
   }, [loadProfile]);
 
+  // Secretário, professor e encarregado têm o cookie "user" EFETIVO (lib/perfil-efetivo):
+  // o perfil bruto desta página não pode sobrescrevê-lo.
+  const contaPessoa = profile ? ["secretario", "professor", "encarregado"].includes(profile.tipo) : false;
+
   useEffect(() => {
-    if (profile) {
+    if (profile && !contaPessoa) {
       setCookie("user", JSON.stringify(profile), 1);
     }
-  }, [profile]);
+  }, [profile, contaPessoa]);
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
@@ -69,6 +74,8 @@ export default function PerfilPageContent() {
           message="Tente atualizar a página. Se o problema continuar, entre novamente na sua conta."
           variant="error"
         />
+      ) : profile && contaPessoa ? (
+        <ContaPessoaCard profile={profile} onAtualizado={() => loadProfile().catch(() => undefined)} />
       ) : profile ? (
         <div className="space-y-6">
           <UserMetaCard user={profile} />

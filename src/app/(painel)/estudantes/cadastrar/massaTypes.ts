@@ -40,6 +40,17 @@ export interface EstudanteBulkRow {
   telefoneEncarregado: string;
   bilheteIdentidade: string;
   bilheteIdentidadeEncarregado: string;
+  // Encarregado (Parte 5): colunas I a N do modelo. Só são obrigatórias quando o
+  // encarregado ainda não tem conta; com um encarregado já existente (mesmo
+  // telefone) basta o telefone da coluna G.
+  encarregadoNome: string;
+  encarregadoGenero: string;
+  encarregadoDataNascimento: string;
+  encarregadoDataNascimentoIso?: string;
+  encarregadoDataNascimentoErro?: string;
+  encarregadoEmail: string;
+  encarregadoRelacao: string;
+  encarregadoRelacaoOutro: string;
 }
 
 export interface ErroValidacao {

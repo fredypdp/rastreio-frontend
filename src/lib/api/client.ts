@@ -1,6 +1,7 @@
 // src/lib/api/client.ts
 
 import { getCookie, setCookieHours, removeCookie } from '@/lib/utils/cookies';
+import { cabecalhosDoEducando, educandoStorage } from '@/lib/utils/educando';
 
 // ✅ URL base com protocolo garantido
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
@@ -78,6 +79,8 @@ export interface ApiErrorEnvelope {
   code?: string;
   /** 429 do reenvio de credenciais: segundos até poder tentar de novo. */
   retry_after_segundos?: number;
+  /** 403 SECRETARIO_SEM_PERMISSAO: a permissão que faltou (chave do catálogo). */
+  permissao_necessaria?: string;
 }
 
 /** Código devolvido pelo backend enquanto a senha temporária não foi trocada. */
@@ -174,6 +177,8 @@ export const asApiErrorEnvelope = (value: unknown): ApiErrorEnvelope | undefined
     code: typeof value.code === 'string' ? value.code : undefined,
     retry_after_segundos:
       typeof value.retry_after_segundos === 'number' ? value.retry_after_segundos : undefined,
+    permissao_necessaria:
+      typeof value.permissao_necessaria === 'string' ? value.permissao_necessaria : undefined,
   };
 };
 
@@ -248,6 +253,8 @@ async function fetchApi<T>(
   const isFormData = typeof FormData !== 'undefined' && fetchOptions.body instanceof FormData;
   const headers: Record<string, string> = {
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+    // Encarregado: age em nome do educando escolhido (cabeçalho X-Educando).
+    ...cabecalhosDoEducando(endpoint),
     ...(fetchOptions.headers as Record<string, string>),
   };
 
@@ -316,6 +323,7 @@ async function fetchApi<T>(
 export async function fetchApiBlob(endpoint: string, options: FetchOptions = {}): Promise<Blob> {
   const { token, ...fetchOptions } = options;
   const headers: Record<string, string> = {
+    ...cabecalhosDoEducando(endpoint),
     ...(fetchOptions.headers as Record<string, string>),
   };
 
@@ -419,6 +427,7 @@ export const tokenStorage = {
     removeCookie('user_type');
     removeCookie('user');
     removeCookie('deve_alterar_senha');
+    educandoStorage.clear();
   },
 
   getWithType: () => {

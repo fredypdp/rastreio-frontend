@@ -22,7 +22,7 @@ const REGEX_EMAIL = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const REGEX_EMAIL_CARACTERES_BLOQUEADOS = /['\-;]|--/;
 const REGEX_NOME = /^[\p{L}\p{M} '’ʻ]+$/u;
 const REGEX_CARACTERES_BLOQUEADOS = /[;\"`]|--|\/\*|\*\//;
-const TOTAL_COLUNAS = 8;
+const TOTAL_COLUNAS = 14;
 
 function celulaTexto(ws: any, r: number, c: number): string {
   const addr = XLSX.utils.encode_cell({ r, c });
@@ -124,6 +124,52 @@ function erroGenerico(nomeArquivo: string, mensagem: string): ResultadoAnalise {
   };
 }
 
+const RELACOES_ENCARREGADO = ['pai', 'mae', 'irmao', 'irma', 'outro'];
+
+/**
+ * Colunas I a N (encarregado). Não dá para saber aqui se o encarregado já tem
+ * conta (isso depende do servidor), então só se valida o que foi preenchido:
+ * o bloco de dados pessoais é "tudo ou nada" e cada campo tem de ser válido.
+ * Se faltar dado de um encarregado NOVO, o servidor recusa essa linha com uma
+ * mensagem que começa por "encarregado:".
+ */
+function validarEncarregado(
+  linha: EstudanteBulkRow,
+  add: (coluna: string, campo: string, valor: string, mensagem: string) => void
+) {
+  const preencheuAlgumDado = !!(linha.encarregadoNome || linha.encarregadoGenero || linha.encarregadoDataNascimento);
+  if (preencheuAlgumDado) {
+    if (!linha.encarregadoNome) add('I', 'Nome do Encarregado', '', 'Preencha o nome do encarregado: o género e a data de nascimento foram preenchidos.');
+    else if (linha.encarregadoNome.length < 2 || linha.encarregadoNome.length > 255 || !REGEX_NOME.test(linha.encarregadoNome)) {
+      add('I', 'Nome do Encarregado', linha.encarregadoNome, 'O nome do encarregado deve conter apenas letras, acentos, espaços e apóstrofos.');
+    }
+    const genero = linha.encarregadoGenero.toLowerCase();
+    if (!genero) add('J', 'Género do Encarregado', '', 'Preencha o género do encarregado com "masculino" ou "feminino".');
+    else if (!['masculino', 'feminino'].includes(genero)) add('J', 'Género do Encarregado', linha.encarregadoGenero, `Valor "${linha.encarregadoGenero}" inválido. Escreva exatamente "masculino" ou "feminino".`);
+    if (!linha.encarregadoDataNascimento) add('K', 'Data de Nascimento do Encarregado', '', 'Preencha a data de nascimento do encarregado, no formato DD/MM/AAAA.');
+    else if (linha.encarregadoDataNascimentoErro) add('K', 'Data de Nascimento do Encarregado', linha.encarregadoDataNascimento, linha.encarregadoDataNascimentoErro);
+    else if (linha.encarregadoDataNascimentoIso) {
+      const limite = new Date();
+      limite.setHours(0, 0, 0, 0);
+      limite.setFullYear(limite.getFullYear() - 18);
+      if (new Date(`${linha.encarregadoDataNascimentoIso}T00:00:00`) > limite) {
+        add('K', 'Data de Nascimento do Encarregado', linha.encarregadoDataNascimento, 'O encarregado deve ter pelo menos 18 anos.');
+      }
+    }
+  }
+  if (linha.encarregadoEmail && !REGEX_EMAIL.test(linha.encarregadoEmail)) {
+    add('L', 'Email do Encarregado', linha.encarregadoEmail, `O email "${linha.encarregadoEmail}" não é válido. Exemplo: nome@exemplo.com`);
+  }
+  const relacao = linha.encarregadoRelacao.toLowerCase();
+  if (relacao && !RELACOES_ENCARREGADO.includes(relacao)) {
+    add('M', 'Relação', linha.encarregadoRelacao, 'Use pai, mae, irmao, irma ou outro.');
+  } else if (relacao === 'outro' && !linha.encarregadoRelacaoOutro) {
+    add('N', 'Descrição da relação', '', 'Quando a relação é "outro", descreva-a.');
+  } else if (relacao !== 'outro' && linha.encarregadoRelacaoOutro) {
+    add('N', 'Descrição da relação', linha.encarregadoRelacaoOutro, 'A descrição só se preenche quando a relação é "outro".');
+  }
+}
+
 function validarLinha(linha: EstudanteBulkRow, contexto: ContextoModelo): ErroValidacao[] {
   const erros: ErroValidacao[] = [];
   const add = (coluna: string, campo: string, valor: string, mensagem: string) => {
@@ -216,6 +262,8 @@ function validarLinha(linha: EstudanteBulkRow, contexto: ContextoModelo): ErroVa
       'O telefone do encarregado de educação não pode ser igual ao telefone do estudante.'
     );
   }
+
+  if (!isSuperior) validarEncarregado(linha, add);
 
   const primeiroAnoFundamental = contexto.anoAcademico === '1_ano_fundamental';
   const biEstudante = linha.bilheteIdentidade.toUpperCase();
@@ -346,7 +394,8 @@ export async function analisarPlanilha(
   for (let r = 1; r <= range.e.r; r++) {
     const valores = Array.from({ length: TOTAL_COLUNAS }, (_, c) => celulaTexto(ws, r, c));
     const dataCell = celulaData(ws, r, 2);
-    const tudoVazio = valores.every((v) => !v) && !dataCell.texto;
+    const dataEncCell = celulaData(ws, r, 10);
+    const tudoVazio = valores.every((v) => !v) && !dataCell.texto && !dataEncCell.texto;
     if (tudoVazio) continue;
 
     const linhaExcel = r + 1;
@@ -362,6 +411,14 @@ export async function analisarPlanilha(
       telefone: valores[5],
       telefoneEncarregado: valores[6],
       email: valores[7],
+      encarregadoNome: valores[8],
+      encarregadoGenero: valores[9],
+      encarregadoDataNascimento: dataEncCell.texto,
+      encarregadoDataNascimentoIso: dataEncCell.iso,
+      encarregadoDataNascimentoErro: dataEncCell.erro,
+      encarregadoEmail: valores[11],
+      encarregadoRelacao: valores[12],
+      encarregadoRelacaoOutro: valores[13],
     };
 
     linhas.push(linha);

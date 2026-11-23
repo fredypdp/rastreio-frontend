@@ -27,6 +27,12 @@ export const COLUNAS_MODELO_MASSA = [
   'Telefone do Estudante',
   'Telefone do Encarregado',
   'Email (opcional)',
+  'Nome do Encarregado (obrigatório se o encarregado ainda não tem conta)',
+  'Género do Encarregado (masculino ou feminino)',
+  'Data de Nascimento do Encarregado (DD/MM/AAAA)',
+  'Email do Encarregado (opcional)',
+  'Relação com o estudante (opcional: pai, mae, irmao, irma ou outro)',
+  'Descrição da relação (se for "outro")',
 ];
 
 function slugify(value: string): string {
@@ -76,10 +82,14 @@ function montarLinhasInstrucoes(contexto: ContextoModelo): (string | undefined)[
   linhas.push([
     '9. Os documentos (BI, cédula, certificados) e a atribuição de turma são feitos depois, individualmente, na ficha de cada estudante.',
   ]);
+  linhas.push([
+    '10. Ensino fundamental/médio: o contato é o do ENCARREGADO. O telefone do encarregado (coluna G) o identifica: se já existe um encarregado com esse telefone (por exemplo, um irmão já cadastrado), ele é apenas vinculado e não recebe novas credenciais. Se ainda não existe, preencha as colunas I (nome), J (género) e K (data de nascimento, mínimo 18 anos); as credenciais seguem por SMS para o telefone do encarregado.',
+  ]);
+  linhas.push(['11. A Relação (coluna M) é opcional: pai, mae, irmao, irma ou outro. Se for "outro", descreva-a na coluna N.']);
 
   if (contexto.anoAcademico === '1_ano_fundamental') {
     linhas.push([
-      '10. Para o 1ª Classe, deixe o Bilhete de Identidade do Estudante em branco — este ano usa Cédula, anexada depois.',
+      '12. Para o 1ª Classe, deixe o Bilhete de Identidade do Estudante em branco — este ano usa Cédula, anexada depois.',
     ]);
   }
 
@@ -102,6 +112,7 @@ export function gerarModeloExcel(contexto: ContextoModelo): void {
   const wsDados: any = XLSX.utils.aoa_to_sheet([COLUNAS_MODELO_MASSA]);
   wsDados['!cols'] = [
     { wch: 30 }, { wch: 24 }, { wch: 24 }, { wch: 22 }, { wch: 22 }, { wch: 20 }, { wch: 24 }, { wch: 28 },
+    { wch: 34 }, { wch: 24 }, { wch: 26 }, { wch: 28 }, { wch: 30 }, { wch: 26 },
   ];
 
   for (let c = 0; c < COLUNAS_MODELO_MASSA.length; c++) {

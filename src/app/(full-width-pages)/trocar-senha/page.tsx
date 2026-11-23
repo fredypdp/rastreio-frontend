@@ -1,6 +1,7 @@
 // src/app/(full-width-pages)/trocar-senha/page.tsx
 'use client';
 
+import { rotaInicial } from '@/lib/perfil-efetivo-regras';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -80,7 +81,7 @@ export default function TrocarSenhaPage() {
         tokenStorage.set(resposta.token);
       }
       tokenStorage.setDeveAlterarSenha(false);
-      router.replace('/painel');
+      router.replace(rotaInicial(tokenStorage.getWithType().type, false));
     } catch (error) {
       setErroServidor(formatApiError(error, 'Não foi possível alterar a senha. Tente novamente.'));
     } finally {

@@ -1,5 +1,6 @@
 // src/app/(painel)/estudantes/cadastrar/massaPayload.ts
 import type { CriarEstudanteRequest } from '@/types/api';
+import type { BlocoEncarregado } from '@/types/contas';
 import type { ContextoModelo, EstudanteBulkRow } from './massaTypes';
 
 /**
@@ -29,5 +30,23 @@ export function construirPayloadEstudante(linha: EstudanteBulkRow, contexto: Con
     ano_superior: isSuperior ? contexto.anoAcademico : undefined,
     curso_superior_id: isSuperior ? contexto.cursoId : undefined,
     codigo_turma: contexto.modoCadastro === 'turma' ? contexto.codigoTurma : undefined,
+    // Parte 5: no nível escolar o encarregado vai no bloco "encarregado". Telefone sempre que
+    // houver; os dados pessoais só quando preenchidos (encarregado já existente não precisa deles).
+    encarregado: isSuperior ? undefined : construirBlocoEncarregado(linha),
+  };
+}
+
+function construirBlocoEncarregado(linha: EstudanteBulkRow): BlocoEncarregado | undefined {
+  const telefone = linha.telefoneEncarregado.replace(/\D/g, '');
+  if (!telefone) return undefined;
+  const relacao = linha.encarregadoRelacao.trim().toLowerCase();
+  return {
+    telefone,
+    nome: linha.encarregadoNome.trim() || undefined,
+    genero: (linha.encarregadoGenero.trim().toLowerCase() || undefined) as BlocoEncarregado['genero'],
+    data_nascimento: linha.encarregadoDataNascimentoIso || undefined,
+    email: linha.encarregadoEmail.trim() || undefined,
+    relacao: (relacao || undefined) as BlocoEncarregado['relacao'],
+    relacao_outro: relacao === 'outro' ? linha.encarregadoRelacaoOutro.trim() || undefined : undefined,
   };
 }

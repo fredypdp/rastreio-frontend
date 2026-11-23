@@ -24,6 +24,7 @@ function chaveEstudante(estudante: CriarEstudanteRequest): string {
     email: estudante.email?.trim().toLowerCase() || '',
     telefone: estudante.telefone || '',
     telefone_encarregado: estudante.telefone_encarregado || '',
+    encarregado: estudante.encarregado || null,
     bilhete_identidade: estudante.bilhete_identidade || '',
     bilhete_identidade_encarregado: estudante.bilhete_identidade_encarregado || '',
     ano_escolar_fundamental: estudante.ano_escolar_fundamental || '',

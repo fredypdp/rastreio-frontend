@@ -1,5 +1,7 @@
 // src/app/(painel)/estudantes/PageContent.tsx
 "use client"
+import TrocarEncarregadoModal from '@/components/estudantes/TrocarEncarregadoModal';
+import { temPermissao } from '@/lib/perfil-efetivo';
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -483,6 +485,20 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
   const [credenciaisPendentes, setCredenciaisPendentes] = useState<boolean>(estudante.deve_alterar_senha === true);
   const [feedbackCredenciais, setFeedbackCredenciais] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
 
+  // Parte 5: academia (e o secretário com estudantes.credenciais) reenviam os dos seus estudantes;
+  // o admin (adm ou fpp) só reenvia para estudante SEM nenhuma academia.
+  const { user: usuarioAtual } = useUserCookie();
+  const estudanteSemAcademia = !estudanteConsultado.codigo_academia;
+  const podeReenviarCredenciais = isAdmin ? estudanteSemAcademia : temPermissao(usuarioAtual, 'estudantes.credenciais');
+  // Troca de encarregado: academia, ou secretário com estudantes.dados; só no nível escolar e antes de o concluir.
+  const [trocandoEncarregado, setTrocandoEncarregado] = useState(false);
+  const podeTrocarEncarregado =
+    !isAdmin &&
+    temPermissao(usuarioAtual, 'estudantes.dados') &&
+    Boolean(estudanteConsultado.ano_escolar_fundamental || estudanteConsultado.ano_escolar_medio) &&
+    !estudanteConsultado.ano_superior &&
+    estudanteConsultado.status_escolar_medio !== 'finalizado';
+
   const handleReenviarCredenciais = async () => {
     if (!window.confirm('Gerar uma nova senha temporária e enviá-la por SMS? A senha atual e as sessões abertas deste estudante deixam de valer.')) return;
     setFeedbackCredenciais(null);
@@ -678,8 +694,21 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
       <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]"><h4 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Contatos</h4><div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <DetailItem label="E-mail do estudante" value={estudanteConsultado.email || '-'} />
         <DetailItem label="Telefone do estudante" value={estudanteConsultado.telefone || '-'} />
-        <DetailItem label="Telefone do encarregado de educação" value={estudanteConsultado.telefone_encarregado || '-'} />
-      </div></section>
+        <DetailItem label="Telefone do encarregado (no cadastro)" value={estudanteConsultado.telefone_encarregado || '-'} />
+      </div>
+      {podeTrocarEncarregado && (
+        <div className="mt-3">
+          <Button size="sm" variant="outline" onClick={() => setTrocandoEncarregado(true)}>Trocar encarregado</Button>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">O contato do estudante é o do encarregado, que tem conta própria e altera o próprio telefone.</p>
+        </div>
+      )}
+      <TrocarEncarregadoModal
+        isOpen={trocandoEncarregado}
+        onClose={() => setTrocandoEncarregado(false)}
+        codigoEstudante={estudanteConsultado.codigo_estudante}
+        nomeEstudante={estudanteConsultado.nome}
+      />
+      </section>
       <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
         <h4 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Credenciais de acesso</h4>
         {acoesBloqueadas && (
@@ -687,7 +716,14 @@ function TelaDetalhesEstudante({ estudante, isAdmin, academiaNivel, nivelEscolar
             <Icon icon="mdi:shield-alert" width={14} className="inline" /> Ações de credenciais indisponíveis: estudante com vínculo anterior ou status inativo.
           </p>
         )}
-        {!acoesBloqueadas && (
+        {!acoesBloqueadas && !podeReenviarCredenciais && (
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            {isAdmin
+              ? 'Este estudante pertence a uma academia: só a academia (ou o secretário dela) reenvia as credenciais.'
+              : 'Não tem permissão para reenviar credenciais de estudantes.'}
+          </p>
+        )}
+        {!acoesBloqueadas && podeReenviarCredenciais && (
           <>
             <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
               {credenciaisPendentes

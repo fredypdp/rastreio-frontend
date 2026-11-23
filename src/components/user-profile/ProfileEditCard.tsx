@@ -18,7 +18,6 @@ type FormState = {
   nome: string;
   email: string;
   telefone: string;
-  telefone_encarregado: string;
   bilhete_identidade: string;
   bilhete_identidade_encarregado: string;
   data_nascimento: string;
@@ -31,7 +30,6 @@ const emptyForm: FormState = {
   nome: "",
   email: "",
   telefone: "",
-  telefone_encarregado: "",
   bilhete_identidade: "",
   bilhete_identidade_encarregado: "",
   data_nascimento: "",
@@ -51,7 +49,6 @@ function getInitialForm(user: MeuPerfilResponse): FormState {
       nome: user.estudante.nome ?? "",
       email: user.estudante.email ?? "",
       telefone: user.estudante.telefone ?? "",
-      telefone_encarregado: user.estudante.telefone_encarregado ?? "",
       bilhete_identidade: user.estudante.bilhete_identidade ?? "",
       bilhete_identidade_encarregado: user.estudante.bilhete_identidade_encarregado ?? "",
       data_nascimento: user.estudante.data_nascimento?.slice(0, 10) ?? "",
@@ -120,7 +117,7 @@ export default function ProfileEditCard({ user, onProfileUpdated }: ProfileEditC
   const handleChange = (field: keyof FormState, value: string) => {
     setForm((current) => ({
       ...current,
-      [field]: field === "telefone" || field === "telefone_encarregado" ? onlyDigits(value).slice(0, 9) : value,
+      [field]: field === "telefone" ? onlyDigits(value).slice(0, 9) : value,
     }));
   };
 
@@ -128,8 +125,6 @@ export default function ProfileEditCard({ user, onProfileUpdated }: ProfileEditC
     if (!form.nome.trim()) return "Nome é obrigatório.";
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return "Informe um email válido.";
     if (form.telefone.trim() && form.telefone.trim().length !== 9) return "Telefone deve ter exatamente 9 dígitos locais.";
-    if (form.telefone_encarregado.trim() && form.telefone_encarregado.trim().length !== 9) return "Telefone do encarregado deve ter exatamente 9 dígitos locais.";
-    if (form.telefone.trim() && form.telefone_encarregado.trim() && form.telefone.trim() === form.telefone_encarregado.trim()) return "Os telefones do estudante e do encarregado não podem ser iguais.";
     if (form.bilhete_identidade.trim() && form.bilhete_identidade_encarregado.trim() && form.bilhete_identidade.trim().toLowerCase() === form.bilhete_identidade_encarregado.trim().toLowerCase()) return "O BI do estudante não pode ser igual ao BI do encarregado de educação.";
     return "";
   };
@@ -160,7 +155,6 @@ export default function ProfileEditCard({ user, onProfileUpdated }: ProfileEditC
       if (isEstudante) {
         await estudanteService.atualizarDadosPessoais({
           nome: form.nome.trim(),
-          telefone_encarregado: form.telefone_encarregado.trim() || undefined,
           bilhete_identidade: form.bilhete_identidade.trim() || undefined,
           bilhete_identidade_encarregado: form.bilhete_identidade_encarregado.trim() || undefined,
           data_nascimento: form.data_nascimento || undefined,
@@ -217,7 +211,6 @@ export default function ProfileEditCard({ user, onProfileUpdated }: ProfileEditC
               <Field id="nome" label="Nome" value={form.nome} disabled={saving} onChange={handleChange} />
               <Field id="email" label="Email" type="email" value={form.email} disabled={saving} onChange={handleChange} />
               <Field id="telefone" label="Telefone" type="tel" value={form.telefone} disabled={saving} onChange={handleChange} />
-              {isEstudante && <Field id="telefone_encarregado" label="Telefone do encarregado" type="tel" value={form.telefone_encarregado} disabled={saving} onChange={handleChange} />}
               {isEstudante && <Field id="bilhete_identidade" label="BI do estudante" value={form.bilhete_identidade} disabled={saving} onChange={handleChange} />}
               {isEstudante && <Field id="bilhete_identidade_encarregado" label="BI do encarregado" value={form.bilhete_identidade_encarregado} disabled={saving} onChange={handleChange} />}
               {isEstudante && <Field id="data_nascimento" label="Data de nascimento" type="date" value={form.data_nascimento} disabled={saving} onChange={handleChange} />}

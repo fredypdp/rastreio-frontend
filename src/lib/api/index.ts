@@ -20,6 +20,8 @@ export {
   financeiroService,
 } from './services';
 
+export { secretarioService, professorService, professorAreaService, encarregadoService } from './contas-service';
+
 // Hooks
 export { useApi, useApiQuery } from '@/hooks/useApi';
 

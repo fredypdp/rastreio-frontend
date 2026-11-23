@@ -7,7 +7,9 @@ import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
 import React from "react";
-import { tokenStorage, useApi, perfilService } from '@/lib/api';
+import { tokenStorage } from '@/lib/api';
+import { carregarPerfilEfetivo, ehEncarregado } from '@/lib/perfil-efetivo';
+import BannerEducando from '@/components/encarregado/BannerEducando';
 import { setCookie } from '@/lib/utils/cookies';
 import { useUserCookie } from '@/hooks/useUserCookie';
 import RouteGuard from "@/components/guards/RouteGuard";
@@ -36,7 +38,6 @@ export default function PainelLayout({ children }: { children: React.ReactNode }
   const hasLoadedProfile = useRef(false);
 
   const { user, loading: loadingUser } = useUserCookie();
-  const { execute: executarPegarPerfil } = useApi(perfilService.meuPerfil);
   // Verdadeiro apenas durante a janela entre "não havia cookie 'user' ainda"
   // e "o perfil buscado da API terminou de chegar (e a página vai recarregar
   // sozinha) ou falhou". Enquanto verdadeiro, o conteúdo do painel (children)
@@ -60,7 +61,8 @@ export default function PainelLayout({ children }: { children: React.ReactNode }
       setVerificandoPerfilInicial(true);
     }
 
-    executarPegarPerfil(token).then((data) => {
+    // Perfil EFETIVO: secretário vale como a academia; encarregado, como o educando escolhido.
+    carregarPerfilEfetivo(token).then((data) => {
       if (!data) {
         setVerificandoPerfilInicial(false);
         return;
@@ -101,6 +103,7 @@ export default function PainelLayout({ children }: { children: React.ReactNode }
             <AppHeader />
 
             <div className="p-4 mx-auto w-full max-w-(--breakpoint-2xl) md:p-6">
+              {ehEncarregado(user) && user?.educando_ativo && <BannerEducando educando={user.educando_ativo} />}
               {user?.tipo === 'estudante' && user.estudante?.status === 'inativo' && <AvisoContaDesvinculada />}
               {children}
             </div>

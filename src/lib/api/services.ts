@@ -86,7 +86,6 @@ import type {
   ListarMateriasResponse,
   AtualizarDadosPessoaisEstudanteRequest,
   AtualizarBilheteIdentidadeSemAcademiaRequest,
-  AtualizarTelefoneEncarregadoEstudanteRequest,
   CriarSolicitacaoEdicaoDadoEstudanteRequest,
   CriarSolicitacaoEdicaoDadoEstudanteResponse,
   CampoEdicaoDadoEstudante,
@@ -200,6 +199,7 @@ import type {
   ChargeResult,
   FinanceiroContextoTipo,
 } from '@/types/api';
+import type { BlocoEncarregado } from '@/types/contas';
 
 const API_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const GET_PAGE_LIMIT_MAX = 100;
@@ -351,6 +351,30 @@ function ensureBilhetesDiferentes(
   }
 }
 
+/** Remove campos vazios do bloco do encarregado; sem telefone não há bloco. */
+function limparBlocoEncarregado(bloco?: BlocoEncarregado): BlocoEncarregado | undefined {
+  if (!bloco) return undefined;
+  const limpo: BlocoEncarregado = { telefone: bloco.telefone?.trim() ?? '' };
+  (['nome', 'genero', 'data_nascimento', 'email', 'relacao', 'relacao_outro'] as const).forEach((k) => {
+    const v = typeof bloco[k] === 'string' ? (bloco[k] as string).trim() : bloco[k];
+    if (v) (limpo as unknown as Record<string, unknown>)[k] = v;
+  });
+  return limpo.telefone ? limpo : undefined;
+}
+
+/** O multipart não leva objetos: o bloco do encarregado viaja como campos `encarregado_*`. */
+function achatarEncarregado(bloco?: BlocoEncarregado): Record<string, string> {
+  if (!bloco) return {};
+  const campos: Record<string, string> = { encarregado_telefone: bloco.telefone };
+  if (bloco.nome) campos.encarregado_nome = bloco.nome;
+  if (bloco.genero) campos.encarregado_genero = bloco.genero;
+  if (bloco.data_nascimento) campos.encarregado_data_nascimento = bloco.data_nascimento;
+  if (bloco.email) campos.encarregado_email = bloco.email;
+  if (bloco.relacao) campos.encarregado_relacao = bloco.relacao;
+  if (bloco.relacao_outro) campos.encarregado_relacao_outro = bloco.relacao_outro;
+  return campos;
+}
+
 function prepareCriarEstudante(data: CriarEstudanteRequest): CriarEstudanteRequest {
   const bilheteIdentidade = normalizarBilheteIdentidade(data.bilhete_identidade);
   const bilheteIdentidadeEncarregado = normalizarBilheteIdentidade(data.bilhete_identidade_encarregado);
@@ -363,6 +387,7 @@ function prepareCriarEstudante(data: CriarEstudanteRequest): CriarEstudanteReque
     email: data.email?.trim() || undefined,
     telefone: data.telefone?.trim() || undefined,
     telefone_encarregado: data.telefone_encarregado?.trim() || undefined,
+    encarregado: limparBlocoEncarregado(data.encarregado),
     bilhete_identidade: bilheteIdentidade,
     bilhete_identidade_encarregado: bilheteIdentidadeEncarregado,
     ano_escolar_fundamental: data.ano_escolar_fundamental ?? null,
@@ -378,9 +403,9 @@ function prepareCriarEstudante(data: CriarEstudanteRequest): CriarEstudanteReque
 }
 
 function prepareCriarEstudanteForm(data: CriarEstudanteRequest): FormData {
-  const payload = prepareCriarEstudante(data);
+  const { encarregado, ...payload } = prepareCriarEstudante(data);
   const form = new FormData();
-  const entries = Object.entries({ ...payload,
+  const entries = Object.entries({ ...payload, ...achatarEncarregado(encarregado),
     bi_estudante: data.bi_estudante,
     bi_encarregado: data.bi_encarregado,
     cedula_estudante: data.cedula_estudante,
@@ -414,23 +439,12 @@ function prepareAtualizarDadosPessoaisEstudante(
   return {
     ...data,
     nome: data.nome?.trim() || undefined,
-    telefone_encarregado: data.telefone_encarregado?.trim() || undefined,
     bilhete_identidade: bilheteIdentidade,
     bilhete_identidade_encarregado: bilheteIdentidadeEncarregado,
     data_nascimento: ensureApiDate(data.data_nascimento, 'Data de nascimento'),
   };
 }
 
-
-function prepareAtualizarTelefoneEncarregadoEstudante(
-  data: AtualizarTelefoneEncarregadoEstudanteRequest
-): AtualizarTelefoneEncarregadoEstudanteRequest {
-  const telefone = data.telefone_encarregado?.trim();
-  if (!/^\d{9}$/.test(telefone || '')) {
-    throw new Error('Telefone do encarregado deve conter exatamente 9 dígitos.');
-  }
-  return { telefone_encarregado: telefone };
-}
 
 function prepareSolicitacaoEdicaoDadoEstudanteForm(
   data: CriarSolicitacaoEdicaoDadoEstudanteRequest
@@ -1082,12 +1096,9 @@ export const estudanteService = {
       { token: token || tokenStorage.get() || undefined }
     ),
 
-  atualizarTelefoneEncarregado: (data: AtualizarTelefoneEncarregadoEstudanteRequest, token?: string) =>
-    api.put<{ message: string }>(
-      '/estudante/encarregado/telefone',
-      prepareAtualizarTelefoneEncarregadoEstudante(data),
-      { token: token || tokenStorage.get() || undefined }
-    ),
+  // (Parte 5) PUT /estudante/encarregado/telefone foi removida na API 4.0.0: o telefone do
+  // encarregado pertence à conta do encarregado (PUT /me/telefone) ou é trocado pela
+  // academia (encarregadoService.trocar).
 
   /**
    * Autoatualização do BI sem aprovação — só funciona quando o estudante

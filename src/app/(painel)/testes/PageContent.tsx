@@ -1189,7 +1189,16 @@ export default function PageContent() {
 
       if (!payload.ano_superior) {
         payload.bilhete_identidade_encarregado = gerarBilheteIdentidade(bilhetesUsadosCadastro);
-        payload.telefone_encarregado = gerarTelefoneAngola(telefonesUsadosCadastro);
+        // Parte 5: o nível escolar exige a conta do encarregado (nome, género e nascimento).
+        const telefoneEncarregado = gerarTelefoneAngola(telefonesUsadosCadastro);
+        const encarregadoGerado = gerarNome();
+        payload.telefone_encarregado = telefoneEncarregado;
+        payload.encarregado = {
+          telefone: telefoneEncarregado,
+          nome: encarregadoGerado.nome,
+          genero: encarregadoGerado.genero,
+          data_nascimento: "1980-01-15",
+        };
       }
 
       if (camposDocumentaisObrigatorios(payload).includes("declaracao")) {

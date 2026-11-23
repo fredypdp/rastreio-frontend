@@ -843,7 +843,9 @@ export default function PainelDashboard() {
   const nome = user?.estudante?.nome ?? user?.academia?.nome ?? user?.admin?.nome ?? "";
   const nomeSaudacao = user?.tipo === "academia" ? user?.academia?.nome ?? "" : firstName(nome);
   const tipo = user?.tipo;
-  const deveMostrarGuiaAcademia = tipo === "academia" && (
+  // O guia de configuração leva a páginas da conta da academia (dados, NIF, alvará):
+  // o secretário não as acessa, por isso não o vê.
+  const deveMostrarGuiaAcademia = tipo === "academia" && user?.tipo_real !== "secretario" && (
     configuracaoStatus.loading ||
     Boolean(configuracaoStatus.error) ||
     configuracaoStatus.completedCount < configuracaoStatus.totalCount
