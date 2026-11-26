@@ -20,6 +20,7 @@ import {
   MetodoPagamentoSelector,
   PaginacaoSetas,
   Qr,
+  ReferenciaPagamento,
   StatusBadge,
   SubtelaDetalheCobranca,
   SubtelaPanel,
@@ -430,7 +431,7 @@ export default function EstudantePagamentosPainel() {
               <p className="text-sm text-gray-700 dark:text-gray-300">Você receberá uma notificação no telefone informado para confirmar o pagamento.</p>
             )}
             {metodoCheckout === "REF" && (
-              <pre className="whitespace-pre-wrap rounded bg-gray-50 p-3 text-xs dark:bg-gray-800">{JSON.stringify(resultado.response ?? {}, null, 2)}</pre>
+              <ReferenciaPagamento response={resultado.response} />
             )}
             {metodoCheckout === "GPO_QR" && <Qr value={resultado.qrCodeArr} />}
             <div className="flex flex-wrap gap-2">

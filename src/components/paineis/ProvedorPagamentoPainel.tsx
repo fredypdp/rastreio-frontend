@@ -19,6 +19,7 @@ import Button from "@/components/ui/button/Button";
 import Icon from "@/components/ui/Icon";
 import Alert from "@/components/ui/alert/Alert";
 import Input from "@/components/form/input/InputField";
+import TextArea from "@/components/form/input/TextArea";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import SearchableSelect from "@/components/form/SearchableSelect";
@@ -143,6 +144,9 @@ export default function ProvedorPagamentoPainel() {
   const [credencialParaRemover, setCredencialParaRemover] = useState<FinanceiroCredencial | null>(null);
   // Provedor que o usuário quer tornar ativo — controla o ConfirmDialog de troca.
   const [provedorParaAtivar, setProvedorParaAtivar] = useState<FinanceiroProvedorDoContexto | null>(null);
+  // Provedor escolhido no seletor do topo (a subtela mostrada). Vazio = o ativo do
+  // contexto, ou o primeiro do catálogo.
+  const [provedorEscolhido, setProvedorEscolhido] = useState("");
 
   const { execute: listarProvedores, data: catalogoData } = useApi(financeiroService.listarProvedores);
   const { execute: consultarProvedor, data: estadoProvedor } = useApi(financeiroService.consultarProvedor);
@@ -206,6 +210,9 @@ export default function ProvedorPagamentoPainel() {
   // Estado do contexto só é válido para o contexto atualmente selecionado.
   const estado = contextoBase && estadoProvedor && estadoProvedor.contexto_tipo === contextoBase.contexto_tipo && (estadoProvedor.codigo_academia ?? "") === (contextoBase.codigo_academia ?? "") ? estadoProvedor : null;
   const provedorAtivo = estado?.provedor_ativo ? catalogo.find((p) => p.id === estado.provedor_ativo) ?? null : null;
+  // Provedor cuja subtela está aberta: o escolhido no seletor, senão o ativo, senão o primeiro.
+  const emFoco = catalogo.find((p) => p.id === provedorEscolhido) ?? provedorAtivo ?? catalogo[0] ?? null;
+  const emFocoDoContexto = emFoco ? estado?.provedores.find((p) => p.id === emFoco.id) ?? null : null;
 
   const resetForm = (provedor: FinanceiroProvedor | undefined) => {
     setFormProvedor(provedor?.id ?? "");
@@ -223,7 +230,7 @@ export default function ProvedorPagamentoPainel() {
 
   const openCreate = (provedorId?: string) => {
     setEditing(null);
-    const inicial = catalogo.find((p) => p.id === provedorId) ?? provedorAtivo ?? catalogo[0];
+    const inicial = catalogo.find((p) => p.id === provedorId) ?? emFoco ?? undefined;
     resetForm(inicial);
     setFormOpen(true);
   };
@@ -343,8 +350,10 @@ export default function ProvedorPagamentoPainel() {
   if (loading) return <LoadingState />;
   if (!isAcademia && !isFpp) return <UnauthorizedAccess requiredTypes={["Admin FPP", "Academia"]} />;
 
-  const rows = credenciais ?? [];
-  const temProvedorAtivo = rows.some((c) => c.ativo);
+  const todasAsCredenciais = credenciais ?? [];
+  const temProvedorAtivo = todasAsCredenciais.some((c) => c.ativo);
+  // A subtela mostra só as credenciais do provedor escolhido no seletor.
+  const rows = todasAsCredenciais.filter((c) => !emFoco || c.provedor === emFoco.id);
   // Espelha authorizeFinanceScope no backend (internal/handlers/financeiro_handlers.go):
   // um admin FPP só tem permissão de ESCRITA (configurar/definir provedor/remover/rotacionar)
   // no contexto "spuri" — nunca no contexto de uma academia específica, mesmo que já
@@ -430,46 +439,47 @@ export default function ProvedorPagamentoPainel() {
         )}
       </div>
 
-      <AdesaoProvedorInfo temProvedorAtivo={temProvedorAtivo} provedor={formOpen ? provedorFormInfo : provedorAtivo ?? undefined} />
+      <AdesaoProvedorInfo temProvedorAtivo={temProvedorAtivo} provedor={formOpen ? provedorFormInfo : emFoco ?? undefined} />
 
-      {!formOpen && estado && (
+      {!formOpen && catalogo.length > 0 && (
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03]">
           <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">Provedores disponíveis</h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {estado.provedor_ativo
-              ? "Apenas o provedor ativo gera cobranças novas. Cobranças já criadas continuam a ser acompanhadas no provedor que as emitiu, mesmo depois de trocar de provedor."
-              : "Ainda não há provedor definido. Configure as credenciais de um provedor e defina-o como o provedor de pagamento."}
+            {!estado
+              ? "Escolha um provedor para ver e configurar as suas credenciais. Selecione um contexto único (o Spuri ou uma academia) para ver qual provedor está ativo."
+              : estado.provedor_ativo
+                ? "Apenas o provedor ativo gera cobranças novas. Cobranças já criadas continuam a ser acompanhadas no provedor que as emitiu, mesmo depois de trocar de provedor."
+                : "Ainda não há provedor definido. Configure as credenciais de um provedor e defina-o como o provedor de pagamento."}
           </p>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {estado.provedores.map((provedor) => (
-              <div key={provedor.id} className={`rounded-xl border p-4 ${provedor.ativo ? "border-brand-300 bg-brand-50 dark:border-brand-500/40 dark:bg-brand-500/10" : "border-gray-200 dark:border-white/[0.08]"}`}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-gray-800 dark:text-white/90">{provedor.nome}</span>
-                  {provedor.ativo && <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Provedor ativo</span>}
-                  <span className={provedor.credenciais_configuradas ? "rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-300" : "rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-white/[0.06] dark:text-gray-300"}>
-                    {provedor.credenciais_configuradas ? "Credenciais configuradas" : "Sem credenciais"}
-                  </span>
-                </div>
-                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Métodos suportados: {provedor.metodos.map((m) => METODO_PAGAMENTO_LABEL[m] ?? m).join(", ")}</p>
-                {provedor.cobrancas_pendentes > 0 && (
-                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{provedor.cobrancas_pendentes} cobrança(s) pendente(s) aguardando resposta deste provedor.</p>
-                )}
-                {provedor.credenciais_arquivadas && (
-                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Credenciais anteriores arquivadas (por remoção ou edição): continuam a ser usadas só para concluir as cobranças pendentes e são descartadas quando a última for resolvida.</p>
-                )}
-                {canCreate && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {!provedor.credenciais_configuradas && <Button size="sm" variant="outline" onClick={() => openCreate(provedor.id)}>Configurar credenciais</Button>}
-                    {provedor.credenciais_configuradas && !provedor.ativo && (
-                      <Button size="sm" disabled={ativandoId === provedor.id} onClick={() => setProvedorParaAtivar(provedor)}>
-                        {ativandoId === provedor.id ? "Definindo..." : "Definir como provedor"}
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+          <div role="tablist" aria-label="Provedor de pagamento" className="mt-4 flex flex-wrap gap-2">
+            {catalogo.map((p) => {
+              const selecionado = emFoco?.id === p.id;
+              const ativo = estado?.provedor_ativo === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selecionado}
+                  onClick={() => setProvedorEscolhido(p.id)}
+                  className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition ${selecionado ? "border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300" : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-white/[0.08] dark:text-gray-300 dark:hover:bg-white/[0.05]"}`}
+                >
+                  {p.nome}
+                  {ativo && <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Provedor ativo</span>}
+                </button>
+              );
+            })}
           </div>
+          {emFoco && (
+            <SubtelaProvedor
+              provedor={emFoco}
+              doContexto={emFocoDoContexto}
+              canCreate={canCreate}
+              ativando={ativandoId === emFocoDoContexto?.id}
+              onConfigurar={() => openCreate(emFoco.id)}
+              onDefinir={() => emFocoDoContexto && setProvedorParaAtivar(emFocoDoContexto)}
+            />
+          )}
         </div>
       )}
 
@@ -478,8 +488,8 @@ export default function ProvedorPagamentoPainel() {
           <div className="flex flex-col items-center justify-center gap-3 py-14 text-center">
             <Icon icon="mdi:credit-card-remove-outline" width={44} className="text-gray-400" />
             <div>
-              <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">Nenhuma credencial configurada.</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Salve as credenciais de um provedor para habilitar as próximas operações financeiras.</p>
+              <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">Nenhuma credencial {emFoco ? `${emFoco.nome} ` : ""}configurada.</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Salve as credenciais deste provedor para habilitar as próximas operações financeiras.</p>
             </div>
             <Button size="sm" onClick={() => openCreate()} disabled={!canCreate || catalogo.length === 0}>Configurar credenciais</Button>
           </div>
@@ -552,21 +562,25 @@ export default function ProvedorPagamentoPainel() {
           ) : (
             <Alert variant="info" title="Sem cobranças pendentes" message="Este provedor não tem cobranças pendentes: as credenciais atuais serão simplesmente substituídas pelas que preencher." />
           ))}
-          {!editing && (
-            <div>
-              <Label>Provedor de pagamento *</Label>
-              <Select
-                key={formProvedor || "sem-provedor"}
-                defaultValue={formProvedor}
-                options={catalogo.map((p) => ({ value: p.id, label: p.nome }))}
-                placeholder="Selecione o provedor"
-                onChange={(value) => resetForm(catalogo.find((p) => p.id === value))}
-              />
-              {formErrors.provedor && <p className="mt-1 text-xs text-error-500 dark:text-error-400">{formErrors.provedor}</p>}
-            </div>
+          {!editing && provedorFormInfo && (
+            <p className="text-sm text-gray-600 dark:text-gray-300">Provedor de pagamento: <b>{provedorFormInfo.nome}</b></p>
           )}
+          {formErrors.provedor && <p className="text-xs text-error-500 dark:text-error-400">{formErrors.provedor}</p>}
           <div className="grid gap-4 md:grid-cols-2">
-            {(provedorFormInfo?.campos_credenciais ?? []).map((campo) => campo.secreto ? (
+            {(provedorFormInfo?.campos_credenciais ?? []).map((campo) => campo.multilinha ? (
+              <div key={campo.chave} className="md:col-span-2">
+                <MultilineField
+                  label={`${campo.rotulo}${campo.obrigatorio ? " *" : ""}`}
+                  value={formData[campo.chave] ?? ""}
+                  secreto={campo.secreto}
+                  show={!!showSecrets[campo.chave]}
+                  onToggle={() => setShowSecrets((v) => ({ ...v, [campo.chave]: !v[campo.chave] }))}
+                  onChange={(value) => setFormData((p) => ({ ...p, [campo.chave]: value }))}
+                  error={formErrors[campo.chave]}
+                  hint={campo.ajuda}
+                />
+              </div>
+            ) : campo.secreto ? (
               <PasswordField
                 key={campo.chave}
                 label={`${campo.rotulo}${campo.obrigatorio ? " *" : ""}`}
@@ -593,6 +607,9 @@ export default function ProvedorPagamentoPainel() {
                 na coluna &quot;Segredo do webhook&quot; da tabela.
               </p>
             </div>
+          )}
+          {provedorFormInfo && !provedorFormInfo.usa_segredo_webhook && (provedorFormInfo.webhooks?.length ?? 0) > 0 && (
+            <EnderecoNotificacao provedor={provedorFormInfo} />
           )}
           {!editing && !temProvedorAtivo && (
             <p className="text-xs text-gray-500 dark:text-gray-400">Como este contexto ainda não tem provedor de pagamento, o provedor configurado agora passa a ser o provedor ativo.</p>
@@ -782,6 +799,98 @@ function PasswordField({ label, value, show, error, onToggle, onChange }: { labe
           <Icon icon={show ? "mdi:eye-off-outline" : "mdi:eye-outline"} width={20} />
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Subtela de um provedor: situação no contexto (ativo, credenciais, pendentes),
+ * métodos suportados e as ações. As credenciais dele ficam na tabela logo abaixo.
+ * O manual de adesão vem de AdesaoProvedorInfo (só a AppyPay tem texto próprio; o
+ * PayPay ainda não tem manual).
+ */
+function SubtelaProvedor({ provedor, doContexto, canCreate, ativando, onConfigurar, onDefinir }: {
+  provedor: FinanceiroProvedor;
+  doContexto: FinanceiroProvedorDoContexto | null;
+  canCreate: boolean;
+  ativando: boolean;
+  onConfigurar: () => void;
+  onDefinir: () => void;
+}) {
+  return (
+    <div className={`mt-4 rounded-xl border p-4 ${doContexto?.ativo ? "border-brand-300 bg-brand-50 dark:border-brand-500/40 dark:bg-brand-500/10" : "border-gray-200 dark:border-white/[0.08]"}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold text-gray-800 dark:text-white/90">{provedor.nome}</span>
+        {doContexto?.ativo && <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Provedor ativo</span>}
+        {doContexto && (
+          <span className={doContexto.credenciais_configuradas ? "rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-300" : "rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-white/[0.06] dark:text-gray-300"}>
+            {doContexto.credenciais_configuradas ? "Credenciais configuradas" : "Sem credenciais"}
+          </span>
+        )}
+      </div>
+      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Métodos suportados: {provedor.metodos.map((m) => METODO_PAGAMENTO_LABEL[m] ?? m).join(", ")}</p>
+      {(doContexto?.cobrancas_pendentes ?? 0) > 0 && (
+        <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{doContexto?.cobrancas_pendentes} cobrança(s) pendente(s) aguardando resposta deste provedor.</p>
+      )}
+      {doContexto?.credenciais_arquivadas && (
+        <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Credenciais anteriores arquivadas (por remoção ou edição): continuam a ser usadas só para concluir as cobranças pendentes e são descartadas quando a última for resolvida.</p>
+      )}
+      {canCreate && doContexto && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {!doContexto.credenciais_configuradas && <Button size="sm" variant="outline" onClick={onConfigurar}>Configurar credenciais</Button>}
+          {doContexto.credenciais_configuradas && !doContexto.ativo && (
+            <Button size="sm" disabled={ativando} onClick={onDefinir}>{ativando ? "Definindo..." : "Definir como provedor"}</Button>
+          )}
+        </div>
+      )}
+      {!provedor.usa_segredo_webhook && (provedor.webhooks?.length ?? 0) > 0 && <div className="mt-3"><EnderecoNotificacao provedor={provedor} /></div>}
+    </div>
+  );
+}
+
+/**
+ * Endereço de notificação dos provedores que autenticam o webhook por assinatura
+ * (PayPay): o Spuri não gera segredo, mas o provedor precisa de saber para onde
+ * avisar. É o endereço a configurar no portal dele.
+ */
+function EnderecoNotificacao({ provedor }: { provedor: FinanceiroProvedor }) {
+  const [copiado, setCopiado] = useState<string | null>(null);
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
+  return (
+    <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600 dark:bg-white/[0.03] dark:text-gray-300">
+      <p className="font-medium text-gray-800 dark:text-white/90">Endereço de notificação do {provedor.nome}</p>
+      <p className="mt-1">Configure este endereço no portal do {provedor.nome} para ser avisado dos pagamentos. O {provedor.nome} assina cada notificação e o Spuri confere a assinatura com a chave pública dele: não há segredo nem cabeçalho para configurar.</p>
+      <ul className="mt-2 space-y-2">
+        {(provedor.webhooks ?? []).map((caminho) => {
+          const url = `${base}${caminho}`;
+          return (
+            <li key={caminho} className="flex flex-wrap items-center gap-2">
+              <code className="break-all rounded bg-white px-3 py-1.5 text-xs dark:bg-gray-900 dark:text-white/90">{url}</code>
+              <Button size="sm" variant="outline" onClick={() => { navigator.clipboard?.writeText(url).catch(() => {}); setCopiado(caminho); setTimeout(() => setCopiado(null), 2000); }}>
+                {copiado === caminho ? "Copiado!" : "Copiar"}
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/** Campo de texto grande (chaves RSA). Secreto: escondido por omissão, com botão para mostrar. */
+function MultilineField({ label, value, secreto, show, error, hint, onToggle, onChange }: { label: string; value: string; secreto: boolean; show: boolean; error?: string; hint?: string; onToggle: () => void; onChange: (value: string) => void }) {
+  const escondido = secreto && !show;
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <Label>{label}</Label>
+        {secreto && (
+          <button type="button" onClick={onToggle} className="mb-1.5 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            <Icon icon={show ? "mdi:eye-off-outline" : "mdi:eye-outline"} width={16} /> {show ? "Ocultar" : "Mostrar"}
+          </button>
+        )}
+      </div>
+      <TextArea rows={4} value={value} onChange={onChange} error={!!error} hint={error ?? hint} className={`font-mono text-xs ${escondido ? "[-webkit-text-security:disc]" : ""}`} />
     </div>
   );
 }

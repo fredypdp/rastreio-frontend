@@ -1436,6 +1436,8 @@ export interface FinanceiroCampoCredencial {
   obrigatorio: boolean;
   secreto: boolean;
   ajuda?: string;
+  /** Pede um campo de texto maior (chaves RSA, por exemplo). Só apresentação. */
+  multilinha?: boolean;
 }
 
 /**
@@ -1812,6 +1814,21 @@ export interface CobrancaResumo {
   pagamento_externo?: boolean;
   /** Referência do comprovativo informada pela academia ao marcar o pagamento externo (opcional). */
   referencia_externa?: string;
+  /**
+   * true quando esta cobrança foi paga, mas outra cobrança já paga quita a mesma
+   * dívida (ex.: o pagador pagou nos dois provedores depois de uma troca). Não é
+   * aplicada a nenhuma dívida: a academia deve devolver o valor ao pagador.
+   * `duplicidade_com` lista as outras cobranças.
+   */
+  pago_em_duplicidade?: boolean;
+  duplicidade_com?: string[];
+  /**
+   * true quando o provedor confirmou o pagamento mas o valor do pedido não é o
+   * cobrado: a cobrança NÃO é quitada e continua no estado em que estava.
+   * `valor_pago_provedor` é o valor que o provedor informou (`valor` é o cobrado).
+   */
+  pagamento_divergente?: boolean;
+  valor_pago_provedor?: number;
   /**
    * Ausente para um item sintético (`status === "pendente"`, ver
    * PagamentoResumo) — não existe nenhuma atividade real para reportar

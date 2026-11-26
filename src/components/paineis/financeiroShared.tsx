@@ -308,6 +308,26 @@ export function StatusBadge({ status }: { status: string }) {
   return <span className={`rounded-full px-2 py-1 text-xs font-medium ${cls}`}>{status}</span>;
 }
 
+/**
+ * Dados para o pagador concluir um pagamento por REFERÊNCIA. Quando o provedor
+ * devolve entidade e referência (PayPay), mostra-as de forma legível; nos outros
+ * (AppyPay) mantém a resposta do provedor como sempre foi mostrada.
+ */
+export function ReferenciaPagamento({ response }: { response?: Record<string, unknown> }) {
+  const entidade = response?.entity_id;
+  const referencia = response?.reference_id;
+  if (entidade != null && referencia != null && String(entidade) !== "" && String(referencia) !== "") {
+    return (
+      <div className="space-y-1 rounded bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+        <p>Pague em qualquer Multicaixa ou pelo Multicaixa Express, com a referência:</p>
+        <p><span className="text-xs text-gray-500 dark:text-gray-400">Entidade:</span> <b>{String(entidade)}</b></p>
+        <p><span className="text-xs text-gray-500 dark:text-gray-400">Referência:</span> <b>{String(referencia)}</b></p>
+      </div>
+    );
+  }
+  return <pre className="whitespace-pre-wrap rounded bg-gray-50 p-3 text-xs dark:bg-gray-800">{JSON.stringify(response ?? {}, null, 2)}</pre>;
+}
+
 export function Qr({ value }: { value?: string }) {
   if (!value) return null;
   return value.startsWith("data:image") ? (
@@ -778,6 +798,16 @@ export function CobrancasTable({ rows, onOpen, onCancelar }: {
                         Pago fora da plataforma
                       </span>
                     )}
+                    {r.pago_em_duplicidade && (
+                      <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                        Pago em duplicidade
+                      </span>
+                    )}
+                    {r.pagamento_divergente && (
+                      <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                        Valor divergente
+                      </span>
+                    )}
                     {r.status.toLowerCase() === "pendente" && (
                       <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
                         Sem cobrança gerada
@@ -945,6 +975,18 @@ export function SubtelaDetalheCobranca({ cobranca, onVoltar, mostrarDadosEstudan
         {cobranca.pagamento_externo && (
           <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
             Pagamento registado manualmente pela academia como feito fora da plataforma.
+          </p>
+        )}
+
+        {cobranca.pago_em_duplicidade && (
+          <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-300">
+            Esta cobrança foi paga, mas outra cobrança já paga quita a mesma dívida. O valor desta não foi aplicado a nenhuma dívida: devolva-o ao pagador.
+          </p>
+        )}
+
+        {cobranca.pagamento_divergente && (
+          <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-300">
+            O provedor registou um pedido de {cobranca.valor_pago_provedor != null ? money(cobranca.valor_pago_provedor) : "valor diferente"}, mas foram cobrados {money(cobranca.valor)}. Por isso a cobrança não foi quitada e continua pendente. Confirme o caso com o provedor.
           </p>
         )}
 
