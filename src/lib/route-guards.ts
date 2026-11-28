@@ -219,25 +219,24 @@ export const ROUTE_PERMISSIONS: RouteConfig[] = [
   },
 
   // ==========================================
-  // ROTAS PARA ACADEMIA — Serviços Extras (gestão)
+  // ROTAS PARA ACADEMIA — Serviços (gestão)
   // Movidas de /gerenciamento/servicos-extras* — antes sem entrada própria
   // aqui (caíam no fallback "qualquer usuário autenticado"), agora
   // explicitamente restritas a 'academia', como o resto da gestão.
   // ==========================================
   {
-    path: '/servicos-extras/gerenciar-servicos',
+    // Parte 7: o catálogo de serviços é fixo (Transporte e Atividade extracurricular).
+    path: '/servicos-extras/transporte',
+    allowedTypes: ['academia'],
+    redirectIfUnauthorized: '/',
+  },
+  {
+    path: '/servicos-extras/atividades',
     allowedTypes: ['academia'],
     redirectIfUnauthorized: '/',
   },
   {
     path: '/servicos-extras/inscricoes',
-    allowedTypes: ['academia'],
-    redirectIfUnauthorized: '/',
-  },
-  {
-    // Movida de /gerenciamento/categorias-servico — antes sem entrada
-    // própria aqui (caía no fallback "qualquer usuário autenticado").
-    path: '/servicos-extras/categorias-servico',
     allowedTypes: ['academia'],
     redirectIfUnauthorized: '/',
   },

@@ -1286,40 +1286,90 @@ export interface Materia {
   version: number;
 }
 
-export type TipoCobrancaServico = 'unico' | 'mensal';
 export type MetodoPagamentoServico = 'GPO' | 'REF' | 'GPO_QR';
 
-export type TipoDetalhePersonalizado = 'texto' | 'numero' | 'booleano' | 'data' | 'hora' | 'lista_texto';
-export interface DetalhePersonalizado { rotulo: string; valor: string | number | boolean | string[]; tipo: TipoDetalhePersonalizado; }
+// ── Serviços: catálogo fixo (Parte 7 — Transporte e Atividade extracurricular) ──
+export type TipoServico = 'transporte' | 'atividade';
+/** Modo de um preço: `nenhum` = não definido neste nível; `gratuito` = não gera cobrança; `valor` = com preço. */
+export type ModoPrecoServico = 'nenhum' | 'gratuito' | 'valor';
+/** Modo do prazo geral do Transporte: `gratuito` = nenhum mês é cobrado em nenhuma rota. */
+export type ModoPrazoServico = 'nenhum' | 'gratuito' | 'meses';
 
-export interface ServicoExtra {
-  id: string; codigo_academia: string; nome: string; descricao?: string; categoria_servico_id?: string | null;
-  pago: boolean; preco: number | null; tipo_cobranca: TipoCobrancaServico | null;
-  metodos_pagamento: MetodoPagamentoServico[]; tem_taxa_inscricao: boolean;
-  valor_taxa_inscricao: number | null; metodos_pagamento_taxa_inscricao: MetodoPagamentoServico[];
-  /**
-   * Só nas visões do PAGADOR (lista pública e catálogo do estudante), onde as
-   * listas de métodos já vêm filtradas pelo provedor ativo da academia: explicam
-   * por que a lista de um serviço pago / da taxa de inscrição veio vazia.
-   */
-  metodos_pagamento_aviso?: FinanceiroAvisoMetodos;
-  metodos_pagamento_taxa_inscricao_aviso?: FinanceiroAvisoMetodos;
-  anos_academicos_disponiveis: string[]; cursos_disponiveis: string[]; documento_obrigatorio: boolean;
-  documento_instrucoes?: string; detalhes_personalizados: Record<string, DetalhePersonalizado>;
-  ativo: boolean; created_at: string; updated_at: string;
+export interface VeiculoTransporte { id: string; nome: string; ativo: boolean; }
+export interface RotaTransporte {
+  id: string; nome: string; horario_embarque: string; ativo: boolean;
+  preco_modo: ModoPrecoServico; preco: number; prazo_meses: number[];
+  veiculos: VeiculoTransporte[];
+  /** Resolvido pelo servidor (preço/prazo geral ou da rota). */
+  preco_efetivo: number; gratuito_efetivo: boolean; meses_efetivos: number[];
+  /** O que falta configurar para o estudante poder pedir esta rota. */
+  problemas: string[]; configurado: boolean;
+}
+export interface TransporteConfig {
+  id: string; codigo_academia: string; ativo: boolean;
+  /** false = a academia ainda não configurou o Transporte (nada gravado). */
+  persistido: boolean;
+  preco_geral_modo: ModoPrecoServico; preco_geral: number;
+  prazo_geral_modo: ModoPrazoServico; prazo_geral_meses: number[];
+  tem_taxa_inscricao: boolean; valor_taxa_inscricao: number;
+  metodos_pagamento: MetodoPagamentoServico[]; metodos_pagamento_taxa_inscricao: MetodoPagamentoServico[];
+  anos_academicos_disponiveis: string[]; cursos_disponiveis: string[];
+  rotas: RotaTransporte[];
+}
+/** PUT /academia/servicos-extras/transporte — campo ausente não muda. */
+export interface TransportePayload {
+  preco_geral_modo?: ModoPrecoServico; preco_geral?: number;
+  prazo_geral_modo?: ModoPrazoServico; prazo_geral_meses?: number[];
+  valor_taxa_inscricao?: number;
+  metodos_pagamento?: MetodoPagamentoServico[]; metodos_pagamento_taxa_inscricao?: MetodoPagamentoServico[];
+  anos_academicos_disponiveis?: string[]; cursos_disponiveis?: string[];
+  ativo?: boolean;
+}
+export interface RotaPayload {
+  nome: string; horario_embarque: string;
+  preco_modo: ModoPrecoServico; preco?: number; prazo_meses: number[];
 }
 
-export interface ServicoExtraPayload {
-  nome?: string; descricao?: string; categoria_servico_id?: string | null; pago?: boolean; preco?: number;
-  tipo_cobranca?: TipoCobrancaServico; metodos_pagamento?: MetodoPagamentoServico[];
-  tem_taxa_inscricao?: boolean; valor_taxa_inscricao?: number;
-  metodos_pagamento_taxa_inscricao?: MetodoPagamentoServico[];
-  anos_academicos_disponiveis?: string[]; cursos_disponiveis?: string[]; documento_obrigatorio?: boolean;
-  documento_instrucoes?: string; detalhes_personalizados?: Record<string, DetalhePersonalizado>;
+export interface HorarioAtividade { dia_semana: number; hora_inicio: string; hora_fim: string; }
+export interface TurmaAtividade { id: string; nome: string; ativo: boolean; membros: number; }
+export interface MembroTurmaAtividade { codigo_estudante: string; solicitacao_id: string; desde: string; }
+export interface AtividadeServico {
+  id: string; codigo_academia: string; nome: string; instrutor: string; coletiva: boolean;
+  gratuito: boolean; preco: number; prazo_meses: number[];
+  tem_taxa_inscricao: boolean; valor_taxa_inscricao: number;
+  metodos_pagamento: MetodoPagamentoServico[]; metodos_pagamento_taxa_inscricao: MetodoPagamentoServico[];
+  anos_academicos_disponiveis: string[]; cursos_disponiveis: string[];
+  ativo: boolean; horarios: HorarioAtividade[]; turmas: TurmaAtividade[];
+  problemas: string[]; configurado: boolean;
 }
+export interface AtividadePayload {
+  nome?: string; instrutor?: string; coletiva?: boolean; gratuito?: boolean;
+  preco?: number; prazo_meses?: number[]; valor_taxa_inscricao?: number;
+  metodos_pagamento?: MetodoPagamentoServico[]; metodos_pagamento_taxa_inscricao?: MetodoPagamentoServico[];
+  anos_academicos_disponiveis?: string[]; cursos_disponiveis?: string[];
+  horarios?: HorarioAtividade[];
+}
+export interface ServicosAcademiaResponse { transporte: TransporteConfig; atividades: AtividadeServico[]; total_atividades: number; }
 
-export interface CategoriaServico { id: string; codigo_academia: string; nome: string; ativo: boolean; created_at: string; updated_at: string; }
-export interface CategoriaServicoPayload { nome: string }
+/** Visão de quem paga (catálogo do estudante e lista pública): só o que está ativo e configurado. */
+interface CatalogoPagamento {
+  tem_taxa_inscricao: boolean; valor_taxa_inscricao: number;
+  /** Já filtrados pelo provedor ativo da academia; o aviso explica a lista vazia de um serviço pago. */
+  metodos_pagamento: MetodoPagamentoServico[]; metodos_pagamento_aviso?: FinanceiroAvisoMetodos;
+  metodos_pagamento_taxa_inscricao: MetodoPagamentoServico[]; metodos_pagamento_taxa_inscricao_aviso?: FinanceiroAvisoMetodos;
+}
+export interface CatalogoRotaTransporte {
+  id: string; nome: string; horario_embarque: string; gratuito: boolean; preco: number; meses: number[];
+  veiculos: Array<{ id: string; nome: string }>;
+}
+export interface CatalogoTransporte extends CatalogoPagamento {
+  id: string; tipo: 'transporte'; nome: string; rotas: CatalogoRotaTransporte[];
+}
+export interface CatalogoAtividade extends CatalogoPagamento {
+  id: string; tipo: 'atividade'; nome: string; instrutor: string; coletiva: boolean;
+  gratuito: boolean; preco: number; meses: number[]; horarios: HorarioAtividade[];
+}
+export interface CatalogoServicos { transporte: CatalogoTransporte | null; atividades: CatalogoAtividade[]; total: number; }
 
 export type ProvedorComunicacao = 'GOSMS' | 'ZIETT';
 export interface RemetenteComunicacao {
@@ -1345,6 +1395,8 @@ export interface ProvedorPadraoComunicacaoResponse { provedor_padrao: ProvedorCo
 export type StatusSolicitacaoServicoExtra = 'pendente' | 'aprovada_pendente_pagamento_taxa_inscricao' | 'vinculada' | 'reprovada' | 'cancelada_antes_da_vinculacao' | 'cancelada';
 export interface SolicitacaoServicoExtra {
   id: string; servico_extra_id: string; codigo_academia: string; codigo_estudante: string;
+  /** O que foi pedido: o tipo do serviço e, no transporte, a rota e os veículos; a turma da atividade coletiva é a escolhida na aprovação. */
+  tipo_servico: TipoServico; rota_id?: string | null; veiculo_ids: string[]; turma_id?: string | null;
   status: StatusSolicitacaoServicoExtra; motivo_reprovacao?: string; motivo_cancelamento?: string;
   cancelada_por?: 'academia' | 'estudante'; documento_path?: string; documento_url?: string;
   valor_taxa_inscricao: number; metodos_pagamento_taxa_inscricao: MetodoPagamentoServico[];
@@ -1352,10 +1404,12 @@ export interface SolicitacaoServicoExtra {
   metodos_pagamento_taxa_inscricao_aviso?: FinanceiroAvisoMetodos;
   aprovada_por?: string; reprovada_por?: string; vinculada_em?: string; created_at: string; updated_at: string;
 }
-export type TipoLancamentoServicoExtra = 'mensalidade' | 'preco_unico';
+/** Só existe mensalidade (um lançamento por mês cobrado do serviço). */
+export type TipoLancamentoServicoExtra = 'mensalidade';
 export type EstadoLancamentoServicoExtra = 'pendente' | 'anulada' | 'pago';
 export interface PendenciaServicoExtra { tipo_lancamento: TipoLancamentoServicoExtra; ano?: number; mes?: number; estado: EstadoLancamentoServicoExtra; valor: number; }
-export interface SolicitarServicoExtraRequest { documento?: File; }
+/** Transporte: `rota_id` e ao menos um `veiculo_ids` da rota. Atividade: sem rota nem veículo. O documento é sempre opcional. */
+export interface SolicitarServicoExtraRequest { documento?: File; rota_id?: string; veiculo_ids?: string[]; }
 export interface IniciarPagamentoTaxaInscricaoRequest { solicitacao_id: string; metodo_pagamento: MetodoPagamentoServico; telefone?: string; }
 export interface IniciarPagamentoObrigacaoRequest { solicitacao_id: string; tipo_lancamento: TipoLancamentoServicoExtra; ano?: number; mes?: number; metodo_pagamento: MetodoPagamentoServico; telefone?: string; }
 

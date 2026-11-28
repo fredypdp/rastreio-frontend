@@ -116,9 +116,9 @@ const navItems: NavItem[] = [
     subItems: [
       { name: "Catálogo", path: "/servicos-extras/catalogo" },
       { name: "Minhas Inscrições", path: "/servicos-extras/minhas-inscricoes" },
-      { name: "Gerenciar Serviços", path: "/servicos-extras/gerenciar-servicos" },
+      { name: "Transporte", path: "/servicos-extras/transporte" },
+      { name: "Atividades", path: "/servicos-extras/atividades" },
       { name: "Inscrições", path: "/servicos-extras/inscricoes" },
-      { name: "Categorias de Serviço", path: "/servicos-extras/categorias-servico" },
     ],
   },
   {
@@ -391,10 +391,10 @@ export default function AppSidebar() {
         }
 
         // Serviços: catálogo/minhas inscrições são do estudante;
-        // gerenciar serviços/inscrições são da academia.
+        // Transporte, atividades e inscrições são da academia.
         if (item.name === "Serviços" && item.subItems) {
           const estudantePaths = ["/servicos-extras/catalogo", "/servicos-extras/minhas-inscricoes"];
-          const academiaPaths = ["/servicos-extras/gerenciar-servicos", "/servicos-extras/inscricoes", "/servicos-extras/categorias-servico"];
+          const academiaPaths = ["/servicos-extras/transporte", "/servicos-extras/atividades", "/servicos-extras/inscricoes"];
           return {
             ...item,
             subItems: item.subItems.filter((sub) => {

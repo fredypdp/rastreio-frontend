@@ -14,7 +14,7 @@ import type { AnoAcademico, DocumentoExtra, DocumentoExtraPayload } from "@/type
 import { Icon } from "@iconify/react";
 
 // Mesma lista/rótulos de src/components/paineis/MateriaPainel.tsx e
-// src/components/paineis/ServicosExtrasPainel.tsx — mantenha os três em
+// src/components/paineis/ServicosShared.tsx — mantenha os três em
 // sincronia se a numeração de anos do fundamental mudar.
 const ANOS_FUNDAMENTAL = [
   { value: "1_ano_fundamental", label: "1ª Classe" },

@@ -58,10 +58,15 @@ import type {
   CriarSumarioRequest,
   AtualizarSumarioRequest,
   Sumario,
-  ServicoExtra,
-  ServicoExtraPayload,
-  CategoriaServico,
-  CategoriaServicoPayload,
+  ServicosAcademiaResponse,
+  TransporteConfig,
+  TransportePayload,
+  RotaPayload,
+  AtividadeServico,
+  AtividadePayload,
+  TurmaAtividade,
+  MembroTurmaAtividade,
+  CatalogoServicos,
   DocumentoExtra,
   DocumentoExtraPayload,
   RemetenteComunicacao,
@@ -72,6 +77,7 @@ import type {
   ProvedorPadraoComunicacaoResponse,
   ProvedorComunicacao,
   SolicitacaoServicoExtra,
+  TipoServico,
   StatusSolicitacaoServicoExtra,
   PendenciaServicoExtra,
   TipoLancamentoServicoExtra,
@@ -1080,10 +1086,18 @@ export const estudanteService = {
       undefined,
       { token: token || tokenStorage.get() || undefined }
     ),
-  listarServicosExtrasDisponiveis: (codigoAcademia: string, token?: string) => api.get<{ servicos_extras: ServicoExtra[]; total: number }>(`/academia/servico/${encodeURIComponent(codigoAcademia)}/servicos-extras`, { token: token || tokenStorage.get() || undefined }),
-  /** GET /estudante/servicos-extras/catalogo (Tarefa 112) — catálogo já filtrado pela elegibilidade do próprio estudante (ano/curso), com as categorias já resolvidas (a rota de categorias exige academia/admin, o estudante não consegue chamá-la). Substitui listarServicosExtrasDisponiveis (rota pública, sem filtro de elegibilidade) no catálogo do estudante. */
-  listarCatalogoServicosExtras: (token?: string) => api.get<{ servicos_extras: ServicoExtra[]; categorias_servico: CategoriaServico[]; total: number }>('/estudante/servicos-extras/catalogo', { token: token || tokenStorage.get() || undefined }),
-  solicitarServicoExtra: (servicoId: string, data: SolicitarServicoExtraRequest, token?: string) => { const form = new FormData(); if (data.documento) form.append('documento', data.documento); return api.postForm<{ data: SolicitacaoServicoExtra }>(`/estudante/servicos-extras/${servicoId}/solicitacao`, form, { token: token || tokenStorage.get() || undefined }); },
+  /** GET /academia/servico/:codigo/servicos-extras — catálogo público (sem filtro de elegibilidade): só o que está ativo e configurado. */
+  listarServicosExtrasDisponiveis: (codigoAcademia: string, token?: string) => api.get<CatalogoServicos>(`/academia/servico/${encodeURIComponent(codigoAcademia)}/servicos-extras`, { token: token || tokenStorage.get() || undefined }),
+  /** GET /estudante/servicos-extras/catalogo — o catálogo do próprio estudante, já filtrado pela elegibilidade (ano/curso). */
+  listarCatalogoServicosExtras: (token?: string) => api.get<CatalogoServicos>('/estudante/servicos-extras/catalogo', { token: token || tokenStorage.get() || undefined }),
+  /** POST /estudante/servicos-extras/:id/solicitacao — `servicoId` é o id do transporte ou da atividade no catálogo. Transporte: `rota_id` e `veiculo_ids`. */
+  solicitarServicoExtra: (servicoId: string, data: SolicitarServicoExtraRequest, token?: string) => {
+    const form = new FormData();
+    if (data.documento) form.append('documento', data.documento);
+    if (data.rota_id) form.append('rota_id', data.rota_id);
+    (data.veiculo_ids ?? []).forEach((v) => form.append('veiculo_ids', v));
+    return api.postForm<{ data: SolicitacaoServicoExtra }>(`/estudante/servicos-extras/${servicoId}/solicitacao`, form, { token: token || tokenStorage.get() || undefined });
+  },
   listarMinhasInscricoesServicoExtra: (status?: string, token?: string) => api.get<{ inscricoes: SolicitacaoServicoExtra[]; total: number }>(`/estudante/servicos-extras/minhas-inscricoes${status ? `?status=${encodeURIComponent(status)}` : ''}`, { token: token || tokenStorage.get() || undefined }),
   cancelarMinhaInscricaoServicoExtra: (id: string, motivo: string | undefined, token?: string) => api.put<{ message: string; status: string }, { motivo?: string }>(`/estudante/servicos-extras/minhas-inscricoes/${id}/cancelar`, { motivo }, { token: token || tokenStorage.get() || undefined }),
   minhasPendenciasServicoExtra: (id: string, token?: string) => api.get<{ pendencias: PendenciaServicoExtra[] }>(`/estudante/servicos-extras/minhas-inscricoes/${id}/pendencias`, { token: token || tokenStorage.get() || undefined }),
@@ -1620,17 +1634,6 @@ export const academiaService = {
   // ── Cursos ────────────────────────────────────────────────────────
 
   // ── Serviços Extras ───────────────────────────────────────────────
-  criarCategoriaServico: (data: CategoriaServicoPayload, token?: string) => api.post<{ data: CategoriaServico }, CategoriaServicoPayload>('/academia/categorias-servico', data, { token: token || tokenStorage.get() || undefined }),
-  atualizarCategoriaServico: (id: string, data: CategoriaServicoPayload, token?: string) => api.put<{ data: CategoriaServico }, CategoriaServicoPayload>(`/academia/categorias-servico/${id}`, data, { token: token || tokenStorage.get() || undefined }),
-  /** GET /academia/categorias-servico/:id — endpoint novo (Tarefa 110 do rastreio-backend); busca uma única categoria em vez de precisar carregar a lista inteira e filtrar no cliente. */
-  getCategoriaServico: (id: string, token?: string) => api.get<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}`, { token: token || tokenStorage.get() || undefined }),
-  desativarCategoriaServico: (id: string, token?: string) => api.put<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
-  reativarCategoriaServico: (id: string, token?: string) => api.put<{ data: CategoriaServico }>(`/academia/categorias-servico/${id}/reativar`, undefined, { token: token || tokenStorage.get() || undefined }),
-  // Tarefa 107/10: exige que a categoria já esteja desativada e sem
-  // nenhum serviço vinculado — o backend rejeita com 422 e uma mensagem
-  // explicando o motivo quando essas condições não são atendidas.
-  deletarCategoriaServico: (id: string, motivo?: string, token?: string) => api.delete<{ message: string }>(`/academia/categorias-servico/${id}`, { motivo }, { token: token || tokenStorage.get() || undefined }),
-  listarCategoriasServico: (token?: string) => api.get<{ categorias_servico: CategoriaServico[]; total: number }>('/academia/categorias-servico', { token: token || tokenStorage.get() || undefined }),
   criarDocumentoExtra: (data: DocumentoExtraPayload, token?: string) => api.post<{ data: DocumentoExtra }, DocumentoExtraPayload>('/academia/documentos-extra', data, { token: token || tokenStorage.get() || undefined }),
   atualizarDocumentoExtra: (id: string, data: DocumentoExtraPayload, token?: string) => api.put<{ data: DocumentoExtra }, DocumentoExtraPayload>(`/academia/documentos-extra/${encodeURIComponent(id)}`, data, { token: token || tokenStorage.get() || undefined }),
   desativarDocumentoExtra: (id: string, token?: string) => api.put<{ data: DocumentoExtra }>(`/academia/documentos-extra/${encodeURIComponent(id)}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
@@ -1642,20 +1645,36 @@ export const academiaService = {
     const query = qs.toString();
     return api.get<{ documentos_extra: DocumentoExtra[]; total: number }>(`/academia/documentos-extra${query ? `?${query}` : ''}`, { token: params?.token || tokenStorage.get() || undefined });
   },
-  criarServicoExtra: (data: ServicoExtraPayload, token?: string) => api.post<{ message: string; data: ServicoExtra }, ServicoExtraPayload>('/academia/servicos-extras', data, { token: token || tokenStorage.get() || undefined }),
-  atualizarServicoExtra: (id: string, data: ServicoExtraPayload, token?: string) => api.put<{ message: string; data: ServicoExtra }, ServicoExtraPayload>(`/academia/servicos-extras/${id}`, data, { token: token || tokenStorage.get() || undefined }),
-  desativarServicoExtra: (id: string, token?: string) => api.put<{ data: ServicoExtra }>(`/academia/servicos-extras/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
-  reativarServicoExtra: (id: string, token?: string) => api.put<{ data: ServicoExtra }>(`/academia/servicos-extras/${id}/reativar`, undefined, { token: token || tokenStorage.get() || undefined }),
-  // Tarefa 107/10: exige que o serviço já esteja desativado e sem nenhuma
-  // solicitação pendente/aprovada-pendente-de-pagamento/vinculada — o
-  // backend rejeita com 422 e uma mensagem explicando o motivo quando
-  // essas condições não são atendidas.
-  deletarServicoExtra: (id: string, motivo?: string, token?: string) => api.delete<{ message: string }>(`/academia/servicos-extras/${id}`, { motivo }, { token: token || tokenStorage.get() || undefined }),
-  listarServicosExtras: (token?: string) => api.get<{ servicos_extras: ServicoExtra[]; total: number }>('/academia/servicos-extras', { token: token || tokenStorage.get() || undefined }),
-  getServicoExtra: (id: string, token?: string) => api.get<{ data: ServicoExtra }>(`/academia/servicos-extras/${id}`, { token: token || tokenStorage.get() || undefined }),
-  listarSolicitacoesServicoExtra: (status?: string, token?: string) => api.get<{ solicitacoes: Array<{ id: string; servico_extra_id: string; codigo_estudante: string; status: StatusSolicitacaoServicoExtra; motivo_reprovacao?: string; motivo_cancelamento?: string; created_at: string; updated_at: string }>; total: number }>(`/academia/servicos-extras/solicitacoes${status ? `?status=${encodeURIComponent(status)}` : ''}`, { token: token || tokenStorage.get() || undefined }),
+  // ── Serviços: catálogo fixo (Parte 7). Escrita: academia (ou secretário com servicos_extras.gerir) ──
+  /** GET /academia/servicos-extras — Transporte e atividades como a academia os configurou (sem filtro por provedor). */
+  listarServicosAcademia: (token?: string) => api.get<ServicosAcademiaResponse>('/academia/servicos-extras', { token: token || tokenStorage.get() || undefined }),
+  getTransporte: (token?: string) => api.get<{ data: TransporteConfig }>('/academia/servicos-extras/transporte', { token: token || tokenStorage.get() || undefined }),
+  atualizarTransporte: (data: TransportePayload, token?: string) => api.put<{ data: TransporteConfig }, TransportePayload>('/academia/servicos-extras/transporte', data, { token: token || tokenStorage.get() || undefined }),
+  criarRotaTransporte: (data: RotaPayload, token?: string) => api.post<{ data: TransporteConfig; rota_id: string }, RotaPayload>('/academia/servicos-extras/transporte/rotas', data, { token: token || tokenStorage.get() || undefined }),
+  atualizarRotaTransporte: (id: string, data: RotaPayload, token?: string) => api.put<{ data: TransporteConfig }, RotaPayload>(`/academia/servicos-extras/transporte/rotas/${id}`, data, { token: token || tokenStorage.get() || undefined }),
+  desativarRotaTransporte: (id: string, token?: string) => api.put<{ data: TransporteConfig }>(`/academia/servicos-extras/transporte/rotas/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
+  reativarRotaTransporte: (id: string, token?: string) => api.put<{ data: TransporteConfig }>(`/academia/servicos-extras/transporte/rotas/${id}/reativar`, undefined, { token: token || tokenStorage.get() || undefined }),
+  /** Só se nenhuma inscrição usou a rota (senão 409: desative). */
+  excluirRotaTransporte: (id: string, token?: string) => api.delete<{ data: TransporteConfig }>(`/academia/servicos-extras/transporte/rotas/${id}`, undefined, { token: token || tokenStorage.get() || undefined }),
+  criarVeiculoTransporte: (rotaId: string, nome: string, token?: string) => api.post<{ data: TransporteConfig; veiculo_id: string }, { nome: string }>(`/academia/servicos-extras/transporte/rotas/${rotaId}/veiculos`, { nome }, { token: token || tokenStorage.get() || undefined }),
+  atualizarVeiculoTransporte: (id: string, data: { nome?: string; ativo?: boolean }, token?: string) => api.put<{ data: TransporteConfig }, { nome?: string; ativo?: boolean }>(`/academia/servicos-extras/transporte/veiculos/${id}`, data, { token: token || tokenStorage.get() || undefined }),
+  excluirVeiculoTransporte: (id: string, token?: string) => api.delete<{ data: TransporteConfig }>(`/academia/servicos-extras/transporte/veiculos/${id}`, undefined, { token: token || tokenStorage.get() || undefined }),
+  listarAtividadesServico: (token?: string) => api.get<ServicosAcademiaResponse>('/academia/servicos-extras/atividades', { token: token || tokenStorage.get() || undefined }),
+  getAtividadeServico: (id: string, token?: string) => api.get<{ data: AtividadeServico }>(`/academia/servicos-extras/atividades/${id}`, { token: token || tokenStorage.get() || undefined }),
+  criarAtividadeServico: (data: AtividadePayload, token?: string) => api.post<{ data: AtividadeServico }, AtividadePayload>('/academia/servicos-extras/atividades', data, { token: token || tokenStorage.get() || undefined }),
+  atualizarAtividadeServico: (id: string, data: AtividadePayload, token?: string) => api.put<{ data: AtividadeServico }, AtividadePayload>(`/academia/servicos-extras/atividades/${id}`, data, { token: token || tokenStorage.get() || undefined }),
+  desativarAtividadeServico: (id: string, token?: string) => api.put<{ data: AtividadeServico }>(`/academia/servicos-extras/atividades/${id}/desativar`, undefined, { token: token || tokenStorage.get() || undefined }),
+  reativarAtividadeServico: (id: string, token?: string) => api.put<{ data: AtividadeServico }>(`/academia/servicos-extras/atividades/${id}/reativar`, undefined, { token: token || tokenStorage.get() || undefined }),
+  /** Só se a atividade nunca teve inscrições (senão 409: desative). */
+  excluirAtividadeServico: (id: string, token?: string) => api.delete<{ message: string }>(`/academia/servicos-extras/atividades/${id}`, undefined, { token: token || tokenStorage.get() || undefined }),
+  criarTurmaAtividade: (atividadeId: string, nome: string, token?: string) => api.post<{ data: AtividadeServico }, { nome: string }>(`/academia/servicos-extras/atividades/${atividadeId}/turmas`, { nome }, { token: token || tokenStorage.get() || undefined }),
+  atualizarTurmaAtividade: (turmaId: string, data: { nome?: string; ativo?: boolean }, token?: string) => api.put<{ data: TurmaAtividade & { atividade_id: string } }, { nome?: string; ativo?: boolean }>(`/academia/servicos-extras/turmas-atividade/${turmaId}`, data, { token: token || tokenStorage.get() || undefined }),
+  excluirTurmaAtividade: (turmaId: string, token?: string) => api.delete<{ message: string }>(`/academia/servicos-extras/turmas-atividade/${turmaId}`, undefined, { token: token || tokenStorage.get() || undefined }),
+  listarMembrosTurmaAtividade: (turmaId: string, token?: string) => api.get<{ membros: MembroTurmaAtividade[]; total: number }>(`/academia/servicos-extras/turmas-atividade/${turmaId}/membros`, { token: token || tokenStorage.get() || undefined }),
+  listarSolicitacoesServicoExtra: (status?: string, token?: string) => api.get<{ solicitacoes: Array<{ id: string; servico_extra_id: string; tipo_servico: TipoServico; rota_id?: string | null; turma_id?: string | null; codigo_estudante: string; status: StatusSolicitacaoServicoExtra; motivo_reprovacao?: string; motivo_cancelamento?: string; created_at: string; updated_at: string }>; total: number }>(`/academia/servicos-extras/solicitacoes${status ? `?status=${encodeURIComponent(status)}` : ''}`, { token: token || tokenStorage.get() || undefined }),
   getSolicitacaoServicoExtra: (id: string, token?: string) => api.get<{ data: SolicitacaoServicoExtra }>(`/academia/servicos-extras/solicitacoes/${id}`, { token: token || tokenStorage.get() || undefined }),
-  aprovarSolicitacaoServicoExtra: (id: string, token?: string) => api.put<{ data: SolicitacaoServicoExtra }>(`/academia/servicos-extras/solicitacoes/${id}/aprovar`, undefined, { token: token || tokenStorage.get() || undefined }),
+  /** `turma_id` é obrigatório ao aprovar inscrição em atividade coletiva (turma ativa da atividade) e recusado nos demais. */
+  aprovarSolicitacaoServicoExtra: (id: string, turmaId?: string, token?: string) => api.put<{ data: SolicitacaoServicoExtra }, { turma_id?: string }>(`/academia/servicos-extras/solicitacoes/${id}/aprovar`, turmaId ? { turma_id: turmaId } : {}, { token: token || tokenStorage.get() || undefined }),
   reprovarSolicitacaoServicoExtra: (id: string, motivo_reprovacao: string, token?: string) => api.put<{ data: SolicitacaoServicoExtra }, { motivo_reprovacao: string }>(`/academia/servicos-extras/solicitacoes/${id}/reprovar`, { motivo_reprovacao }, { token: token || tokenStorage.get() || undefined }),
   cancelarInscricaoServicoExtraAcademia: (id: string, motivo: string | undefined, token?: string) => api.put<{ message: string; status: string }, { motivo?: string }>(`/academia/servicos-extras/inscricoes/${id}/cancelar`, { motivo }, { token: token || tokenStorage.get() || undefined }),
   pendenciasServicoExtraAcademia: (id: string, token?: string) => api.get<{ pendencias: PendenciaServicoExtra[] }>(`/academia/servicos-extras/inscricoes/${id}/pendencias`, { token: token || tokenStorage.get() || undefined }),
